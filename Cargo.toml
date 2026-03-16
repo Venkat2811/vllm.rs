@@ -71,6 +71,7 @@ url = "2.5.7"
 tool-parser = "1.2.0"
 openai-protocol = "1.2.0"
 nvtx = { version = "1.3", optional = true }
+myelon-playground = { path = "../../myelon-playground/crates/myelon-playground", package = "myelon-playground", optional = true }
 
 [lib]
 name = "vllm_rs"
@@ -88,6 +89,7 @@ trtllm = ["flashinfer", "attention-rs/trtllm"]
 metal = ["candle-core/metal", "candle-nn/metal", "attention-rs/metal", "dep:metal"]
 python = ["pyo3"]
 nvtx = ["dep:nvtx"]
+myelon = ["dep:myelon-playground"]
 
 [[bin]]
 name = "runner"
