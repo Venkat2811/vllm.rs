@@ -9,6 +9,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokenizers::Tokenizer;
 use vllm_rs::core::runner::{ModelRunner, Seqs};
+#[cfg(feature = "myelon")]
+use vllm_rs::ipc::myelon_ipc::{MsgKind, ResponseProducer, RpcBroadcastConsumer};
 use vllm_rs::models::layers::distributed::Comm;
 use vllm_rs::models::layers::VarBuilderX;
 use vllm_rs::runner::{receive_local, send_local, MessageType};
@@ -246,8 +248,33 @@ fn main() -> anyhow::Result<()> {
 
     // mark model as loaded
     model_loaded.store(true, Ordering::SeqCst);
+    #[cfg(feature = "myelon")]
+    let mut myelon_transport: Option<(RpcBroadcastConsumer, ResponseProducer)> = None;
+
     loop {
         match receive_local(&mut stream, false) {
+            #[cfg(feature = "myelon")]
+            Ok(MessageType::InitMyelonTransport(config)) => {
+                vllm_rs::log_info!(
+                    "Runner configuring Myelon transport rpc={} resp={}",
+                    config.rpc_ring_name,
+                    config.response_ring_name
+                );
+                let rpc_consumer = RpcBroadcastConsumer::attach(
+                    &config.rpc_ring_name,
+                    config.rpc_depth,
+                    config.wait_strategy,
+                )?;
+                let response_producer =
+                    ResponseProducer::create(&config.response_ring_name, config.response_depth)?;
+                send_local(
+                    &mut vec![stream.try_clone()?],
+                    &MessageType::MyelonReady,
+                    false,
+                )?;
+                myelon_transport = Some((rpc_consumer, response_producer));
+                break;
+            }
             Ok(MessageType::Shutdown) => {
                 vllm_rs::log_info!("Runner exit");
                 break;
@@ -432,6 +459,76 @@ fn main() -> anyhow::Result<()> {
             }
         }
     }
+
+    #[cfg(feature = "myelon")]
+    if let Some((mut rpc_consumer, mut response_producer)) = myelon_transport {
+        loop {
+            let (kind, payload) = rpc_consumer.recv_message_blocking();
+            match kind {
+                k if k == MsgKind::RunPrefill as u8 => {
+                    let (sequences, is_prefill): (Vec<vllm_rs::core::sequence::Sequence>, bool) =
+                        match bincode::deserialize(&payload) {
+                            Ok(request) => request,
+                            Err(error) => {
+                                response_producer
+                                    .send(error.to_string().as_bytes(), MsgKind::Error);
+                                continue;
+                            }
+                        };
+
+                    let refs = sequences.iter().collect::<Vec<_>>();
+                    match runner.run(Seqs::SeqRefs(&refs), is_prefill) {
+                        Ok(outputs) => {
+                            let bytes = bincode::serialize(&outputs)
+                                .expect("serialize Myelon prefill outputs");
+                            response_producer.send(&bytes, MsgKind::RunResponse);
+                        }
+                        Err(error) => {
+                            response_producer.send(error.to_string().as_bytes(), MsgKind::Error);
+                        }
+                    }
+                }
+                k if k == MsgKind::RunDecode as u8 => {
+                    let (sequences, is_prefill): (
+                        Vec<vllm_rs::core::sequence::DecodeSequence>,
+                        bool,
+                    ) = match bincode::deserialize(&payload) {
+                        Ok(request) => request,
+                        Err(error) => {
+                            response_producer.send(error.to_string().as_bytes(), MsgKind::Error);
+                            continue;
+                        }
+                    };
+
+                    match runner.run(Seqs::DecodeVec(&sequences), is_prefill) {
+                        Ok(outputs) => {
+                            let bytes = bincode::serialize(&outputs)
+                                .expect("serialize Myelon decode outputs");
+                            response_producer.send(&bytes, MsgKind::RunResponse);
+                        }
+                        Err(error) => {
+                            response_producer.send(error.to_string().as_bytes(), MsgKind::Error);
+                        }
+                    }
+                }
+                k if k == MsgKind::FinishDecode as u8 || k == MsgKind::Cancel as u8 => {
+                    let sequence_id: usize = match bincode::deserialize(&payload) {
+                        Ok(sequence_id) => sequence_id,
+                        Err(error) => {
+                            response_producer.send(error.to_string().as_bytes(), MsgKind::Error);
+                            continue;
+                        }
+                    };
+                    runner.finished(sequence_id);
+                }
+                other => {
+                    let message = format!("unsupported Myelon message kind {other}");
+                    response_producer.send(message.as_bytes(), MsgKind::Error);
+                }
+            }
+        }
+    }
+
     stop_flag.store(true, Ordering::Relaxed);
     vllm_rs::log_info!("Runner finished");
     std::process::exit(0);
