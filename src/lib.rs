@@ -2,6 +2,8 @@
 use pyo3::prelude::*;
 pub mod api;
 pub mod core;
+#[cfg(feature = "myelon")]
+pub mod ipc;
 pub mod mcp;
 pub mod models;
 #[cfg(feature = "python")]
