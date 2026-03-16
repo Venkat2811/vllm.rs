@@ -1,4 +1,6 @@
 use crate::core::sequence::{DecodeSequence, Sequence};
+#[cfg(feature = "myelon")]
+use crate::ipc::myelon_ipc::RunnerMyelonTransportConfig;
 use crate::models::layers::distributed::Id;
 use crate::server::EmbeddingStrategy;
 use crate::utils::config::{Config, EngineConfig, ModelType};
@@ -169,6 +171,14 @@ pub struct InitAck {
 pub enum MessageType {
     /// Sent by main process to initialize the runner.
     Init(RunnerInitRequest),
+
+    /// Sent by main process to hand the hot path over to Myelon IPC.
+    #[cfg(feature = "myelon")]
+    InitMyelonTransport(RunnerMyelonTransportConfig),
+
+    /// Sent by runner after Myelon transport attach succeeds.
+    #[cfg(feature = "myelon")]
+    MyelonReady,
 
     /// Sent by runner in response to `Init` with initialization status.
     InitAck(bool),
