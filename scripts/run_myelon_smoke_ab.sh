@@ -13,10 +13,17 @@ timeout_seconds="${VLLM_TIMEOUT_SECONDS:-60}"
 
 if [[ ! -d "${model_path}" ]]; then
     echo "model path does not exist: ${model_path}" >&2
+    echo "set VLLM_MODEL_PATH to a local snapshot directory before running this script" >&2
     exit 1
 fi
 
-build_features="${VLLM_BUILD_FEATURES:-cuda,myelon}"
+if [[ -n "${VLLM_BUILD_FEATURES:-}" ]]; then
+    build_features="${VLLM_BUILD_FEATURES}"
+elif [[ "$(uname -s)" == "Darwin" ]]; then
+    build_features="metal,myelon"
+else
+    build_features="cuda,myelon"
+fi
 echo "==> building vllm-rs and runner with features: ${build_features}"
 cargo build --bin vllm-rs --bin runner --features "${build_features}"
 
