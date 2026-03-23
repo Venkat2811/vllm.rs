@@ -46,14 +46,14 @@ pub fn heartbeat_worker(
             while !flag_clone.load(Ordering::Relaxed) {
                 let alive_result = manager.heartbeat(is_daemon);
                 if let Err(e) = alive_result {
-                    if !flag_clone.load(Ordering::Relaxed) {
-                        crate::log_warn!("{:?}", e);
-                    }
-                    if e.kind() == std::io::ErrorKind::UnexpectedEof
-                        || e.kind() == std::io::ErrorKind::BrokenPipe
-                    {
+                    let parent_disconnected = e.kind() == std::io::ErrorKind::UnexpectedEof
+                        || e.kind() == std::io::ErrorKind::BrokenPipe;
+                    if parent_disconnected {
                         crate::log_info!("Parent process disconnected, exiting...");
                         process::exit(0);
+                    }
+                    if !flag_clone.load(Ordering::Relaxed) {
+                        crate::log_warn!("{:?}", e);
                     }
                     if heartbeat_error_count > 5 {
                         crate::log_error!(
