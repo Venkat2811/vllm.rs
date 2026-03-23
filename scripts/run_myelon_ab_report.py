@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -22,6 +23,12 @@ def env_str(name: str, default: str) -> str:
     if value is None or value == "":
         return default
     return value
+
+
+def default_build_features() -> str:
+    if platform.system() == "Darwin":
+        return "metal,myelon"
+    return "cuda,myelon"
 
 
 def build_command(repo_root: Path, model_path: str, prompt: str, max_model_len: str, max_tokens: str, seed: str, extra_args: list[str]) -> list[str]:
@@ -113,12 +120,18 @@ def main() -> int:
     seed = env_str("VLLM_SEED", "123")
     timeout_seconds = int(env_str("VLLM_TIMEOUT_SECONDS", "60"))
     build_features = env_str("VLLM_BUILD_FEATURES", "cuda,myelon")
+    if "VLLM_BUILD_FEATURES" not in os.environ:
+        build_features = default_build_features()
     output_path = Path(
         env_str("VLLM_AB_REPORT_OUT", str(repo_root / "target" / "myelon_ab_report.json"))
     )
 
     if not Path(model_path).is_dir():
         print(f"model path does not exist: {model_path}", file=sys.stderr)
+        print(
+            "set VLLM_MODEL_PATH to a local snapshot directory before running this script",
+            file=sys.stderr,
+        )
         return 1
 
     subprocess.run(
