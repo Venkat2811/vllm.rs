@@ -142,6 +142,8 @@ impl EngineBuilder {
             self.isq,
             Some(self.device_ids.clone().unwrap_or(vec![0]).len()),
             self.device_ids.clone(),
+            Some(false),
+            Some(false),
             None,
             None,
             self.prefix_cache,

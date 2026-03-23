@@ -462,8 +462,18 @@ fn main() -> anyhow::Result<()> {
 
     #[cfg(feature = "myelon")]
     if let Some((mut rpc_consumer, mut response_producer)) = myelon_transport {
+        let mut logged_first_rpc = false;
+        let mut logged_first_response = false;
         loop {
             let (kind, payload) = rpc_consumer.recv_message_blocking();
+            if !logged_first_rpc {
+                vllm_rs::log_info!(
+                    "Runner entered Myelon hot path with first kind={} bytes={}.",
+                    kind,
+                    payload.len()
+                );
+                logged_first_rpc = true;
+            }
             match kind {
                 k if k == MsgKind::RunPrefill as u8 => {
                     let (sequences, is_prefill): (Vec<vllm_rs::core::sequence::Sequence>, bool) =
@@ -481,6 +491,13 @@ fn main() -> anyhow::Result<()> {
                         Ok(outputs) => {
                             let bytes = bincode::serialize(&outputs)
                                 .expect("serialize Myelon prefill outputs");
+                            if !logged_first_response {
+                                vllm_rs::log_info!(
+                                    "Runner sent first Myelon response bytes={}.",
+                                    bytes.len()
+                                );
+                                logged_first_response = true;
+                            }
                             response_producer.send(&bytes, MsgKind::RunResponse);
                         }
                         Err(error) => {
@@ -504,6 +521,13 @@ fn main() -> anyhow::Result<()> {
                         Ok(outputs) => {
                             let bytes = bincode::serialize(&outputs)
                                 .expect("serialize Myelon decode outputs");
+                            if !logged_first_response {
+                                vllm_rs::log_info!(
+                                    "Runner sent first Myelon response bytes={}.",
+                                    bytes.len()
+                                );
+                                logged_first_response = true;
+                            }
                             response_producer.send(&bytes, MsgKind::RunResponse);
                         }
                         Err(error) => {
