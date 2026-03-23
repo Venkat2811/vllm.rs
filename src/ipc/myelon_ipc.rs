@@ -68,6 +68,7 @@ pub enum MsgKind {
     RunDecode = 2,
     FinishDecode = 3,
     Cancel = 4,
+    Shutdown = 5,
     RunResponse = 100,
     Error = 101,
 }

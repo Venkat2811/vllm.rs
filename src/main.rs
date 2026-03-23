@@ -228,6 +228,7 @@ async fn main() -> Result<()> {
             .port
             .unwrap_or(if args.pd_server { 7000 } else { 8000 });
         run_server(engine.clone(), econfig.clone(), port, args.ui_server).await?;
+        engine.write().shutdown()?;
         return Ok(());
     }
 
@@ -304,6 +305,7 @@ async fn main() -> Result<()> {
                 Ok(Signal::CtrlD) | Ok(Signal::CtrlC) => {
                     if chat_history.is_empty() {
                         print!("\n👋 Exiting.");
+                        let _ = engine.write().shutdown();
                         std::process::exit(0); // Ctrl+C to exit
                     } else {
                         print!("\n🌀 Chat history cleared. Start a new conversation.\n");
@@ -495,6 +497,8 @@ async fn main() -> Result<()> {
             break;
         }
     }
+
+    engine.write().shutdown()?;
 
     Ok(())
 }
