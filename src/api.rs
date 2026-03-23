@@ -178,8 +178,13 @@ pub struct Engine {
 }
 
 impl Engine {
+    pub fn shutdown(&mut self) -> Result<()> {
+        let mut engine = self.engine.write();
+        engine.shutdown()
+    }
+
     pub fn start_server(&mut self, port: usize, with_ui_server: bool) -> Result<()> {
-        GLOBAL_RT.block_on(async {
+        let result = GLOBAL_RT.block_on(async {
             run_server(
                 self.engine.clone(),
                 self.econfig.clone(),
@@ -187,7 +192,9 @@ impl Engine {
                 with_ui_server,
             )
             .await
-        })
+        });
+        self.shutdown()?;
+        result
     }
 
     pub fn generate(
@@ -260,6 +267,14 @@ impl Engine {
     pub fn get_available_kv_tokens(&self) -> usize {
         let engine = self.engine.read();
         engine.get_available_kv_tokens()
+    }
+}
+
+impl Drop for Engine {
+    fn drop(&mut self) {
+        if let Err(error) = self.shutdown() {
+            crate::log_warn!("engine shutdown during drop failed: {:?}", error);
+        }
     }
 }
 
