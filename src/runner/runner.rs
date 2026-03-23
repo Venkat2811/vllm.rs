@@ -545,6 +545,10 @@ fn main() -> anyhow::Result<()> {
                     };
                     runner.finished(sequence_id);
                 }
+                k if k == MsgKind::Shutdown as u8 => {
+                    vllm_rs::log_info!("Runner received Myelon shutdown.");
+                    break;
+                }
                 other => {
                     let message = format!("unsupported Myelon message kind {other}");
                     response_producer.send(message.as_bytes(), MsgKind::Error);
