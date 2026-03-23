@@ -2018,6 +2018,7 @@ pub fn prepare_engine_config(
         device_ids.push(0);
     }
     let num_shards = device_ids.len();
+    let force_runner = econfig.force_runner.unwrap_or(false);
     econfig.device_ids = Some(device_ids);
     econfig.num_shards = Some(num_shards);
 
@@ -2036,9 +2037,13 @@ pub fn prepare_engine_config(
         "Multi-gpu inference is only available when `cuda` and `nccl` features enabled!"
     );
     #[cfg(not(feature = "nccl"))]
-    let use_runner = num_shards > 1;
+    let use_runner = force_runner || num_shards > 1;
 
-    crate::log_warn!("Check use_runner {:?}", use_runner);
+    crate::log_warn!(
+        "Check use_runner {:?} (force_runner={:?})",
+        use_runner,
+        force_runner
+    );
     (econfig, use_runner)
 }
 
