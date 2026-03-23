@@ -392,6 +392,9 @@ VLLM_TIMEOUT_SECONDS=60 \
 This is the Linux bring-up path used for local Myelon validation before moving to multi-GPU or
 macOS verification.
 
+By default the scripts build with `cuda,myelon` on Linux and `metal,myelon` on macOS. Override
+`VLLM_BUILD_FEATURES` if you need a different backend mix.
+
 For a machine-readable artifact, use the companion report script:
 
 ```bash
