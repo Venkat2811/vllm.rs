@@ -295,6 +295,8 @@ pub struct EngineConfig {
     pub isq: Option<String>,
     pub num_shards: Option<usize>,
     pub device_ids: Option<Vec<usize>>,
+    pub force_runner: Option<bool>,
+    pub myelon_ipc: Option<bool>,
     pub generation_cfg: Option<GenerationConfig>,
     pub seed: Option<u64>,
     pub prefix_cache: Option<bool>,
@@ -361,6 +363,10 @@ pub struct EngineConfig {
     #[pyo3(get, set)]
     pub device_ids: Option<Vec<usize>>,
     #[pyo3(get, set)]
+    pub force_runner: Option<bool>,
+    #[pyo3(get, set)]
+    pub myelon_ipc: Option<bool>,
+    #[pyo3(get, set)]
     pub generation_cfg: Option<GenerationConfig>,
     #[pyo3(get, set)]
     pub seed: Option<u64>,
@@ -406,6 +412,8 @@ impl EngineConfig {
         isq: Option<String>,
         num_shards: Option<usize>,
         device_ids: Option<Vec<usize>>,
+        force_runner: Option<bool>,
+        myelon_ipc: Option<bool>,
         generation_cfg: Option<GenerationConfig>,
         seed: Option<u64>,
         prefix_cache: Option<bool>,
@@ -460,6 +468,8 @@ impl EngineConfig {
             isq,
             num_shards,
             device_ids: Some(device_ids),
+            force_runner,
+            myelon_ipc,
             generation_cfg,
             seed,
             prefix_cache,

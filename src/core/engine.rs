@@ -5,6 +5,11 @@ use super::sequence::Sequence;
 use crate::core::scheduler::PD_PREFILL_STATUS_CHECK_COOLING_PERIOD;
 use crate::core::sequence::{DecodeSequence, SequenceStatus};
 use crate::core::GenerationOutput;
+#[cfg(feature = "myelon")]
+use crate::ipc::myelon_ipc::{
+    MsgKind, MyelonTransportLayout, MyelonWaitStrategy, ResponseConsumer, RpcBroadcastProducer,
+    RunnerMyelonTransportConfig,
+};
 use crate::models::layers::distributed::Comm;
 #[cfg(feature = "nccl")]
 use crate::models::layers::distributed::Id;
@@ -41,6 +46,8 @@ use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
+#[cfg(feature = "myelon")]
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::io::{BufRead, BufReader};
 use std::rc::Rc;
@@ -73,9 +80,155 @@ pub enum RequestType {
     Completion,
 }
 
+#[cfg(feature = "myelon")]
+const MYELON_RPC_DEPTH: usize = 1024;
+#[cfg(feature = "myelon")]
+const MYELON_RESPONSE_DEPTH: usize = 256;
+
+#[cfg(feature = "myelon")]
+fn myelon_to_candle<E: std::fmt::Display>(error: E) -> candle_core::Error {
+    candle_core::Error::Msg(error.to_string())
+}
+
+#[cfg(feature = "myelon")]
+struct MyelonEngineTransport {
+    rpc_producer: RpcBroadcastProducer,
+    response_consumers: Vec<ResponseConsumer>,
+    logged_first_request: bool,
+    logged_first_response: bool,
+}
+
+#[cfg(feature = "myelon")]
+impl MyelonEngineTransport {
+    fn attach(
+        runner_streams: &mut [LocalStream],
+        session_label: &str,
+        wait_strategy: MyelonWaitStrategy,
+    ) -> Result<Self> {
+        let layout = MyelonTransportLayout::for_session(
+            session_label,
+            runner_streams.len(),
+            MYELON_RPC_DEPTH,
+            MYELON_RESPONSE_DEPTH,
+        )
+        .map_err(myelon_to_candle)?;
+        let rpc_producer = RpcBroadcastProducer::create(layout.rpc_ring_name(), layout.rpc_depth())
+            .map_err(myelon_to_candle)?;
+
+        for (rank, stream) in runner_streams.iter_mut().enumerate() {
+            let config = RunnerMyelonTransportConfig::for_rank(&layout, rank, wait_strategy)
+                .map_err(myelon_to_candle)?;
+            send_local(
+                &mut vec![stream.try_clone()?],
+                &MessageType::InitMyelonTransport(config),
+                false,
+            )?;
+            match receive_local(stream, false)? {
+                MessageType::MyelonReady => {}
+                other => {
+                    candle_core::bail!("runner {} failed Myelon handoff: {:?}", rank, other);
+                }
+            }
+        }
+
+        let mut response_consumers = Vec::with_capacity(layout.runner_count());
+        for rank in 0..layout.runner_count() {
+            let response_ring_name = layout.response_ring_name(rank).map_err(myelon_to_candle)?;
+            let consumer = ResponseConsumer::attach(
+                response_ring_name,
+                layout.response_depth(),
+                wait_strategy,
+            )
+            .map_err(myelon_to_candle)?;
+            response_consumers.push(consumer);
+        }
+
+        Ok(Self {
+            rpc_producer,
+            response_consumers,
+            logged_first_request: false,
+            logged_first_response: false,
+        })
+    }
+
+    fn run_prefill(&mut self, sequences: Vec<Sequence>) -> Result<Vec<u32>> {
+        self.publish_and_collect(&(sequences, true), MsgKind::RunPrefill)
+    }
+
+    fn run_decode(&mut self, sequences: Vec<DecodeSequence>) -> Result<Vec<u32>> {
+        self.publish_and_collect(&(sequences, false), MsgKind::RunDecode)
+    }
+
+    fn finish_decode(&mut self, sequence_id: usize) -> Result<()> {
+        self.publish_only(&sequence_id, MsgKind::FinishDecode)
+    }
+
+    fn publish_only<T: Serialize>(&mut self, payload: &T, kind: MsgKind) -> Result<()> {
+        let bytes = bincode::serialize(payload).map_err(myelon_to_candle)?;
+        if !self.logged_first_request {
+            log_info!(
+                "Dispatching first Myelon request kind={} bytes={}.",
+                kind.as_u8(),
+                bytes.len()
+            );
+            self.logged_first_request = true;
+        }
+        self.rpc_producer.publish(&bytes, kind);
+        Ok(())
+    }
+
+    fn publish_and_collect<T: Serialize>(
+        &mut self,
+        payload: &T,
+        kind: MsgKind,
+    ) -> Result<Vec<u32>> {
+        self.publish_only(payload, kind)?;
+        self.collect_outputs()
+    }
+
+    fn collect_outputs(&mut self) -> Result<Vec<u32>> {
+        let mut first_output: Option<Vec<u32>> = None;
+
+        for consumer in &mut self.response_consumers {
+            let (kind, payload) = consumer.recv_message_blocking();
+            if !self.logged_first_response {
+                log_info!(
+                    "Received first Myelon response kind={} bytes={}.",
+                    kind,
+                    payload.len()
+                );
+                self.logged_first_response = true;
+            }
+            if kind == MsgKind::RunResponse.as_u8() {
+                let output_ids: Vec<u32> =
+                    bincode::deserialize(&payload).map_err(myelon_to_candle)?;
+                if let Some(expected) = &first_output {
+                    if expected != &output_ids {
+                        candle_core::bail!("Myelon runner outputs diverged across ranks");
+                    }
+                } else {
+                    first_output = Some(output_ids);
+                }
+            } else if kind == MsgKind::Error.as_u8() {
+                let error = String::from_utf8_lossy(&payload);
+                candle_core::bail!("runner Myelon error: {}", error);
+            } else {
+                candle_core::bail!("unexpected Myelon response kind {}", kind);
+            }
+        }
+
+        first_output
+            .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))
+    }
+}
+
 #[allow(dead_code)]
 pub struct LLMEngine {
     pub runners: Arc<RwLock<RunnerType>>,
+    #[cfg(feature = "myelon")]
+    myelon_transport: Option<MyelonEngineTransport>,
+    #[cfg(feature = "myelon")]
+    pending_myelon_session: Option<String>,
     pub scheduler: Scheduler,
     pub tokenizer: Tokenizer,
     pub econfig: EngineConfig,
@@ -118,6 +271,10 @@ impl LLMEngine {
         let model_loaded = Arc::new(AtomicBool::new(false));
         let (mut econfig, use_runner) =
             prepare_engine_config(econfig, &config, &config_tokenizer, &mut generation_cfg);
+        #[cfg(not(feature = "myelon"))]
+        if econfig.myelon_ipc.unwrap_or(false) {
+            candle_core::bail!("myelon_ipc requires building with the `myelon` feature");
+        }
         config.fp8_kvcache = econfig.fp8_kvcache;
 
         // In case config file missing bos and eos configuration
@@ -187,6 +344,10 @@ impl LLMEngine {
         #[cfg(feature = "nvtx")]
         let use_runner = false;
 
+        #[cfg(feature = "myelon")]
+        let mut myelon_transport = None;
+        #[cfg(feature = "myelon")]
+        let mut pending_myelon_session = None;
         let runners = if !use_runner {
             let device = crate::utils::new_device(device_ids[0])?;
             log_info!("Loading model...");
@@ -386,7 +547,16 @@ impl LLMEngine {
             if let Some(cfg) = engine_config.get() {
                 econfig = cfg.clone();
             }
-            RunnerType::Process(runner_streams?)
+            let mut runner_streams = runner_streams?;
+            #[cfg(feature = "myelon")]
+            if econfig.myelon_ipc.unwrap_or(false) {
+                pending_myelon_session = Some(unique_id.to_string());
+                log_info!(
+                    "Queued Myelon IPC hot path handoff for {} runner(s).",
+                    runner_streams.len()
+                );
+            }
+            RunnerType::Process(runner_streams)
         };
 
         if econfig.max_model_len.is_none() {
@@ -471,6 +641,10 @@ impl LLMEngine {
 
         let engine = Arc::new(RwLock::new(Self {
             runners,
+            #[cfg(feature = "myelon")]
+            myelon_transport,
+            #[cfg(feature = "myelon")]
+            pending_myelon_session,
             scheduler,
             tokenizer,
             econfig,
@@ -736,6 +910,11 @@ impl LLMEngine {
     }
 
     pub fn notify_runner_finished(&mut self, id: usize) -> Result<()> {
+        #[cfg(feature = "myelon")]
+        if let Some(transport) = self.myelon_transport.as_mut() {
+            return transport.finish_decode(id);
+        }
+
         match &mut *self.runners.write() {
             RunnerType::Thread(model_runner) => Ok(model_runner.finished(id)),
             RunnerType::Process(ref mut runner_streams) => {
@@ -772,9 +951,78 @@ impl LLMEngine {
                 }
             }
 
+            #[cfg(feature = "myelon")]
+            self.ensure_myelon_transport()?;
+
             // Get immutable references to scheduled sequences for model_runner
             let seqs = self.scheduler.get_sequences(&scheduled_ids);
+            #[cfg(feature = "myelon")]
+            let output_ids = if let Some(transport) = self.myelon_transport.as_mut() {
+                if is_prefill {
+                    let sequences = seqs.iter().map(|s| (*s).clone()).collect::<Vec<_>>();
+                    transport.run_prefill(sequences)?
+                } else {
+                    let sequences = seqs
+                        .iter()
+                        .map(|s| DecodeSequence::new(s))
+                        .collect::<Vec<_>>();
+                    transport.run_decode(sequences)?
+                }
+            } else {
+                match &mut *self.runners.write() {
+                    RunnerType::Thread(model_runner) => {
+                        // Run model on the scheduled sequences in the main thread
+                        model_runner.run(Seqs::SeqRefs(&seqs), is_prefill)?
+                    }
+                    RunnerType::Process(ref mut runner_streams) => {
+                        let request = if is_prefill {
+                            let sequences = seqs.iter().map(|s| (*s).clone()).collect::<Vec<_>>();
+                            MessageType::RunPrefill((sequences, true))
+                        } else {
+                            let sequences = seqs
+                                .iter()
+                                .map(|s| DecodeSequence::new(s))
+                                .collect::<Vec<_>>();
+                            MessageType::RunDecode((sequences, false))
+                        };
 
+                        let cloned_streams: Vec<LocalStream> = runner_streams
+                            .iter_mut()
+                            .map(|s| s.try_clone().expect("clone failed"))
+                            .collect();
+
+                        let all_outputs: Result<Vec<Vec<u32>>> = cloned_streams
+                            .into_par_iter()
+                            .map(|mut stream| {
+                                let msg = request.clone();
+                                send_local(&mut vec![stream.try_clone()?], &msg, false)?;
+                                let response = receive_local(&mut stream, false)?;
+
+                                match response {
+                                    MessageType::RunResponse(output_ids) => {
+                                        if output_ids.len() == 0 {
+                                            candle_core::bail!("Runner step error, no response!")
+                                        } else {
+                                            Ok(output_ids)
+                                        }
+                                    }
+                                    other => {
+                                        candle_core::bail!("Unexpected response type: {:?}", other)
+                                    }
+                                }
+                            })
+                            .collect();
+
+                        let all_outputs = all_outputs.map_err(candle_core::Error::wrap)?;
+                        if let Some(output_ids) = all_outputs.first() {
+                            output_ids.clone()
+                        } else {
+                            candle_core::bail!("No output ids received from model runners");
+                        }
+                    }
+                }
+            };
+            #[cfg(not(feature = "myelon"))]
             let output_ids = match &mut *self.runners.write() {
                 RunnerType::Thread(model_runner) => {
                     // Run model on the scheduled sequences in the main thread
@@ -820,10 +1068,8 @@ impl LLMEngine {
                         .collect();
 
                     let all_outputs = all_outputs.map_err(candle_core::Error::wrap)?;
-                    // Only run postprocess once after all runners finish (use first result)
                     if let Some(output_ids) = all_outputs.first() {
                         output_ids.clone()
-                        // self.scheduler.postprocess(&scheduled_ids, output_ids);
                     } else {
                         candle_core::bail!("No output ids received from model runners");
                     }
@@ -1040,6 +1286,36 @@ impl LLMEngine {
             self.may_print_decoding_throughput(&indices);
         }
         Ok(indices.len())
+    }
+
+    #[cfg(feature = "myelon")]
+    fn ensure_myelon_transport(&mut self) -> Result<()> {
+        if self.myelon_transport.is_some() {
+            return Ok(());
+        }
+        let Some(session_label) = self.pending_myelon_session.take() else {
+            return Ok(());
+        };
+
+        let mut runners = self.runners.write();
+        match &mut *runners {
+            RunnerType::Process(ref mut runner_streams) => {
+                self.myelon_transport = Some(MyelonEngineTransport::attach(
+                    runner_streams,
+                    &session_label,
+                    MyelonWaitStrategy::Block,
+                )?);
+                log_info!(
+                    "Enabled Myelon IPC hot path across {} runner(s).",
+                    runner_streams.len()
+                );
+                Ok(())
+            }
+            RunnerType::Thread(_) => {
+                self.pending_myelon_session = Some(session_label);
+                Ok(())
+            }
+        }
     }
 
     pub fn try_release_cache(&mut self, tokens_required: usize) -> bool {
@@ -1490,6 +1766,12 @@ impl LLMEngine {
                 let embedding_result = match &mut *self.runners.write() {
                     RunnerType::Thread(model_runner) => model_runner.embed(&[&seq], &strategy),
                     RunnerType::Process(ref mut runner_streams) => {
+                        #[cfg(feature = "myelon")]
+                        if self.myelon_transport.is_some() {
+                            candle_core::bail!(
+                                "embedding requests are not supported with Myelon IPC yet"
+                            );
+                        }
                         let request = MessageType::RunEmbed((vec![seq.clone()], strategy.clone()));
                         let cloned_streams: Vec<LocalStream> = runner_streams
                             .iter_mut()

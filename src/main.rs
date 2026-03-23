@@ -181,6 +181,12 @@ async fn main() -> Result<()> {
         None
     };
 
+    if args.myelon_ipc && !cfg!(feature = "myelon") {
+        candle_core::bail!("--myelon-ipc requires building with the `myelon` feature");
+    }
+
+    let force_runner = args.force_runner || args.myelon_ipc;
+
     let econfig = EngineConfig::new(
         args.model_id,
         args.weight_path,
@@ -195,6 +201,8 @@ async fn main() -> Result<()> {
         args.isq.clone(),
         Some(1),
         args.device_ids.clone(),
+        Some(force_runner),
+        Some(args.myelon_ipc),
         generation_cfg,
         args.seed,
         Some(prefix_cache),
