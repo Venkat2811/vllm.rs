@@ -359,6 +359,41 @@ vllm-rs --m AxionML/Qwen3.5-9B-NVFP4 --ui-server --prefix-cache
 
 ---
 
+## 🔁 Local Myelon Smoke
+
+For local CUDA validation on a single GPU, `vllm-rs` now supports an explicit subprocess runner path
+and a Myelon hot-path handoff:
+
+- `--force-runner`: use the subprocess runner even on one local device
+- `--myelon-ipc`: force subprocess runner mode and switch prefill/decode/finish traffic to Myelon IPC
+
+The quickest A/B check is the checked-in smoke script:
+
+```bash
+./scripts/run_myelon_smoke_ab.sh
+```
+
+It builds `vllm-rs` and `runner`, then runs:
+
+1. direct path
+2. forced subprocess runner
+3. forced subprocess runner with Myelon IPC
+
+You can override the defaults through environment variables:
+
+```bash
+VLLM_MODEL_PATH=/path/to/local/model \
+VLLM_PROMPT="Say hello in one short sentence." \
+VLLM_MAX_TOKENS=4 \
+VLLM_TIMEOUT_SECONDS=60 \
+./scripts/run_myelon_smoke_ab.sh
+```
+
+This is the Linux bring-up path used for local Myelon validation before moving to multi-GPU or
+macOS verification.
+
+---
+
 ## 🔌 Guided decoding (Structured Outputs & Constraints)
 vLLM.rs now supports structured output and constraint-based generation via llguidance:
 
