@@ -1,6 +1,7 @@
 use anyhow::{anyhow, bail, Context, Result};
 use myelon_playground::{
-    attach_shared_consumer, build_shared_single_producer, SharedConsumer, SharedProducer,
+    attach_shared_consumer, build_shared_single_producer, lock_free::SharedCursor, SharedConsumer,
+    SharedProducer,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
@@ -186,15 +187,20 @@ impl RunnerMyelonTransportConfig {
 }
 
 pub struct RpcBroadcastProducer {
+    _coordination_cursor: SharedCursor,
     inner: SharedProducer<RpcFrame>,
 }
 
 impl RpcBroadcastProducer {
     pub fn create(name: &str, depth: usize) -> Result<Self> {
+        let coordination_cursor = ensure_coordination_cursor(name)?;
         let inner = build_shared_single_producer::<RpcFrame>(name, depth)
             .build_producer(RpcFrame::default)
             .with_context(|| format!("failed to create rpc ring '{name}'"))?;
-        Ok(Self { inner })
+        Ok(Self {
+            _coordination_cursor: coordination_cursor,
+            inner,
+        })
     }
 
     pub fn publish(&mut self, payload: &[u8], kind: MsgKind) {
@@ -243,15 +249,20 @@ impl RpcBroadcastConsumer {
 }
 
 pub struct ResponseProducer {
+    _coordination_cursor: SharedCursor,
     inner: SharedProducer<ResponseFrame>,
 }
 
 impl ResponseProducer {
     pub fn create(name: &str, depth: usize) -> Result<Self> {
+        let coordination_cursor = ensure_coordination_cursor(name)?;
         let inner = build_shared_single_producer::<ResponseFrame>(name, depth)
             .build_producer(ResponseFrame::default)
             .with_context(|| format!("failed to create response ring '{name}'"))?;
-        Ok(Self { inner })
+        Ok(Self {
+            _coordination_cursor: coordination_cursor,
+            inner,
+        })
     }
 
     pub fn send(&mut self, payload: &[u8], kind: MsgKind) {
@@ -306,6 +317,16 @@ struct FrameMeta<'a> {
     flags: u8,
     msg_id: u32,
     data: &'a [u8],
+}
+
+fn coordination_cursor_name(base_name: &str) -> String {
+    format!("{base_name}_cr")
+}
+
+fn ensure_coordination_cursor(base_name: &str) -> Result<SharedCursor> {
+    let cursor_name = coordination_cursor_name(base_name);
+    SharedCursor::new_or_attach(&cursor_name, 0)
+        .with_context(|| format!("failed to create coordination cursor '{cursor_name}'"))
 }
 
 fn recv_message_blocking<F, T, M>(
@@ -445,6 +466,10 @@ fn validate_segment_name(name: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    static UNIQUE_SUFFIX: AtomicU64 = AtomicU64::new(0);
 
     #[test]
     fn compact_session_tag_is_stable_and_short() {
@@ -499,5 +524,25 @@ mod tests {
         assert_eq!(frames[0].kind, MsgKind::RunDecode.as_u8());
         assert_eq!(frames[0].msg_id, frames[1].msg_id);
         assert_eq!(frames[1].msg_id, frames[2].msg_id);
+    }
+
+    #[test]
+    fn ensure_coordination_cursor_is_idempotent() {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .subsec_nanos() as u64;
+        let suffix = UNIQUE_SUFFIX.fetch_add(1, AtomicOrdering::Relaxed);
+        let base_name = format!("vmyt{:08x}", (nanos ^ suffix) as u32);
+
+        let first = ensure_coordination_cursor(&base_name).unwrap();
+        let second = ensure_coordination_cursor(&base_name).unwrap();
+
+        assert_eq!(
+            coordination_cursor_name(&base_name),
+            format!("{base_name}_cr")
+        );
+        assert_eq!(first.load(std::sync::atomic::Ordering::Acquire), 0);
+        assert_eq!(second.load(std::sync::atomic::Ordering::Acquire), 0);
     }
 }
