@@ -300,7 +300,7 @@ impl Phi4Attention {
                 head_dim,
                 1. / ((head_dim as f32).sqrt()),
                 Some(kv_heads),
-                cfg.sliding_window,
+                cfg.effective_sliding_window(),
                 vb.device().clone(),
                 None,
                 cfg.fp8_kvcache.unwrap_or(false),
@@ -610,7 +610,7 @@ impl Phi4ForCausalLM {
             self.dtype,
             positions,
             seqlens.clone(),
-            self.config.sliding_window,
+            self.config.effective_sliding_window(),
             input_metadata.is_prefill,
         );
         let mut xs = if embeded_inputs {

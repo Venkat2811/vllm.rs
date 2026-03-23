@@ -43,7 +43,7 @@ impl LLaMaDecoderLayer {
             comm.clone(),
             config,
             None,
-            config.sliding_window,
+            config.effective_sliding_window(),
             dtype,
         )?;
         let mlp = MLP::new(
@@ -281,7 +281,7 @@ impl LLaMaForCausalLM {
             self.dtype,
             positions,
             seqlens.clone(),
-            self.config.sliding_window,
+            self.config.effective_sliding_window(),
             input_metadata.is_prefill,
         );
 

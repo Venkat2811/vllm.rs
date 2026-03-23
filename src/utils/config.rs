@@ -265,6 +265,14 @@ impl Config {
             (Some(e), Some(other)) => Some(e.merge(other.clone())),
         };
     }
+
+    pub fn effective_sliding_window(&self) -> Option<usize> {
+        if matches!(self.use_sliding_window, Some(false)) {
+            None
+        } else {
+            self.sliding_window
+        }
+    }
 }
 #[cfg(not(feature = "python"))]
 #[derive(Serialize, Deserialize, Clone, Debug)]

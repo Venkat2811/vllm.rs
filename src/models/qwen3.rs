@@ -43,7 +43,7 @@ impl Qwen3DecoderLayer {
             comm.clone(),
             config,
             None,
-            config.sliding_window,
+            config.effective_sliding_window(),
             dtype,
         )?;
 
@@ -323,7 +323,7 @@ impl Qwen3ForCausalLM {
             self.dtype,
             positions,
             seqlens.clone(),
-            self.config.sliding_window,
+            self.config.effective_sliding_window(),
             input_metadata.is_prefill,
         );
         let mut xs = if embeded_inputs {

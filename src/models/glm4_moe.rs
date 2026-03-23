@@ -64,7 +64,7 @@ impl GLM4DecoderLayer {
             comm.clone(),
             config,
             None,
-            config.sliding_window,
+            config.effective_sliding_window(),
             dtype,
         )?;
 
@@ -415,7 +415,7 @@ impl GLM4MoEForCausalLM {
             self.dtype,
             positions,
             seqlens.clone(),
-            self.config.sliding_window,
+            self.config.effective_sliding_window(),
             input_metadata.is_prefill,
         );
         let mut xs = if embeded_inputs {

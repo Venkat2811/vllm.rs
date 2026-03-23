@@ -35,6 +35,7 @@ use attention_rs::FlashInferMetadata;
 use attention_rs::InputMetadata;
 use candle_core::{DType, Device, Result, Tensor, D};
 use interprocess::local_socket::Stream as LocalStream;
+use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 use std::rc::Rc;
@@ -52,6 +53,16 @@ pub struct CachedSamplingParams {
 pub enum Seqs<'a> {
     SeqRefs(&'a [&'a Sequence]),
     DecodeVec(&'a Vec<DecodeSequence>),
+}
+
+static RUNNER_DIAG_ENABLED: Lazy<bool> = Lazy::new(|| {
+    std::env::var("VLLM_RS_RUNNER_DIAG")
+        .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+        .unwrap_or(false)
+});
+
+fn runner_diag_enabled() -> bool {
+    *RUNNER_DIAG_ENABLED
 }
 
 fn sampling_params_for_batch_index<'a>(seqs: &'a Seqs<'a>, index: usize) -> &'a SamplingParams {
@@ -722,6 +733,17 @@ impl ModelRunner {
     pub fn run(&self, seqs: Seqs, is_prefill: bool) -> Result<Vec<u32>> {
         #[cfg(feature = "nvtx")]
         nvtx::range_push!("{}", if is_prefill { "prefill" } else { "decoding" });
+        let diag_seq_ids: Vec<usize> = match &seqs {
+            Seqs::SeqRefs(seqs) => seqs.iter().map(|seq| seq.id()).collect(),
+            Seqs::DecodeVec(vec) => vec.iter().map(|seq| seq.id()).collect(),
+        };
+        if runner_diag_enabled() {
+            crate::log_warn!(
+                "[runner-diag] start is_prefill={} seq_ids={:?}",
+                is_prefill,
+                diag_seq_ids,
+            );
+        }
         let (input_ids, positions, mut input_metadata) = if is_prefill {
             match &seqs {
                 Seqs::SeqRefs(seqs) => self.prepare_prefill(seqs)?,
@@ -737,6 +759,14 @@ impl ModelRunner {
                 Seqs::DecodeVec(decode_seqs) => self.prepare_decode(decode_seqs.iter())?,
             }
         };
+        if runner_diag_enabled() {
+            crate::log_warn!(
+                "[runner-diag] prepared is_prefill={} input_shape={:?} position_shape={:?}",
+                is_prefill,
+                input_ids.shape(),
+                positions.shape(),
+            );
+        }
 
         if is_prefill {
             if let Seqs::SeqRefs(seqs_ref) = &seqs {
@@ -779,6 +809,14 @@ impl ModelRunner {
                         .replay(&input_ids, &positions, &input_metadata)?,
                 };
                 let output_ids = self.sample(&logits, seqs, is_prefill)?;
+                if runner_diag_enabled() {
+                    crate::log_warn!(
+                        "[runner-diag] graph replay sampled is_prefill={} seq_ids={:?} output_ids={:?}",
+                        is_prefill,
+                        diag_seq_ids,
+                        output_ids,
+                    );
+                }
                 return Ok(output_ids);
             }
         }
@@ -849,7 +887,22 @@ impl ModelRunner {
                 Qwen3VL => images,
             }
         )?;
+        if runner_diag_enabled() {
+            crate::log_warn!(
+                "[runner-diag] forward finished is_prefill={} logits_shape={:?}",
+                is_prefill,
+                logits.shape(),
+            );
+        }
         let output_ids = self.sample(&logits, seqs, is_prefill)?;
+        if runner_diag_enabled() {
+            crate::log_warn!(
+                "[runner-diag] sampled is_prefill={} seq_ids={:?} output_ids={:?}",
+                is_prefill,
+                diag_seq_ids,
+                output_ids,
+            );
+        }
         #[cfg(feature = "nvtx")]
         nvtx::range_pop!();
         Ok(output_ids)

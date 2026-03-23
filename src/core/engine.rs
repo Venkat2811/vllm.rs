@@ -58,6 +58,16 @@ pub static GLOBAL_RT: Lazy<Runtime> = Lazy::new(|| {
         .expect("Failed to build global Tokio runtime")
 });
 
+static ENGINE_DIAG_ENABLED: Lazy<bool> = Lazy::new(|| {
+    std::env::var("VLLM_RS_ENGINE_DIAG")
+        .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+        .unwrap_or(false)
+});
+
+fn engine_diag_enabled() -> bool {
+    *ENGINE_DIAG_ENABLED
+}
+
 #[derive(Debug, Clone)]
 pub enum StreamItem {
     Token(String, u32), //streaming: (text, token_id)
@@ -676,6 +686,16 @@ impl LLMEngine {
             Ok((ids, prefill)) => (ids, prefill),
             Err(_) => (vec![], true),
         };
+        if engine_diag_enabled() && (!self.active_requests.is_empty() || !scheduled_ids.is_empty())
+        {
+            crate::log_warn!(
+                "[engine-diag] scheduled_ids={:?} is_prefill={} active_requests={:?} {}",
+                scheduled_ids,
+                is_prefill,
+                self.active_requests,
+                self.scheduler.debug_snapshot(),
+            );
+        }
         let decoded_ids = if !scheduled_ids.is_empty() {
             if is_prefill {
                 let downgraded = self
@@ -746,6 +766,18 @@ impl LLMEngine {
                     }
                 }
             };
+            if engine_diag_enabled() {
+                let seq_ids: Vec<usize> = scheduled_ids
+                    .iter()
+                    .filter_map(|&idx| self.scheduler.get_running(idx).map(|seq| seq.id))
+                    .collect();
+                crate::log_warn!(
+                    "[engine-diag] runner returned output_ids={:?} for seq_ids={:?} is_prefill={}",
+                    output_ids,
+                    seq_ids,
+                    is_prefill,
+                );
+            }
             // Postprocess sequences by modifying them inside the scheduler
             if is_prefill {
                 let (indices, finished_indices) =
@@ -1530,6 +1562,16 @@ impl LLMEngine {
                     match guard.step() {
                         Ok(n_tasks) => {
                             task_processed = n_tasks;
+                            if engine_diag_enabled()
+                                && n_tasks == 0
+                                && !guard.active_requests.is_empty()
+                            {
+                                crate::log_warn!(
+                                    "[engine-diag] idle step with active_requests={:?} {}",
+                                    guard.active_requests,
+                                    guard.scheduler.debug_snapshot(),
+                                );
+                            }
                         }
                         Err(e) => {
                             crate::log_error!("[Engine Loop] Step error: {:?}", e);

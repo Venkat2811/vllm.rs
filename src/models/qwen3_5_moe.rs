@@ -93,7 +93,7 @@ impl Qwen3_5MoEDecoderLayer {
                 comm.clone(),
                 config,
                 None,
-                config.sliding_window,
+                config.effective_sliding_window(),
                 dtype,
             )?)
         } else {
@@ -612,7 +612,7 @@ impl Qwen3_5MoEForCausalLM {
             self.dtype,
             positions,
             seqlens.clone(),
-            self.config.sliding_window,
+            self.config.effective_sliding_window(),
             input_metadata.is_prefill,
         );
 

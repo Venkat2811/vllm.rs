@@ -1131,6 +1131,64 @@ impl Scheduler {
         1.0f32 - (free_blocks as f32 * 1.0f32 / total_blocks as f32)
     }
 
+    pub fn debug_snapshot(&self) -> String {
+        let running = self
+            .running
+            .iter()
+            .map(|seq| {
+                format!(
+                    "{}:{:?}:len{}:out{}:cached{}",
+                    seq.id,
+                    seq.status,
+                    seq.len(),
+                    seq.output_len(),
+                    seq.num_cached_tokens
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        let waiting = self
+            .waiting
+            .iter()
+            .map(|seq| {
+                format!(
+                    "{}:{:?}:len{}:out{}:cached{}",
+                    seq.id,
+                    seq.status,
+                    seq.len(),
+                    seq.output_len(),
+                    seq.num_cached_tokens
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        let cached = self
+            .cached
+            .iter()
+            .map(|seq| {
+                format!(
+                    "{}:{:?}:len{}:out{}:cached{}",
+                    seq.id,
+                    seq.status,
+                    seq.len(),
+                    seq.output_len(),
+                    seq.num_cached_tokens
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+
+        format!(
+            "running=[{}] waiting=[{}] cached=[{}] transferred={} free_blocks={} total_blocks={}",
+            running,
+            waiting,
+            cached,
+            self.transferred.len(),
+            self.block_manager.get_num_free_blocks(),
+            self.block_manager.get_num_total_blocks(),
+        )
+    }
+
     /// Check if the given token is a tool call end token
     /// This supports both:
     /// 1. Explicit tool call end tokens (e.g., </tool_call> in XML format)
