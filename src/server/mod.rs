@@ -880,6 +880,14 @@ pub struct Args {
     #[arg(long = "d", value_delimiter = ',')]
     pub device_ids: Option<Vec<usize>>,
 
+    /// Force subprocess runner mode even on a single local device.
+    #[arg(long, default_value_t = false)]
+    pub force_runner: bool,
+
+    /// Route runner hot-path prefill/decode traffic over Myelon IPC.
+    #[arg(long, default_value_t = false)]
+    pub myelon_ipc: bool,
+
     #[arg(long, default_value_t = false)]
     pub log: bool,
 
