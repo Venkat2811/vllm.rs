@@ -392,6 +392,16 @@ VLLM_TIMEOUT_SECONDS=60 \
 This is the Linux bring-up path used for local Myelon validation before moving to multi-GPU or
 macOS verification.
 
+For a machine-readable artifact, use the companion report script:
+
+```bash
+VLLM_AB_REPORT_OUT=/tmp/myelon_ab_report.json \
+./scripts/run_myelon_ab_report.py
+```
+
+It runs the same three cases, writes a JSON report, and fails if any leg exits non-zero or if the
+responses diverge across direct, subprocess-runner, and Myelon modes.
+
 ---
 
 ## 🔌 Guided decoding (Structured Outputs & Constraints)
