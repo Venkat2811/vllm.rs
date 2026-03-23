@@ -163,6 +163,10 @@ impl MyelonEngineTransport {
         self.publish_only(&sequence_id, MsgKind::FinishDecode)
     }
 
+    fn shutdown(&mut self) {
+        self.rpc_producer.publish(&[], MsgKind::Shutdown);
+    }
+
     fn publish_only<T: Serialize>(&mut self, payload: &T, kind: MsgKind) -> Result<()> {
         let bytes = bincode::serialize(payload).map_err(myelon_to_candle)?;
         if !self.logged_first_request {
@@ -1641,6 +1645,46 @@ impl LLMEngine {
         self.seq_prompt_replays.clear();
     }
 
+    pub fn shutdown(&mut self) -> Result<()> {
+        if self.stop_flag.swap(true, Ordering::SeqCst) {
+            return Ok(());
+        }
+
+        let _ = self.cancel_all_with_reason(Some("engine shutting down".to_string()));
+
+        #[cfg(feature = "myelon")]
+        let had_myelon_transport = self.myelon_transport.is_some();
+        #[cfg(not(feature = "myelon"))]
+        let had_myelon_transport = false;
+
+        #[cfg(feature = "myelon")]
+        {
+            self.pending_myelon_session = None;
+            if let Some(mut transport) = self.myelon_transport.take() {
+                transport.shutdown();
+            }
+        }
+
+        if !had_myelon_transport {
+            match &mut *self.runners.write() {
+                RunnerType::Thread(_) => {}
+                RunnerType::Process(ref mut runner_streams) => {
+                    for (rank, stream) in runner_streams.iter_mut().enumerate() {
+                        if let Err(error) = send_local(
+                            &mut vec![stream.try_clone()?],
+                            &MessageType::Shutdown,
+                            false,
+                        ) {
+                            log_warn!("failed to send shutdown to runner {}: {:?}", rank, error);
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Returns the reasoning end marker when the prompt for this sequence
     /// already ended with an opening think marker.
     pub fn get_prefilled_reasoning_end_marker(&self, seq_id: usize) -> Option<String> {
@@ -1887,6 +1931,14 @@ impl LLMEngine {
                 guard.is_pd_mode() && guard.is_pd_server()
             };
             loop {
+                let should_stop = {
+                    let guard = engine.read();
+                    guard.stop_flag.load(Ordering::Relaxed)
+                };
+                if should_stop {
+                    break;
+                }
+
                 let idle = {
                     let guard = engine.read();
                     //no add_request in PD server, marking it always active

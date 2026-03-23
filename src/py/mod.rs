@@ -61,7 +61,17 @@ impl Engine {
             Ok::<(), PyErr>(())
         })?;
 
+        self.shutdown()?;
+
         Ok(())
+    }
+
+    #[pyo3(name = "shutdown", text_signature = "($self)")]
+    pub fn shutdown(&self) -> PyResult<()> {
+        let mut engine = self.engine.write();
+        engine
+            .shutdown()
+            .map_err(|e| PyValueError::new_err(format!("shutdown failed: {e:?}")))
     }
 
     #[pyo3(
@@ -138,6 +148,14 @@ impl Engine {
     pub fn get_available_kv_tokens(&mut self) -> PyResult<usize> {
         let engine = self.engine.read();
         Ok(engine.get_available_kv_tokens())
+    }
+}
+
+impl Drop for Engine {
+    fn drop(&mut self) {
+        if let Err(error) = self.engine.write().shutdown() {
+            crate::log_warn!("python engine shutdown during drop failed: {:?}", error);
+        }
     }
 }
 
