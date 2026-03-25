@@ -362,6 +362,7 @@ For local CUDA validation on a single GPU, `vllm-rs` now supports an explicit su
 and a Myelon hot-path handoff:
 
 - `--num-shards`: make the intended topology explicit; defaults to `1` when omitted
+- `--device-ids`: make the target device layout explicit; use `--device-ids 0,1` for a future TP=2 host
 - `--force-runner`: use the subprocess runner even on one local device
 - `--myelon-ipc`: force subprocess runner mode and switch prefill/decode/finish traffic to Myelon IPC
 
@@ -389,6 +390,7 @@ VLLM_MODEL_PATH=/path/to/local/model \
 VLLM_PROMPT="Say hello in one short sentence." \
 VLLM_MAX_TOKENS=4 \
 VLLM_NUM_SHARDS=1 \
+VLLM_DEVICE_IDS=0 \
 VLLM_TIMEOUT_SECONDS=60 \
 ./scripts/run_myelon_smoke_ab.sh
 ```

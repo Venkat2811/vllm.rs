@@ -11,6 +11,7 @@ max_tokens="${VLLM_MAX_TOKENS:-4}"
 seed="${VLLM_SEED:-123}"
 timeout_seconds="${VLLM_TIMEOUT_SECONDS:-60}"
 num_shards="${VLLM_NUM_SHARDS:-1}"
+device_ids="${VLLM_DEVICE_IDS:-}"
 
 if [[ ! -d "${model_path}" ]]; then
     echo "model path does not exist: ${model_path}" >&2
@@ -38,6 +39,10 @@ common_args=(
     --seed "${seed}"
     --num-shards "${num_shards}"
 )
+
+if [[ -n "${device_ids}" ]]; then
+    common_args+=(--device-ids "${device_ids}")
+fi
 
 run_case() {
     local label="$1"
