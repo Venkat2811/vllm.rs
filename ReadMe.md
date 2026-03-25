@@ -382,11 +382,15 @@ The quickest A/B check is the checked-in smoke script:
 ./scripts/run_myelon_smoke_ab.sh
 ```
 
-It builds `vllm-rs` and `runner`, then runs:
+For `VLLM_NUM_SHARDS=1`, it builds `vllm-rs` and `runner`, then runs:
 
 1. direct path
 2. forced subprocess runner
 3. forced subprocess runner with Myelon IPC
+
+For `VLLM_NUM_SHARDS>1`, the direct path is skipped automatically and the script compares only
+the subprocess runner baseline against the Myelon hot path, which is the meaningful topology for
+real multi-rank bring-up.
 
 You can override the defaults through environment variables:
 
@@ -417,11 +421,12 @@ VLLM_AB_REPORT_OUT=/tmp/myelon_ab_report.json \
 ./scripts/run_myelon_ab_report.py
 ```
 
-It runs the same three cases, writes a JSON report, and fails if any leg exits non-zero or if the
-responses diverge across direct, subprocess-runner, and Myelon modes. It also fails if the Myelon
-leg is not actually active, or if the Myelon prompt latency exceeds the subprocess-runner prompt
-latency by more than `VLLM_MAX_MYELON_PROMPT_RATIO` (default `4.0`), which guards against a return
-of the old fixed TP=1 handoff cliff.
+For `VLLM_NUM_SHARDS=1`, it runs the same three cases; for `VLLM_NUM_SHARDS>1`, it records only
+the subprocess-runner and Myelon process paths. In both cases it writes a JSON report and fails if
+any leg exits non-zero or if the responses diverge across the included cases. It also fails if the
+Myelon leg is not actually active, or if the Myelon prompt latency exceeds the subprocess-runner
+prompt latency by more than `VLLM_MAX_MYELON_PROMPT_RATIO` (default `4.0`), which guards against a
+return of the old fixed TP=1 handoff cliff.
 
 For repeated Myelon restart / stale-handle validation on the same host, use:
 
