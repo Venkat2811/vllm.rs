@@ -1849,8 +1849,11 @@ mod tests {
     use super::LLMEngine;
     use crate::utils::guidance::GuidanceTokens;
     #[cfg(feature = "myelon")]
-    use crate::ipc::myelon_ipc::{resolve_myelon_transport_config, MyelonWaitStrategy};
+    use crate::ipc::myelon_ipc::resolve_myelon_transport_config;
     use crate::utils::config::EngineConfig;
+    use myelon_playground::{
+        MyelonWaitStrategy, DEFAULT_MYELON_RESPONSE_DEPTH, DEFAULT_MYELON_RPC_DEPTH,
+    };
 
     #[test]
     fn trim_prompt_replay_prefix_accepts_single_reasoning_token() {
@@ -1972,8 +1975,8 @@ mod tests {
             econfig.myelon_busy_spin,
         )
         .unwrap();
-        assert_eq!(resolved.rpc_depth, 1024);
-        assert_eq!(resolved.response_depth, 256);
+        assert_eq!(resolved.rpc_depth, DEFAULT_MYELON_RPC_DEPTH);
+        assert_eq!(resolved.response_depth, DEFAULT_MYELON_RESPONSE_DEPTH);
         assert_eq!(resolved.wait_strategy, MyelonWaitStrategy::Block);
     }
 
