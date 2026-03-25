@@ -34,7 +34,15 @@ def default_build_features() -> str:
     return "cuda,myelon"
 
 
-def build_command(repo_root: Path, model_path: str, prompt: str, max_model_len: str, max_tokens: str, seed: str, extra_args: list[str]) -> list[str]:
+def build_command(
+    repo_root: Path,
+    model_path: str,
+    prompt: str,
+    max_model_len: str,
+    max_tokens: str,
+    seed: str,
+    num_shards: str,
+) -> list[str]:
     return [
         str(repo_root / "target" / "debug" / "vllm-rs"),
         "--w",
@@ -51,7 +59,9 @@ def build_command(repo_root: Path, model_path: str, prompt: str, max_model_len: 
         "bf16",
         "--seed",
         seed,
-        *extra_args,
+        "--num-shards",
+        num_shards,
+        "--myelon-ipc",
     ]
 
 
@@ -72,7 +82,6 @@ def parse_metrics(output: str) -> dict:
         "myelon_enabled": "Enabled Myelon IPC hot path across" in output,
         "myelon_first_request_logged": "Dispatching first Myelon request" in output,
         "myelon_first_response_logged": "Received first Myelon response" in output,
-        "socket_shutdown_logged": "Runner exit" in output,
         "myelon_shutdown_logged": "Runner received Myelon shutdown." in output,
         "runner_mode": None,
         "runner_reason": None,
@@ -104,7 +113,7 @@ def parse_metrics(output: str) -> dict:
     return metrics
 
 
-def run_case(repo_root: Path, label: str, command: list[str], timeout_seconds: int) -> dict:
+def run_once(repo_root: Path, iteration: int, command: list[str], timeout_seconds: int) -> dict:
     started_at = time.time()
     completed = subprocess.run(
         command,
@@ -117,7 +126,7 @@ def run_case(repo_root: Path, label: str, command: list[str], timeout_seconds: i
     finished_at = time.time()
     combined_output = completed.stdout + completed.stderr
     return {
-        "label": label,
+        "iteration": iteration,
         "command": command,
         "exit_code": completed.returncode,
         "elapsed_seconds": round(finished_at - started_at, 3),
@@ -139,11 +148,15 @@ def main() -> int:
     seed = env_str("VLLM_SEED", "123")
     num_shards = env_str("VLLM_NUM_SHARDS", "1")
     timeout_seconds = int(env_str("VLLM_TIMEOUT_SECONDS", "60"))
+    iterations = int(env_str("VLLM_RECOVERY_ITERATIONS", "3"))
     build_features = env_str("VLLM_BUILD_FEATURES", "cuda,myelon")
     if "VLLM_BUILD_FEATURES" not in os.environ:
         build_features = default_build_features()
     output_path = Path(
-        env_str("VLLM_AB_REPORT_OUT", str(repo_root / "target" / "myelon_ab_report.json"))
+        env_str(
+            "VLLM_RECOVERY_REPORT_OUT",
+            str(repo_root / "target" / "myelon_recovery_report.json"),
+        )
     )
 
     if not Path(model_path).is_dir():
@@ -160,24 +173,30 @@ def main() -> int:
         check=True,
     )
 
-    cases = [
-        ("direct", ["--num-shards", num_shards]),
-        ("runner", ["--num-shards", num_shards, "--force-runner"]),
-        ("myelon", ["--num-shards", num_shards, "--myelon-ipc"]),
-    ]
+    command = build_command(
+        repo_root,
+        model_path,
+        prompt,
+        max_model_len,
+        max_tokens,
+        seed,
+        num_shards,
+    )
 
     results = []
-    for label, extra_args in cases:
-        command = build_command(
-            repo_root,
-            model_path,
-            prompt,
-            max_model_len,
-            max_tokens,
-            seed,
-            extra_args,
-        )
-        results.append(run_case(repo_root, label, command, timeout_seconds))
+    for iteration in range(1, iterations + 1):
+        results.append(run_once(repo_root, iteration, command, timeout_seconds))
+
+    first_response = results[0]["metrics"]["response"] if results else None
+    all_responses_match = all(
+        result["metrics"]["response"] == first_response for result in results
+    )
+    all_myelon_enabled = all(
+        result["metrics"]["myelon_enabled"] for result in results
+    )
+    all_process_mode = all(
+        result["metrics"]["runner_mode"] == "process" for result in results
+    )
 
     report = {
         "model_path": model_path,
@@ -186,14 +205,13 @@ def main() -> int:
         "max_tokens": int(max_tokens),
         "seed": int(seed),
         "num_shards": int(num_shards),
+        "iterations": iterations,
         "build_features": build_features,
+        "all_responses_match": all_responses_match,
+        "all_myelon_enabled": all_myelon_enabled,
+        "all_process_mode": all_process_mode,
         "results": results,
     }
-
-    direct_response = results[0]["metrics"]["response"]
-    report["all_responses_match"] = all(
-        result["metrics"]["response"] == direct_response for result in results
-    )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
@@ -201,8 +219,10 @@ def main() -> int:
 
     if any(result["exit_code"] != 0 for result in results):
         return 1
-    if not report["all_responses_match"]:
+    if not all_responses_match:
         return 2
+    if not all_myelon_enabled or not all_process_mode:
+        return 3
     return 0
 
 
