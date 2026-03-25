@@ -118,6 +118,7 @@ def main() -> int:
     max_model_len = env_str("VLLM_MAX_MODEL_LEN", "256")
     max_tokens = env_str("VLLM_MAX_TOKENS", "4")
     seed = env_str("VLLM_SEED", "123")
+    num_shards = env_str("VLLM_NUM_SHARDS", "1")
     timeout_seconds = int(env_str("VLLM_TIMEOUT_SECONDS", "60"))
     build_features = env_str("VLLM_BUILD_FEATURES", "cuda,myelon")
     if "VLLM_BUILD_FEATURES" not in os.environ:
@@ -141,9 +142,9 @@ def main() -> int:
     )
 
     cases = [
-        ("direct", []),
-        ("runner", ["--force-runner"]),
-        ("myelon", ["--myelon-ipc"]),
+        ("direct", ["--num-shards", num_shards]),
+        ("runner", ["--num-shards", num_shards, "--force-runner"]),
+        ("myelon", ["--num-shards", num_shards, "--myelon-ipc"]),
     ]
 
     results = []
@@ -165,6 +166,7 @@ def main() -> int:
         "max_model_len": int(max_model_len),
         "max_tokens": int(max_tokens),
         "seed": int(seed),
+        "num_shards": int(num_shards),
         "build_features": build_features,
         "results": results,
     }

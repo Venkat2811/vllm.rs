@@ -1888,12 +1888,80 @@ pub fn get_dtype(dtype: Option<String>) -> DType {
     dtype
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct RunnerTopologyDecision {
+    device_ids: Vec<usize>,
+    num_shards: usize,
+    use_runner: bool,
+    reason: &'static str,
+}
+
+fn resolve_runner_topology(econfig: &EngineConfig) -> Result<RunnerTopologyDecision> {
+    let mut device_ids = econfig.device_ids.clone().unwrap_or_default();
+    let requested_num_shards = econfig.num_shards.unwrap_or(device_ids.len().max(1));
+
+    if requested_num_shards == 0 {
+        candle_core::bail!("EngineConfig.num_shards must be at least 1");
+    }
+
+    if device_ids.is_empty() {
+        if requested_num_shards == 1 {
+            device_ids.push(0);
+        } else {
+            device_ids.extend(0..requested_num_shards);
+        }
+    }
+
+    if device_ids.len() != requested_num_shards {
+        candle_core::bail!(
+            "Topology mismatch: num_shards={} but device_ids={:?} (len={})",
+            requested_num_shards,
+            device_ids,
+            device_ids.len()
+        );
+    }
+
+    let force_runner = econfig.force_runner.unwrap_or(false);
+
+    #[cfg(feature = "nccl")]
+    let use_runner = true;
+    #[cfg(feature = "nccl")]
+    let reason = if force_runner {
+        "forced_runner"
+    } else if requested_num_shards > 1 {
+        "multi_shard_runner"
+    } else {
+        "nccl_runner_default"
+    };
+
+    #[cfg(not(feature = "nccl"))]
+    let use_runner = force_runner || requested_num_shards > 1;
+    #[cfg(not(feature = "nccl"))]
+    let reason = if force_runner {
+        "forced_runner"
+    } else if requested_num_shards > 1 {
+        candle_core::bail!(
+            "num_shards={} requires the `nccl` feature; use num_shards=1 or rebuild with `nccl`",
+            requested_num_shards
+        );
+    } else {
+        "single_shard_direct"
+    };
+
+    Ok(RunnerTopologyDecision {
+        device_ids,
+        num_shards: requested_num_shards,
+        use_runner,
+        reason,
+    })
+}
+
 pub fn prepare_engine_config(
     econfig: &EngineConfig,
     config: &Config,
     config_tokenizer: &TokenizerConfig,
     generation_cfg: &mut Option<GenerationConfig>,
-) -> (EngineConfig, bool) {
+) -> Result<(EngineConfig, bool)> {
     let mut econfig = econfig.clone();
 
     let config_model_len = resolve_config_model_len(config, config_tokenizer);
@@ -1935,38 +2003,22 @@ pub fn prepare_engine_config(
         }
     }
 
-    let mut device_ids = econfig.device_ids.clone().unwrap_or_default();
-    if device_ids.is_empty() {
-        device_ids.push(0);
-    }
-    let num_shards = device_ids.len();
-    let force_runner = econfig.force_runner.unwrap_or(false);
-    econfig.device_ids = Some(device_ids);
-    econfig.num_shards = Some(num_shards);
-
-    #[cfg(not(feature = "nccl"))]
-    assert!(
-        num_shards == 1,
-        "Multi-rank inference is only available when `nccl` feature is enabled!"
-    );
-
-    #[cfg(feature = "nccl")]
-    let use_runner = true;
-
-    #[cfg(not(feature = "nccl"))]
-    assert!(
-        num_shards == 1,
-        "Multi-gpu inference is only available when `cuda` and `nccl` features enabled!"
-    );
-    #[cfg(not(feature = "nccl"))]
-    let use_runner = force_runner || num_shards > 1;
+    let topology = resolve_runner_topology(&econfig)?;
+    econfig.device_ids = Some(topology.device_ids.clone());
+    econfig.num_shards = Some(topology.num_shards);
 
     crate::log_warn!(
-        "Check use_runner {:?} (force_runner={:?})",
-        use_runner,
-        force_runner
+        "Runner topology mode={} reason={} num_shards={} device_ids={:?}",
+        if topology.use_runner {
+            "process"
+        } else {
+            "direct"
+        },
+        topology.reason,
+        topology.num_shards,
+        topology.device_ids
     );
-    (econfig, use_runner)
+    Ok((econfig, topology.use_runner))
 }
 
 pub fn get_llama4_attn_scale(
@@ -2116,7 +2168,8 @@ pub fn log_throughput(outputs: &[GenerationOutput]) {
 
 #[cfg(test)]
 mod tests {
-    use super::{get_arch_rope, ModelType};
+    use super::{get_arch_rope, resolve_runner_topology, ModelType};
+    use crate::utils::config::EngineConfig;
     use tokenizers::{models::bpe::BPE, Tokenizer};
 
     fn empty_tokenizer() -> Tokenizer {
@@ -2146,6 +2199,94 @@ mod tests {
         let (model_type, _, is_rope_i) = get_arch_rope(&tokenizer, "qwen3vl".to_string()).unwrap();
         assert!(matches!(model_type, ModelType::Qwen3VL));
         assert!(!is_rope_i);
+    }
+
+    fn test_engine_config() -> EngineConfig {
+        EngineConfig::new(
+            None,
+            Some("/tmp/model".to_string()),
+            None,
+            None,
+            None,
+            None,
+            Some(1),
+            None,
+            Some(128),
+            Some(8),
+            None,
+            Some(1),
+            Some(vec![0]),
+            Some(false),
+            Some(false),
+            None,
+            Some(123),
+            Some(false),
+            None,
+            Some(false),
+            Some(false),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
+    #[test]
+    fn topology_defaults_to_direct_single_device() {
+        let decision = resolve_runner_topology(&test_engine_config()).unwrap();
+        assert_eq!(decision.device_ids, vec![0]);
+        assert_eq!(decision.num_shards, 1);
+        assert!(!decision.use_runner);
+        assert_eq!(decision.reason, "single_shard_direct");
+    }
+
+    #[test]
+    fn topology_respects_forced_runner() {
+        let mut econfig = test_engine_config();
+        econfig.force_runner = Some(true);
+
+        let decision = resolve_runner_topology(&econfig).unwrap();
+        assert_eq!(decision.device_ids, vec![0]);
+        assert_eq!(decision.num_shards, 1);
+        assert!(decision.use_runner);
+        assert_eq!(decision.reason, "forced_runner");
+    }
+
+    #[test]
+    fn topology_rejects_mismatched_shards_and_devices() {
+        let mut econfig = test_engine_config();
+        econfig.num_shards = Some(2);
+        econfig.device_ids = Some(vec![0]);
+
+        let error = resolve_runner_topology(&econfig).unwrap_err().to_string();
+        assert!(error.contains("Topology mismatch"));
+    }
+
+    #[test]
+    fn topology_rejects_zero_shards() {
+        let mut econfig = test_engine_config();
+        econfig.num_shards = Some(0);
+        econfig.device_ids = Some(vec![]);
+
+        let error = resolve_runner_topology(&econfig).unwrap_err().to_string();
+        assert!(error.contains("must be at least 1"));
+    }
+
+    #[cfg(not(feature = "nccl"))]
+    #[test]
+    fn topology_rejects_multi_shard_without_nccl() {
+        let mut econfig = test_engine_config();
+        econfig.num_shards = Some(2);
+        econfig.device_ids = Some(vec![0, 1]);
+
+        let error = resolve_runner_topology(&econfig).unwrap_err().to_string();
+        assert!(error.contains("requires the `nccl` feature"));
     }
 }
 

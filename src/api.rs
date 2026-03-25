@@ -35,7 +35,10 @@ pub struct EngineBuilder {
     pd_server_prefix_cache_ratio: Option<f32>,
     pd_client_prefix_cache_ratio: Option<f32>,
     yarn_scaling_factor: Option<f64>,
+    num_shards: Option<usize>,
     device_ids: Option<Vec<usize>>,
+    force_runner: Option<bool>,
+    myelon_ipc: Option<bool>,
 }
 
 impl EngineBuilder {
@@ -52,7 +55,10 @@ impl EngineBuilder {
             pd_server_prefix_cache_ratio: None,
             pd_client_prefix_cache_ratio: None,
             yarn_scaling_factor: None,
+            num_shards: None,
             device_ids: None,
+            force_runner: None,
+            myelon_ipc: None,
         }
     }
 
@@ -102,6 +108,17 @@ impl EngineBuilder {
     }
 
     pub fn with_yarn_scaling_factor(mut self, factor: f64) -> Self {
+    pub fn with_num_shards(mut self, num_shards: usize) -> Self {
+        self.num_shards = Some(num_shards);
+        self
+    }
+
+    pub fn with_device_ids(mut self, device_ids: Vec<usize>) -> Self {
+        self.device_ids = Some(device_ids);
+        self
+    }
+
+    pub fn with_yarn_scaling_factor(mut self, factor: f64) -> Self {
         self.yarn_scaling_factor = Some(factor);
         self
     }
@@ -109,6 +126,16 @@ impl EngineBuilder {
     pub fn with_multirank(mut self, device_ids: &str) -> Result<Self> {
         self.device_ids = Some(parse_device_ids(device_ids)?);
         Ok(self)
+    }
+
+    pub fn with_force_runner(mut self, enabled: bool) -> Self {
+        self.force_runner = Some(enabled);
+        self
+    }
+
+    pub fn with_myelon_ipc(mut self, enabled: bool) -> Self {
+        self.myelon_ipc = Some(enabled);
+        self
     }
 
     pub fn build(self) -> Result<Engine> {
@@ -128,6 +155,7 @@ impl EngineBuilder {
             }
         };
 
+        let force_runner = self.force_runner.unwrap_or(false) || self.myelon_ipc.unwrap_or(false);
         let econfig = EngineConfig::new(
             model_id,
             weight_path,
@@ -140,10 +168,10 @@ impl EngineBuilder {
             None,
             None,
             self.isq,
-            Some(self.device_ids.clone().unwrap_or(vec![0]).len()),
+            self.num_shards,
             self.device_ids.clone(),
-            Some(false),
-            Some(false),
+            Some(force_runner),
+            self.myelon_ipc,
             None,
             None,
             self.prefix_cache,
