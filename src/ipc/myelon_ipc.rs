@@ -1,19 +1,16 @@
 use anyhow::{Context, Result};
 use myelon_playground::{
     attach_shared_consumer, build_shared_single_producer, ensure_coordination_cursor,
-    SharedConsumer, SharedProducer,
+    publish_framed_payload, recv_framed_message, FrameMeta, SharedConsumer, SharedProducer,
 };
 pub use myelon_playground::{
     MyelonTransportLayout, MyelonWaitStrategy, RunnerMyelonTransportConfig,
 };
-use std::sync::atomic::{AtomicU32, Ordering};
 
 pub const RPC_FRAME_HEADER_BYTES: usize = 12;
 pub const RESPONSE_FRAME_HEADER_BYTES: usize = 12;
 pub const RPC_FRAME_DATA_BYTES: usize = 64 * 1024 - RPC_FRAME_HEADER_BYTES;
 pub const RESPONSE_FRAME_DATA_BYTES: usize = 4 * 1024 - RESPONSE_FRAME_HEADER_BYTES;
-
-static NEXT_MESSAGE_ID: AtomicU32 = AtomicU32::new(1);
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -91,9 +88,9 @@ impl RpcBroadcastProducer {
     }
 
     pub fn publish(&mut self, payload: &[u8], kind: MsgKind) {
-        publish_frames(
+        publish_framed_payload(
             payload,
-            kind,
+            kind.as_u8(),
             RPC_FRAME_DATA_BYTES,
             |frame| self.inner.publish(|slot| *slot = frame),
             make_rpc_frame,
@@ -118,8 +115,7 @@ impl RpcBroadcastConsumer {
     }
 
     pub fn recv_message_blocking(&mut self) -> (u8, Vec<u8>) {
-        recv_message_blocking(
-            self.wait_strategy,
+        recv_framed_message(
             || match self.wait_strategy {
                 MyelonWaitStrategy::BusySpin => self.inner.consume_next(),
                 MyelonWaitStrategy::Block => self.inner.consume_next_with_sleep(),
@@ -149,9 +145,9 @@ impl ResponseProducer {
     }
 
     pub fn send(&mut self, payload: &[u8], kind: MsgKind) {
-        publish_frames(
+        publish_framed_payload(
             payload,
-            kind,
+            kind.as_u8(),
             RESPONSE_FRAME_DATA_BYTES,
             |frame| self.inner.publish(|slot| *slot = frame),
             make_response_frame,
@@ -176,8 +172,7 @@ impl ResponseConsumer {
     }
 
     pub fn recv_message_blocking(&mut self) -> (u8, Vec<u8>) {
-        recv_message_blocking(
-            self.wait_strategy,
+        recv_framed_message(
             || match self.wait_strategy {
                 MyelonWaitStrategy::BusySpin => self.inner.consume_next(),
                 MyelonWaitStrategy::Block => self.inner.consume_next_with_sleep(),
@@ -193,120 +188,30 @@ impl ResponseConsumer {
     }
 }
 
-#[derive(Clone, Copy)]
-struct FrameMeta<'a> {
-    len: usize,
-    kind: u8,
-    flags: u8,
-    msg_id: u32,
-    data: &'a [u8],
-}
-
-fn recv_message_blocking<F, T, M>(
-    _wait_strategy: MyelonWaitStrategy,
-    mut next_frame: F,
-    mut meta: M,
-) -> (u8, Vec<u8>)
-where
-    F: FnMut() -> (i64, T),
-    M: for<'a> FnMut(&'a T) -> FrameMeta<'a>,
-{
-    let (_, first_frame) = next_frame();
-    let first = meta(&first_frame);
-    if is_single_frame(first.flags) {
-        return (first.kind, first.data.to_vec());
-    }
-
-    let mut payload = Vec::with_capacity(first.len.max(1024));
-    payload.extend_from_slice(first.data);
-    let msg_id = first.msg_id;
-    let kind = first.kind;
-
-    if is_last_frame(first.flags) {
-        return (kind, payload);
-    }
-
-    loop {
-        let (_, frame) = next_frame();
-        let frame = meta(&frame);
-        if frame.msg_id != msg_id {
-            continue;
-        }
-        payload.extend_from_slice(frame.data);
-        if is_last_frame(frame.flags) {
-            return (kind, payload);
-        }
-    }
-}
-
-fn publish_frames<T, P, W>(
-    payload: &[u8],
-    kind: MsgKind,
-    chunk_size: usize,
-    mut write_frame: W,
-    mut make_frame: P,
-) where
-    T: Copy,
-    P: FnMut(&[u8], MsgKind, u32, u8) -> T,
-    W: FnMut(T),
-{
-    let msg_id = NEXT_MESSAGE_ID.fetch_add(1, Ordering::Relaxed);
-    if payload.is_empty() {
-        let frame = make_frame(payload, kind, msg_id, frame_flags(true, true));
-        write_frame(frame);
-        return;
-    }
-
-    for (index, chunk) in payload.chunks(chunk_size).enumerate() {
-        let last = (index + 1) * chunk_size >= payload.len();
-        let flags = frame_flags(index == 0, last);
-        let frame = make_frame(chunk, kind, msg_id, flags);
-        write_frame(frame);
-    }
-}
-
-fn make_rpc_frame(payload: &[u8], kind: MsgKind, msg_id: u32, flags: u8) -> RpcFrame {
+fn make_rpc_frame(payload: &[u8], kind: u8, msg_id: u32, flags: u8) -> RpcFrame {
     let mut frame = RpcFrame::default();
     frame.len = payload.len() as u32;
-    frame.kind = kind.as_u8();
+    frame.kind = kind;
     frame.flags = flags;
     frame.msg_id = msg_id;
     frame.data[..payload.len()].copy_from_slice(payload);
     frame
 }
 
-fn make_response_frame(payload: &[u8], kind: MsgKind, msg_id: u32, flags: u8) -> ResponseFrame {
+fn make_response_frame(payload: &[u8], kind: u8, msg_id: u32, flags: u8) -> ResponseFrame {
     let mut frame = ResponseFrame::default();
     frame.len = payload.len() as u32;
-    frame.kind = kind.as_u8();
+    frame.kind = kind;
     frame.flags = flags;
     frame.msg_id = msg_id;
     frame.data[..payload.len()].copy_from_slice(payload);
     frame
-}
-
-fn frame_flags(is_first: bool, is_last: bool) -> u8 {
-    let mut flags = 0u8;
-    if is_first {
-        flags |= 0b01;
-    }
-    if is_last {
-        flags |= 0b10;
-    }
-    flags
-}
-
-fn is_single_frame(flags: u8) -> bool {
-    flags & 0b11 == 0b11
-}
-
-fn is_last_frame(flags: u8) -> bool {
-    flags & 0b10 != 0
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use myelon_playground::frame_flags;
 
     #[test]
     fn segmented_frame_flags_mark_boundaries() {
@@ -321,9 +226,9 @@ mod tests {
         let payload = vec![7u8; RPC_FRAME_DATA_BYTES * 2 + 17];
         let mut frames = Vec::new();
 
-        publish_frames(
+        publish_framed_payload(
             &payload,
-            MsgKind::RunDecode,
+            MsgKind::RunDecode.as_u8(),
             RPC_FRAME_DATA_BYTES,
             |frame| frames.push(frame),
             make_rpc_frame,
