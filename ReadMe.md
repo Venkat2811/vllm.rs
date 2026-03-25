@@ -410,15 +410,18 @@ visible GPU count instead of deferring that mismatch to a later runtime failure.
 For repeated Myelon restart / stale-handle validation on the same host, use:
 
 ```bash
+VLLM_RECOVERY_MODE=myelon \
 VLLM_RECOVERY_ITERATIONS=3 \
 VLLM_RECOVERY_REPORT_OUT=/tmp/myelon_recovery_report.json \
 ./scripts/run_myelon_recovery_report.py
 ```
 
-It repeatedly runs the Myelon path on a fresh process, records topology metadata in the JSON
-artifact, and fails if any run exits non-zero, skips the Myelon hot path, or produces a divergent
-response. On CUDA hosts it uses the same fail-fast topology preflight as the A/B script, so
-unsupported multi-shard requests are rejected before the recovery loop starts.
+`VLLM_RECOVERY_MODE` accepts `direct`, `runner`, or `myelon`. The script repeatedly runs the
+selected path on a fresh process, records topology metadata in the JSON artifact, and fails if any
+run exits non-zero, diverges in response, or does not match the expected topology for that mode.
+On CUDA hosts it uses the same fail-fast topology preflight as the A/B script, so unsupported
+multi-shard requests are rejected before the recovery loop starts. `VLLM_RECOVERY_MODE=direct`
+requires `VLLM_NUM_SHARDS=1`.
 
 ---
 
