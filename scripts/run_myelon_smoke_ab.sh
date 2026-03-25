@@ -65,6 +65,11 @@ run_case() {
     timeout "${timeout_seconds}" ./target/debug/vllm-rs "${common_args[@]}" "$@"
 }
 
-run_case "direct path"
+if [[ "${num_shards}" == "1" ]]; then
+    run_case "direct path"
+else
+    echo
+    echo "==> direct path skipped for num_shards=${num_shards}"
+fi
 run_case "forced subprocess runner" --force-runner
 run_case "forced subprocess runner with Myelon IPC" --myelon-ipc
