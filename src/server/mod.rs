@@ -1530,6 +1530,7 @@ pub async fn run_server(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clap::Parser;
 
     #[test]
     fn build_messages_without_images() {
@@ -1991,5 +1992,56 @@ mod tests {
 
         assert_eq!(params.thinking, Some(false));
         assert_eq!(params.reasoning_effort, None);
+    }
+
+    #[test]
+    fn test_args_parse_explicit_topology_controls() {
+        let args = Args::try_parse_from([
+            "vllm-rs",
+            "--w",
+            "/tmp/model",
+            "--num-shards",
+            "2",
+            "--device-ids",
+            "4,5",
+            "--force-runner",
+            "--myelon-ipc",
+            "--myelon-rpc-depth",
+            "64",
+            "--myelon-response-depth",
+            "32",
+            "--myelon-busy-spin",
+        ])
+        .expect("topology flags should parse");
+
+        assert_eq!(args.num_shards, Some(2));
+        assert_eq!(args.device_ids, Some(vec![4, 5]));
+        assert!(args.force_runner);
+        assert!(args.myelon_ipc);
+        assert_eq!(args.myelon_rpc_depth, Some(64));
+        assert_eq!(args.myelon_response_depth, Some(32));
+        assert!(args.myelon_busy_spin);
+    }
+
+    #[test]
+    fn test_args_parse_short_device_alias() {
+        let args = Args::try_parse_from(["vllm-rs", "--w", "/tmp/model", "-d", "0,1"])
+            .expect("short device alias should parse");
+
+        assert_eq!(args.device_ids, Some(vec![0, 1]));
+        assert_eq!(args.num_shards, None);
+    }
+
+    #[test]
+    fn test_args_reject_empty_device_id_entries() {
+        let result = Args::try_parse_from([
+            "vllm-rs",
+            "--w",
+            "/tmp/model",
+            "--device-ids",
+            "0,,1",
+        ]);
+
+        assert!(result.is_err());
     }
 }
