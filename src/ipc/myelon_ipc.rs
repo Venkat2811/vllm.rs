@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use myelon_playground::lock_free::SharedCursor;
 use myelon_playground::{
     attach_shared_consumer, build_shared_single_producer, ensure_coordination_cursor,
     publish_framed_payload, recv_framed_message, FrameMeta, SharedConsumer, SharedProducer,
@@ -75,16 +76,20 @@ impl MsgKind {
 }
 
 pub struct RpcBroadcastProducer {
+    _coordination_cursor: SharedCursor,
     inner: SharedProducer<RpcFrame>,
 }
 
 impl RpcBroadcastProducer {
     pub fn create(name: &str, depth: usize) -> Result<Self> {
-        let _coordination_cursor = ensure_coordination_cursor(name)?;
+        let coordination_cursor = ensure_coordination_cursor(name)?;
         let inner = build_shared_single_producer::<RpcFrame>(name, depth)
             .build_producer(RpcFrame::default)
             .with_context(|| format!("failed to create rpc ring '{name}'"))?;
-        Ok(Self { inner })
+        Ok(Self {
+            _coordination_cursor: coordination_cursor,
+            inner,
+        })
     }
 
     pub fn publish(&mut self, payload: &[u8], kind: MsgKind) {
@@ -132,16 +137,20 @@ impl RpcBroadcastConsumer {
 }
 
 pub struct ResponseProducer {
+    _coordination_cursor: SharedCursor,
     inner: SharedProducer<ResponseFrame>,
 }
 
 impl ResponseProducer {
     pub fn create(name: &str, depth: usize) -> Result<Self> {
-        let _coordination_cursor = ensure_coordination_cursor(name)?;
+        let coordination_cursor = ensure_coordination_cursor(name)?;
         let inner = build_shared_single_producer::<ResponseFrame>(name, depth)
             .build_producer(ResponseFrame::default)
             .with_context(|| format!("failed to create response ring '{name}'"))?;
-        Ok(Self { inner })
+        Ok(Self {
+            _coordination_cursor: coordination_cursor,
+            inner,
+        })
     }
 
     pub fn send(&mut self, payload: &[u8], kind: MsgKind) {
@@ -211,7 +220,21 @@ fn make_response_frame(payload: &[u8], kind: u8, msg_id: u32, flags: u8) -> Resp
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use myelon_playground::frame_flags;
+
+    static UNIQUE_SUFFIX: AtomicU64 = AtomicU64::new(0);
+
+    fn unique_ring_name(prefix: &str) -> String {
+        let counter = UNIQUE_SUFFIX.fetch_add(1, Ordering::Relaxed);
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock should be valid")
+            .as_nanos();
+        format!("{prefix}{counter:x}{nanos:x}")
+    }
 
     #[test]
     fn segmented_frame_flags_mark_boundaries() {
@@ -241,5 +264,28 @@ mod tests {
         assert_eq!(frames[0].kind, MsgKind::RunDecode.as_u8());
         assert_eq!(frames[0].msg_id, frames[1].msg_id);
         assert_eq!(frames[1].msg_id, frames[2].msg_id);
+    }
+
+    #[test]
+    fn rpc_consumer_sees_coordination_cursor_while_producer_lives() {
+        let ring_name = unique_ring_name("vmyrpc");
+        let producer = RpcBroadcastProducer::create(&ring_name, 8).unwrap();
+        let consumer =
+            RpcBroadcastConsumer::attach(&ring_name, 8, MyelonWaitStrategy::Block).unwrap();
+
+        assert!(consumer.inner.has_coordination_support());
+
+        drop(producer);
+    }
+
+    #[test]
+    fn response_consumer_sees_coordination_cursor_while_producer_lives() {
+        let ring_name = unique_ring_name("vmyrsp");
+        let producer = ResponseProducer::create(&ring_name, 8).unwrap();
+        let consumer = ResponseConsumer::attach(&ring_name, 8, MyelonWaitStrategy::Block).unwrap();
+
+        assert!(consumer.inner.has_coordination_support());
+
+        drop(producer);
     }
 }
