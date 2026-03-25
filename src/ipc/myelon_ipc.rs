@@ -1,10 +1,18 @@
 use anyhow::{Context, Result};
+use candle_core::Result as CandleResult;
+use interprocess::local_socket::Stream as LocalStream;
+use interprocess::TryClone;
 use myelon_playground::transport::{
     FramedTransportConsumer, FramedTransportFrame, FramedTransportProducer,
 };
 pub use myelon_playground::{
     FrameMeta, MyelonTransportLayout, MyelonWaitStrategy, RunnerMyelonTransportConfig,
 };
+use serde::Serialize;
+
+use crate::core::sequence::{DecodeSequence, Sequence};
+use crate::log_info;
+use crate::runner::{receive_local, send_local, MessageType};
 
 pub const RPC_FRAME_HEADER_BYTES: usize = 12;
 pub const RESPONSE_FRAME_HEADER_BYTES: usize = 12;
@@ -121,6 +129,48 @@ impl MsgKind {
     }
 }
 
+const MYELON_RPC_DEPTH: usize = 1024;
+const MYELON_RESPONSE_DEPTH: usize = 256;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ResolvedMyelonTransportConfig {
+    pub rpc_depth: usize,
+    pub response_depth: usize,
+    pub wait_strategy: MyelonWaitStrategy,
+}
+
+fn myelon_to_candle<E: std::fmt::Display>(error: E) -> candle_core::Error {
+    candle_core::Error::Msg(error.to_string())
+}
+
+pub fn resolve_myelon_transport_config(
+    rpc_depth: Option<usize>,
+    response_depth: Option<usize>,
+    busy_spin: Option<bool>,
+) -> CandleResult<ResolvedMyelonTransportConfig> {
+    let rpc_depth = rpc_depth.unwrap_or(MYELON_RPC_DEPTH);
+    if rpc_depth == 0 {
+        candle_core::bail!("myelon_rpc_depth must be greater than zero");
+    }
+
+    let response_depth = response_depth.unwrap_or(MYELON_RESPONSE_DEPTH);
+    if response_depth == 0 {
+        candle_core::bail!("myelon_response_depth must be greater than zero");
+    }
+
+    let wait_strategy = if busy_spin.unwrap_or(false) {
+        MyelonWaitStrategy::BusySpin
+    } else {
+        MyelonWaitStrategy::Block
+    };
+
+    Ok(ResolvedMyelonTransportConfig {
+        rpc_depth,
+        response_depth,
+        wait_strategy,
+    })
+}
+
 pub struct RpcBroadcastProducer {
     inner: FramedTransportProducer<RpcFrame>,
 }
@@ -190,6 +240,144 @@ impl ResponseConsumer {
 
     pub fn recv_message_blocking(&mut self) -> (u8, Vec<u8>) {
         self.inner.recv_message_blocking()
+    }
+}
+
+pub struct MyelonEngineTransport {
+    rpc_producer: RpcBroadcastProducer,
+    response_consumers: Vec<ResponseConsumer>,
+    logged_first_request: bool,
+    logged_first_response: bool,
+}
+
+impl MyelonEngineTransport {
+    pub fn attach(
+        runner_streams: &mut [LocalStream],
+        session_label: &str,
+        transport_config: ResolvedMyelonTransportConfig,
+    ) -> CandleResult<Self> {
+        let layout = MyelonTransportLayout::for_session(
+            session_label,
+            runner_streams.len(),
+            transport_config.rpc_depth,
+            transport_config.response_depth,
+        )
+        .map_err(myelon_to_candle)?;
+        let rpc_producer = RpcBroadcastProducer::create(layout.rpc_ring_name(), layout.rpc_depth())
+            .map_err(myelon_to_candle)?;
+
+        for (rank, stream) in runner_streams.iter_mut().enumerate() {
+            let config = RunnerMyelonTransportConfig::for_rank(
+                &layout,
+                rank,
+                transport_config.wait_strategy,
+            )
+            .map_err(myelon_to_candle)?;
+            send_local(
+                &mut vec![stream.try_clone()?],
+                &MessageType::InitMyelonTransport(config),
+                false,
+            )?;
+            match receive_local(stream, false)? {
+                MessageType::MyelonReady => {}
+                other => {
+                    candle_core::bail!("runner {} failed Myelon handoff: {:?}", rank, other);
+                }
+            }
+        }
+
+        let mut response_consumers = Vec::with_capacity(layout.runner_count());
+        for rank in 0..layout.runner_count() {
+            let response_ring_name = layout.response_ring_name(rank).map_err(myelon_to_candle)?;
+            let consumer = ResponseConsumer::attach(
+                response_ring_name,
+                layout.response_depth(),
+                transport_config.wait_strategy,
+            )
+            .map_err(myelon_to_candle)?;
+            response_consumers.push(consumer);
+        }
+
+        Ok(Self {
+            rpc_producer,
+            response_consumers,
+            logged_first_request: false,
+            logged_first_response: false,
+        })
+    }
+
+    pub fn run_prefill(&mut self, sequences: Vec<Sequence>) -> CandleResult<Vec<u32>> {
+        self.publish_and_collect(&(sequences, true), MsgKind::RunPrefill)
+    }
+
+    pub fn run_decode(&mut self, sequences: Vec<DecodeSequence>) -> CandleResult<Vec<u32>> {
+        self.publish_and_collect(&(sequences, false), MsgKind::RunDecode)
+    }
+
+    pub fn finish_decode(&mut self, sequence_id: usize) -> CandleResult<()> {
+        self.publish_only(&sequence_id, MsgKind::FinishDecode)
+    }
+
+    pub fn shutdown(&mut self) {
+        self.rpc_producer.publish(&[], MsgKind::Shutdown);
+    }
+
+    fn publish_only<T: Serialize>(&mut self, payload: &T, kind: MsgKind) -> CandleResult<()> {
+        let bytes = bincode::serialize(payload).map_err(myelon_to_candle)?;
+        if !self.logged_first_request {
+            log_info!(
+                "Dispatching first Myelon request kind={} bytes={}.",
+                kind.as_u8(),
+                bytes.len()
+            );
+            self.logged_first_request = true;
+        }
+        self.rpc_producer.publish(&bytes, kind);
+        Ok(())
+    }
+
+    fn publish_and_collect<T: Serialize>(
+        &mut self,
+        payload: &T,
+        kind: MsgKind,
+    ) -> CandleResult<Vec<u32>> {
+        self.publish_only(payload, kind)?;
+        self.collect_outputs()
+    }
+
+    fn collect_outputs(&mut self) -> CandleResult<Vec<u32>> {
+        let mut first_output: Option<Vec<u32>> = None;
+
+        for consumer in &mut self.response_consumers {
+            let (kind, payload) = consumer.recv_message_blocking();
+            if !self.logged_first_response {
+                log_info!(
+                    "Received first Myelon response kind={} bytes={}.",
+                    kind,
+                    payload.len()
+                );
+                self.logged_first_response = true;
+            }
+            if kind == MsgKind::RunResponse.as_u8() {
+                let output_ids: Vec<u32> =
+                    bincode::deserialize(&payload).map_err(myelon_to_candle)?;
+                if let Some(expected) = &first_output {
+                    if expected != &output_ids {
+                        candle_core::bail!("Myelon runner outputs diverged across ranks");
+                    }
+                } else {
+                    first_output = Some(output_ids);
+                }
+            } else if kind == MsgKind::Error.as_u8() {
+                let error = String::from_utf8_lossy(&payload);
+                candle_core::bail!("runner Myelon error: {}", error);
+            } else {
+                candle_core::bail!("unexpected Myelon response kind {}", kind);
+            }
+        }
+
+        first_output
+            .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))
     }
 }
 
