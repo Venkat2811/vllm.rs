@@ -42,8 +42,9 @@ def build_command(
     max_tokens: str,
     seed: str,
     num_shards: str,
+    device_ids: str | None,
 ) -> list[str]:
-    return [
+    command = [
         str(repo_root / "target" / "debug" / "vllm-rs"),
         "--w",
         model_path,
@@ -63,6 +64,9 @@ def build_command(
         num_shards,
         "--myelon-ipc",
     ]
+    if device_ids:
+        command.extend(["--device-ids", device_ids])
+    return command
 
 
 def parse_metrics(output: str) -> dict:
@@ -147,6 +151,7 @@ def main() -> int:
     max_tokens = env_str("VLLM_MAX_TOKENS", "4")
     seed = env_str("VLLM_SEED", "123")
     num_shards = env_str("VLLM_NUM_SHARDS", "1")
+    device_ids = os.environ.get("VLLM_DEVICE_IDS")
     timeout_seconds = int(env_str("VLLM_TIMEOUT_SECONDS", "60"))
     iterations = int(env_str("VLLM_RECOVERY_ITERATIONS", "3"))
     build_features = env_str("VLLM_BUILD_FEATURES", "cuda,myelon")
@@ -181,6 +186,7 @@ def main() -> int:
         max_tokens,
         seed,
         num_shards,
+        device_ids,
     )
 
     results = []
@@ -205,6 +211,7 @@ def main() -> int:
         "max_tokens": int(max_tokens),
         "seed": int(seed),
         "num_shards": int(num_shards),
+        "device_ids": device_ids,
         "iterations": iterations,
         "build_features": build_features,
         "all_responses_match": all_responses_match,
