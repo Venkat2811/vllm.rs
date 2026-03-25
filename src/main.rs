@@ -188,7 +188,7 @@ async fn main() -> Result<()> {
         max_model_len,
         Some(args.max_tokens),
         args.isq.clone(),
-        Some(1),
+        args.num_shards,
         args.device_ids.clone(),
         Some(force_runner),
         Some(args.myelon_ipc),
