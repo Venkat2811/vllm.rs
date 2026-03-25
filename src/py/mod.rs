@@ -328,11 +328,6 @@ impl EngineConfig {
         pd_client_prefix_cache_ratio: Option<f32>,
         yarn_scaling_factor: Option<f64>,
     ) -> Self {
-        let mut device_ids = device_ids.unwrap_or_default();
-        if device_ids.is_empty() {
-            device_ids.push(0);
-        }
-
         Self {
             model_id,
             weight_path,
@@ -356,7 +351,7 @@ impl EngineConfig {
             max_tokens,
             isq,
             num_shards,
-            device_ids: Some(device_ids),
+            device_ids,
             force_runner,
             myelon_ipc,
             myelon_rpc_depth,
@@ -377,6 +372,99 @@ impl EngineConfig {
             pd_client_prefix_cache_ratio,
             yarn_scaling_factor,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::EngineConfig;
+
+    #[test]
+    fn python_engine_config_preserves_implicit_device_resolution() {
+        let config = EngineConfig::new(
+            None,
+            Some("/tmp/model".to_string()),
+            None,
+            None,
+            None,
+            None,
+            Some(32),
+            None,
+            Some(1024),
+            None,
+            None,
+            Some(2),
+            None,
+            Some(false),
+            Some(false),
+            None,
+            None,
+            Some(false),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        assert_eq!(config.num_shards, Some(2));
+        assert_eq!(config.device_ids, None);
+    }
+
+    #[test]
+    fn python_engine_config_preserves_explicit_device_ids() {
+        let config = EngineConfig::new(
+            None,
+            Some("/tmp/model".to_string()),
+            None,
+            None,
+            None,
+            None,
+            Some(32),
+            None,
+            Some(1024),
+            None,
+            None,
+            Some(2),
+            Some(vec![4, 5]),
+            Some(true),
+            Some(true),
+            None,
+            None,
+            Some(false),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        assert_eq!(config.num_shards, Some(2));
+        assert_eq!(config.device_ids, Some(vec![4, 5]));
+        assert_eq!(config.force_runner, Some(true));
+        assert_eq!(config.myelon_ipc, Some(true));
     }
 }
 
