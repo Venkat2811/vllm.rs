@@ -380,6 +380,18 @@ VLLM_AB_REPORT_OUT=/tmp/myelon_ab_report.json \
 It runs the same three cases, writes a JSON report, and fails if any leg exits non-zero or if the
 responses diverge across direct, subprocess-runner, and Myelon modes.
 
+For repeated Myelon restart / stale-handle validation on the same host, use:
+
+```bash
+VLLM_RECOVERY_ITERATIONS=3 \
+VLLM_RECOVERY_REPORT_OUT=/tmp/myelon_recovery_report.json \
+./scripts/run_myelon_recovery_report.py
+```
+
+It repeatedly runs the Myelon path on a fresh process, records topology metadata in the JSON
+artifact, and fails if any run exits non-zero, skips the Myelon hot path, or produces a divergent
+response.
+
 ---
 
 ## 🔌 Guided decoding (Structured Outputs & Constraints)
