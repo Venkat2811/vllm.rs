@@ -53,6 +53,7 @@ use tokenizers::Tokenizer;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::task::JoinHandle;
 pub static GLOBAL_RT: Lazy<Runtime> = Lazy::new(|| {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -105,6 +106,7 @@ pub struct LLMEngine {
     pub tool_config: ToolConfig,
     pub img_cfg: Option<ImageProcessConfig>,
     pub guidance_tokens: GuidanceTokens,
+    engine_task: Option<JoinHandle<()>>,
 }
 
 impl LLMEngine {
@@ -524,9 +526,11 @@ impl LLMEngine {
             img_cfg,
             model_name,
             guidance_tokens,
+            engine_task: None,
         }));
 
-        Self::start_engine(engine.clone());
+        let engine_task = Self::start_engine(engine.clone());
+        engine.write().engine_task = Some(engine_task);
         Ok(engine)
     }
 
@@ -1505,6 +1509,9 @@ impl LLMEngine {
         }
 
         let _ = self.cancel_all_with_reason(Some("engine shutting down".to_string()));
+        if let Some(engine_task) = self.engine_task.take() {
+            engine_task.abort();
+        }
 
         #[cfg(feature = "myelon")]
         let had_myelon_transport = self.myelon_transport.is_some();
@@ -1777,7 +1784,7 @@ impl LLMEngine {
         Ok((outputs, prompt_tokens))
     }
 
-    pub fn start_engine(engine: Arc<RwLock<Self>>) {
+    pub fn start_engine(engine: Arc<RwLock<Self>>) -> JoinHandle<()> {
         GLOBAL_RT.spawn(async move {
             let engine = engine.clone();
             let is_pd_server = {
@@ -1829,7 +1836,7 @@ impl LLMEngine {
                 }
                 tokio::task::yield_now().await;
             }
-        });
+        })
     }
 
     pub fn get_model_info(&self) -> (bool, String, Option<usize>) {
