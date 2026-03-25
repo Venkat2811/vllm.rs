@@ -159,8 +159,8 @@ impl EngineBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Engine> {
-        let (model_id, weight_path, weight_file) = match self.repo {
+    fn resolve_repo(&self) -> (Option<String>, Option<String>, Option<String>) {
+        match self.repo.clone() {
             ModelRepo::ModelID((model_id, filename)) => (
                 Some(model_id.to_owned()),
                 None,
@@ -174,10 +174,13 @@ impl EngineBuilder {
                 let weight_file = files.into_iter().next().map(|f| f.to_owned());
                 (None, None, weight_file)
             }
-        };
+        }
+    }
 
+    fn build_engine_config(&self) -> EngineConfig {
+        let (model_id, weight_path, weight_file) = self.resolve_repo();
         let force_runner = self.force_runner.unwrap_or(false) || self.myelon_ipc.unwrap_or(false);
-        let econfig = EngineConfig::new(
+        EngineConfig::new(
             model_id,
             weight_path,
             weight_file,
@@ -188,7 +191,7 @@ impl EngineBuilder {
             None,
             None,
             None,
-            self.isq,
+            self.isq.clone(),
             self.num_shards,
             self.device_ids.clone(),
             Some(force_runner),
@@ -214,8 +217,11 @@ impl EngineBuilder {
             self.pd_client_prefix_cache_ratio,
             self.yarn_scaling_factor,
             false,
-        );
+        )
+    }
 
+    pub fn build(self) -> Result<Engine> {
+        let econfig = self.build_engine_config();
         let dtype = self.dtype.clone().map(dtype_to_str);
         let dtype = get_dtype(dtype);
 
@@ -378,14 +384,62 @@ impl EngineStream {
 }
 
 fn parse_device_ids(device_ids: &str) -> Result<Vec<usize>> {
-    device_ids
-        .split(',')
-        .filter(|s| !s.trim().is_empty())
-        .map(|s| {
-            usize::from_str(s.trim())
-                .map_err(|e| candle_core::Error::msg(format!("Invalid device id '{s}': {e}")))
-        })
-        .collect()
+    let mut parsed = Vec::new();
+    for raw in device_ids.split(',') {
+        let trimmed = raw.trim();
+        if trimmed.is_empty() {
+            candle_core::bail!("Invalid device id list '{device_ids}': empty entry");
+        }
+        let value = usize::from_str(trimmed)
+            .map_err(|e| candle_core::Error::msg(format!("Invalid device id '{raw}': {e}")))?;
+        parsed.push(value);
+    }
+    Ok(parsed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builder_enables_force_runner_when_myelon_ipc_is_set() {
+        let builder = EngineBuilder::new(ModelRepo::ModelPath("/tmp/model"))
+            .with_force_runner(false)
+            .with_myelon_ipc(true);
+
+        let econfig = builder.build_engine_config();
+        assert_eq!(econfig.myelon_ipc, Some(true));
+        assert_eq!(econfig.force_runner, Some(true));
+    }
+
+    #[test]
+    fn builder_preserves_explicit_runner_mode_without_myelon() {
+        let builder = EngineBuilder::new(ModelRepo::ModelPath("/tmp/model"))
+            .with_force_runner(true)
+            .with_myelon_ipc(false);
+
+        let econfig = builder.build_engine_config();
+        assert_eq!(econfig.myelon_ipc, Some(false));
+        assert_eq!(econfig.force_runner, Some(true));
+    }
+
+    #[test]
+    fn builder_parses_multirank_device_ids() {
+        let builder = EngineBuilder::new(ModelRepo::ModelPath("/tmp/model"))
+            .with_num_shards(2)
+            .with_multirank("0,1")
+            .unwrap();
+
+        let econfig = builder.build_engine_config();
+        assert_eq!(econfig.num_shards, Some(2));
+        assert_eq!(econfig.device_ids, Some(vec![0, 1]));
+    }
+
+    #[test]
+    fn parse_device_ids_rejects_empty_entries() {
+        let error = parse_device_ids("0,,1").unwrap_err().to_string();
+        assert!(error.contains("empty entry"));
+    }
 }
 
 fn dtype_to_str(dtype: DType) -> String {
