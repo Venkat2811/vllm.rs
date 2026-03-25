@@ -41,6 +41,80 @@ def default_build_features() -> str:
     return "cuda,myelon"
 
 
+def parse_device_ids(device_ids: str | None) -> list[int] | None:
+    if device_ids is None or device_ids.strip() == "":
+        return None
+    parsed = []
+    for raw in device_ids.split(","):
+        stripped = raw.strip()
+        if stripped == "":
+            raise ValueError(f"invalid VLLM_DEVICE_IDS value '{device_ids}': empty entry")
+        parsed.append(int(stripped))
+    return parsed
+
+
+def detect_cuda_device_count() -> int | None:
+    visible = os.environ.get("CUDA_VISIBLE_DEVICES")
+    if visible is not None and visible.strip() != "":
+        tokens = [part.strip() for part in visible.split(",") if part.strip()]
+        return len(tokens)
+
+    try:
+        completed = subprocess.run(
+            ["nvidia-smi", "--query-gpu=index", "--format=csv,noheader"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+
+    if completed.returncode != 0:
+        return None
+
+    lines = [line.strip() for line in completed.stdout.splitlines() if line.strip()]
+    return len(lines)
+
+
+def validate_requested_topology(
+    parsed_num_shards: int,
+    parsed_device_ids: list[int] | None,
+    build_features: str,
+) -> int | None:
+    if parsed_num_shards <= 0:
+        raise ValueError("VLLM_NUM_SHARDS must be greater than zero")
+
+    if parsed_device_ids is not None and len(parsed_device_ids) != parsed_num_shards:
+        raise ValueError(
+            "VLLM_NUM_SHARDS must match the number of ids in VLLM_DEVICE_IDS: "
+            f"num_shards={parsed_num_shards}, device_ids={parsed_device_ids}"
+        )
+
+    if "cuda" not in build_features.split(","):
+        return None
+
+    detected_count = detect_cuda_device_count()
+    if detected_count is None:
+        return None
+
+    if parsed_device_ids is None:
+        if parsed_num_shards > detected_count:
+            raise ValueError(
+                f"requested num_shards={parsed_num_shards} but only {detected_count} CUDA "
+                "device(s) are visible on this host"
+            )
+        return detected_count
+
+    invalid_ids = [device_id for device_id in parsed_device_ids if device_id >= detected_count]
+    if invalid_ids:
+        raise ValueError(
+            f"requested device_ids={parsed_device_ids} but only {detected_count} CUDA "
+            f"device(s) are visible on this host"
+        )
+    return detected_count
+
+
 def build_command(
     repo_root: Path,
     model_path: str,
@@ -168,6 +242,7 @@ def main() -> int:
     num_shards = env_str("VLLM_NUM_SHARDS", "1")
     parsed_num_shards = int(num_shards)
     device_ids = os.environ.get("VLLM_DEVICE_IDS")
+    parsed_device_ids = parse_device_ids(device_ids)
     myelon_rpc_depth = os.environ.get("VLLM_MYELON_RPC_DEPTH")
     myelon_response_depth = os.environ.get("VLLM_MYELON_RESPONSE_DEPTH")
     myelon_busy_spin = env_str("VLLM_MYELON_BUSY_SPIN", "0").lower() in {
@@ -190,6 +265,16 @@ def main() -> int:
             "set VLLM_MODEL_PATH to a local snapshot directory before running this script",
             file=sys.stderr,
         )
+        return 1
+
+    try:
+        detected_cuda_device_count = validate_requested_topology(
+            parsed_num_shards,
+            parsed_device_ids,
+            build_features,
+        )
+    except ValueError as error:
+        print(f"invalid requested topology: {error}", file=sys.stderr)
         return 1
 
     subprocess.run(
@@ -239,6 +324,8 @@ def main() -> int:
         "seed": int(seed),
         "num_shards": parsed_num_shards,
         "device_ids": device_ids,
+        "parsed_device_ids": parsed_device_ids,
+        "detected_cuda_device_count": detected_cuda_device_count,
         "myelon_rpc_depth": int(myelon_rpc_depth) if myelon_rpc_depth else None,
         "myelon_response_depth": int(myelon_response_depth)
         if myelon_response_depth
