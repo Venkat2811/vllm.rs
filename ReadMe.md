@@ -360,6 +360,14 @@ For `VLLM_NUM_SHARDS>1`, the direct path is skipped automatically and the script
 the subprocess runner baseline against the Myelon hot path, which is the meaningful topology for
 real multi-rank bring-up.
 
+Interpretation matters:
+
+- `VLLM_NUM_SHARDS=1`: correctness smoke only. This validates that direct, subprocess-runner, and
+  Myelon subprocess paths all produce the same answer on one device. It is not where Myelon is
+  expected to deliver a real performance win.
+- `VLLM_NUM_SHARDS>1`: real A/B territory. This is the topology where subprocess orchestration is
+  already required and Myelon can matter as a hot-path transport.
+
 You can override the defaults through environment variables:
 
 ```bash
@@ -394,7 +402,8 @@ the subprocess-runner and Myelon process paths. In both cases it writes a JSON r
 any leg exits non-zero or if the responses diverge across the included cases. It also fails if the
 Myelon leg is not actually active, or if the Myelon prompt latency exceeds the subprocess-runner
 prompt latency by more than `VLLM_MAX_MYELON_PROMPT_RATIO` (default `4.0`), which guards against a
-return of the old fixed TP=1 handoff cliff.
+return of the old fixed TP=1 handoff cliff. The artifact now also records whether the run was a
+single-shard correctness smoke or a multi-shard runner-vs-Myelon comparison.
 
 For repeated Myelon restart / stale-handle validation on the same host, use:
 

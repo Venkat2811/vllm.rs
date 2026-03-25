@@ -205,12 +205,14 @@ def main() -> int:
             ("myelon", ["--num-shards", num_shards, "--myelon-ipc"]),
         ]
         comparison_scope = "single_shard_correctness_smoke"
+        performance_expectation = "no_expected_myelon_gain_single_shard"
     else:
         cases = [
             ("runner", ["--num-shards", num_shards, "--force-runner"]),
             ("myelon", ["--num-shards", num_shards, "--myelon-ipc"]),
         ]
         comparison_scope = "multi_shard_process_ab"
+        performance_expectation = "myelon_ab_is_meaningful_multi_shard"
 
     results = []
     for label, extra_args in cases:
@@ -244,6 +246,7 @@ def main() -> int:
         "myelon_busy_spin": myelon_busy_spin,
         "max_myelon_prompt_ratio": max_myelon_prompt_ratio,
         "comparison_scope": comparison_scope,
+        "performance_expectation": performance_expectation,
         "direct_case_included": parsed_num_shards == 1,
         "build_features": build_features,
         "results": results,
