@@ -435,7 +435,9 @@ any leg exits non-zero or if the responses diverge across the included cases. It
 Myelon leg is not actually active, or if the Myelon prompt latency exceeds the subprocess-runner
 prompt latency by more than `VLLM_MAX_MYELON_PROMPT_RATIO` (default `4.0`), which guards against a
 return of the old fixed TP=1 handoff cliff. The artifact now also records whether the run was a
-single-shard correctness smoke or a multi-shard runner-vs-Myelon comparison.
+single-shard correctness smoke or a multi-shard runner-vs-Myelon comparison. On CUDA hosts, the
+script also fails fast if the requested `VLLM_NUM_SHARDS` / `VLLM_DEVICE_IDS` topology exceeds the
+visible GPU count instead of deferring that mismatch to a later runtime failure.
 
 For repeated Myelon restart / stale-handle validation on the same host, use:
 
@@ -447,7 +449,8 @@ VLLM_RECOVERY_REPORT_OUT=/tmp/myelon_recovery_report.json \
 
 It repeatedly runs the Myelon path on a fresh process, records topology metadata in the JSON
 artifact, and fails if any run exits non-zero, skips the Myelon hot path, or produces a divergent
-response.
+response. On CUDA hosts it uses the same fail-fast topology preflight as the A/B script, so
+unsupported multi-shard requests are rejected before the recovery loop starts.
 
 ---
 
