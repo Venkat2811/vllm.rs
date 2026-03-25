@@ -39,6 +39,9 @@ pub struct EngineBuilder {
     device_ids: Option<Vec<usize>>,
     force_runner: Option<bool>,
     myelon_ipc: Option<bool>,
+    myelon_rpc_depth: Option<usize>,
+    myelon_response_depth: Option<usize>,
+    myelon_busy_spin: Option<bool>,
 }
 
 impl EngineBuilder {
@@ -59,6 +62,9 @@ impl EngineBuilder {
             device_ids: None,
             force_runner: None,
             myelon_ipc: None,
+            myelon_rpc_depth: None,
+            myelon_response_depth: None,
+            myelon_busy_spin: None,
         }
     }
 
@@ -138,6 +144,21 @@ impl EngineBuilder {
         self
     }
 
+    pub fn with_myelon_rpc_depth(mut self, depth: usize) -> Self {
+        self.myelon_rpc_depth = Some(depth);
+        self
+    }
+
+    pub fn with_myelon_response_depth(mut self, depth: usize) -> Self {
+        self.myelon_response_depth = Some(depth);
+        self
+    }
+
+    pub fn with_myelon_busy_spin(mut self, enabled: bool) -> Self {
+        self.myelon_busy_spin = Some(enabled);
+        self
+    }
+
     pub fn build(self) -> Result<Engine> {
         let (model_id, weight_path, weight_file) = match self.repo {
             ModelRepo::ModelID((model_id, filename)) => (
@@ -172,6 +193,9 @@ impl EngineBuilder {
             self.device_ids.clone(),
             Some(force_runner),
             self.myelon_ipc,
+            self.myelon_rpc_depth,
+            self.myelon_response_depth,
+            self.myelon_busy_spin,
             None,
             None,
             self.prefix_cache,

@@ -897,6 +897,18 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub myelon_ipc: bool,
 
+    /// Myelon RPC ring depth. Defaults to the engine-side transport default.
+    #[arg(long)]
+    pub myelon_rpc_depth: Option<usize>,
+
+    /// Myelon response ring depth. Defaults to the engine-side transport default.
+    #[arg(long)]
+    pub myelon_response_depth: Option<usize>,
+
+    /// Use busy-spin waits instead of blocking waits for Myelon hot-path consumers.
+    #[arg(long, default_value_t = false)]
+    pub myelon_busy_spin: bool,
+
     #[arg(long, default_value_t = false)]
     pub log: bool,
 
