@@ -34,8 +34,17 @@ def default_build_features() -> str:
     return "cuda,myelon"
 
 
-def build_command(repo_root: Path, model_path: str, prompt: str, max_model_len: str, max_tokens: str, seed: str, extra_args: list[str]) -> list[str]:
-    return [
+def build_command(
+    repo_root: Path,
+    model_path: str,
+    prompt: str,
+    max_model_len: str,
+    max_tokens: str,
+    seed: str,
+    device_ids: str | None,
+    extra_args: list[str],
+) -> list[str]:
+    command = [
         str(repo_root / "target" / "debug" / "vllm-rs"),
         "--w",
         model_path,
@@ -53,6 +62,9 @@ def build_command(repo_root: Path, model_path: str, prompt: str, max_model_len: 
         seed,
         *extra_args,
     ]
+    if device_ids:
+        command.extend(["--device-ids", device_ids])
+    return command
 
 
 def parse_metrics(output: str) -> dict:
@@ -138,6 +150,7 @@ def main() -> int:
     max_tokens = env_str("VLLM_MAX_TOKENS", "4")
     seed = env_str("VLLM_SEED", "123")
     num_shards = env_str("VLLM_NUM_SHARDS", "1")
+    device_ids = os.environ.get("VLLM_DEVICE_IDS")
     timeout_seconds = int(env_str("VLLM_TIMEOUT_SECONDS", "60"))
     build_features = env_str("VLLM_BUILD_FEATURES", "cuda,myelon")
     if "VLLM_BUILD_FEATURES" not in os.environ:
@@ -175,6 +188,7 @@ def main() -> int:
             max_model_len,
             max_tokens,
             seed,
+            device_ids,
             extra_args,
         )
         results.append(run_case(repo_root, label, command, timeout_seconds))
@@ -186,6 +200,7 @@ def main() -> int:
         "max_tokens": int(max_tokens),
         "seed": int(seed),
         "num_shards": int(num_shards),
+        "device_ids": device_ids,
         "build_features": build_features,
         "results": results,
     }
