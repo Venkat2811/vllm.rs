@@ -25,6 +25,8 @@ TOPOLOGY_RE = re.compile(
     r"Runner topology mode=(\w+) reason=([^\s]+) num_shards=(\d+) device_ids=\[([^\]]*)\]"
 )
 
+VALID_RECOVERY_MODES = {"direct", "runner", "myelon"}
+
 
 def build_command(
     repo_root: Path,
@@ -38,6 +40,7 @@ def build_command(
     myelon_rpc_depth: str | None,
     myelon_response_depth: str | None,
     myelon_busy_spin: bool,
+    recovery_mode: str,
 ) -> list[str]:
     command = [
         str(repo_root / "target" / "debug" / "vllm-rs"),
@@ -57,8 +60,11 @@ def build_command(
         seed,
         "--num-shards",
         num_shards,
-        "--myelon-ipc",
     ]
+    if recovery_mode == "runner":
+        command.append("--force-runner")
+    elif recovery_mode == "myelon":
+        command.append("--myelon-ipc")
     if device_ids:
         command.extend(["--device-ids", device_ids])
     if myelon_rpc_depth:
@@ -68,6 +74,17 @@ def build_command(
     if myelon_busy_spin:
         command.append("--myelon-busy-spin")
     return command
+
+
+def validate_recovery_mode(recovery_mode: str, num_shards: int) -> None:
+    if recovery_mode not in VALID_RECOVERY_MODES:
+        allowed = ", ".join(sorted(VALID_RECOVERY_MODES))
+        raise ValueError(
+            f"VLLM_RECOVERY_MODE must be one of {allowed}; got {recovery_mode!r}"
+        )
+
+    if recovery_mode == "direct" and num_shards != 1:
+        raise ValueError("VLLM_RECOVERY_MODE=direct requires VLLM_NUM_SHARDS=1")
 
 
 def parse_metrics(output: str) -> dict:
@@ -164,6 +181,7 @@ def main() -> int:
     }
     timeout_seconds = int(env_str("VLLM_TIMEOUT_SECONDS", "60"))
     iterations = int(env_str("VLLM_RECOVERY_ITERATIONS", "3"))
+    recovery_mode = env_str("VLLM_RECOVERY_MODE", "myelon")
     build_features = env_str("VLLM_BUILD_FEATURES", "cuda,myelon")
     if "VLLM_BUILD_FEATURES" not in os.environ:
         build_features = default_build_features()
@@ -180,6 +198,12 @@ def main() -> int:
             "set VLLM_MODEL_PATH to a local snapshot directory before running this script",
             file=sys.stderr,
         )
+        return 1
+
+    try:
+        validate_recovery_mode(recovery_mode, parsed_num_shards)
+    except ValueError as error:
+        print(f"invalid requested recovery mode: {error}", file=sys.stderr)
         return 1
 
     try:
@@ -210,6 +234,7 @@ def main() -> int:
         myelon_rpc_depth,
         myelon_response_depth,
         myelon_busy_spin,
+        recovery_mode,
     )
 
     results = []
@@ -223,8 +248,13 @@ def main() -> int:
     all_myelon_enabled = all(
         result["metrics"]["myelon_enabled"] for result in results
     )
-    all_process_mode = all(
-        result["metrics"]["runner_mode"] == "process" for result in results
+    expected_runner_mode = "direct" if recovery_mode == "direct" else "process"
+    expected_myelon_enabled = recovery_mode == "myelon"
+    all_expected_runner_mode = all(
+        result["metrics"]["runner_mode"] == expected_runner_mode for result in results
+    )
+    all_expected_myelon_state = all(
+        result["metrics"]["myelon_enabled"] == expected_myelon_enabled for result in results
     )
 
     report = {
@@ -243,10 +273,14 @@ def main() -> int:
         else None,
         "myelon_busy_spin": myelon_busy_spin,
         "iterations": iterations,
+        "recovery_mode": recovery_mode,
         "build_features": build_features,
         "all_responses_match": all_responses_match,
         "all_myelon_enabled": all_myelon_enabled,
-        "all_process_mode": all_process_mode,
+        "all_expected_runner_mode": all_expected_runner_mode,
+        "all_expected_myelon_state": all_expected_myelon_state,
+        "expected_runner_mode": expected_runner_mode,
+        "expected_myelon_enabled": expected_myelon_enabled,
         "results": results,
     }
 
@@ -258,7 +292,7 @@ def main() -> int:
         return 1
     if not all_responses_match:
         return 2
-    if not all_myelon_enabled or not all_process_mode:
+    if not all_expected_myelon_state or not all_expected_runner_mode:
         return 3
     return 0
 
