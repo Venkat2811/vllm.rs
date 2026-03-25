@@ -8,7 +8,6 @@ use myelon_playground::transport::{
 pub use myelon_playground::{
     FrameMeta, MyelonTransportLayout, MyelonWaitStrategy, RunnerMyelonTransportConfig,
 };
-use serde::Serialize;
 
 use crate::core::sequence::{DecodeSequence, Sequence};
 use crate::log_info;
@@ -127,6 +126,19 @@ impl MsgKind {
     pub const fn as_u8(self) -> u8 {
         self as u8
     }
+
+    pub fn from_u8(kind: u8) -> CandleResult<Self> {
+        match kind {
+            x if x == Self::RunPrefill as u8 => Ok(Self::RunPrefill),
+            x if x == Self::RunDecode as u8 => Ok(Self::RunDecode),
+            x if x == Self::FinishDecode as u8 => Ok(Self::FinishDecode),
+            x if x == Self::Cancel as u8 => Ok(Self::Cancel),
+            x if x == Self::Shutdown as u8 => Ok(Self::Shutdown),
+            x if x == Self::RunResponse as u8 => Ok(Self::RunResponse),
+            x if x == Self::Error as u8 => Ok(Self::Error),
+            _ => candle_core::bail!("unexpected Myelon message kind {}", kind),
+        }
+    }
 }
 
 const MYELON_RPC_DEPTH: usize = 1024;
@@ -185,6 +197,12 @@ impl RpcBroadcastProducer {
     pub fn publish(&mut self, payload: &[u8], kind: MsgKind) {
         self.inner.publish(payload, kind.as_u8());
     }
+
+    pub fn publish_request(&mut self, request: &MyelonRequest) -> CandleResult<Vec<u8>> {
+        let bytes = request.encode()?;
+        self.publish(&bytes, request.kind());
+        Ok(bytes)
+    }
 }
 
 pub struct RpcBroadcastConsumer {
@@ -205,6 +223,11 @@ impl RpcBroadcastConsumer {
     pub fn recv_message_blocking(&mut self) -> (u8, Vec<u8>) {
         self.inner.recv_message_blocking()
     }
+
+    pub fn recv_request_blocking(&mut self) -> CandleResult<MyelonRequest> {
+        let (kind, payload) = self.recv_message_blocking();
+        MyelonRequest::decode(kind, &payload)
+    }
 }
 
 pub struct ResponseProducer {
@@ -220,6 +243,20 @@ impl ResponseProducer {
 
     pub fn send(&mut self, payload: &[u8], kind: MsgKind) {
         self.inner.publish(payload, kind.as_u8());
+    }
+
+    pub fn send_response(&mut self, response: &MyelonResponse) -> CandleResult<Vec<u8>> {
+        let bytes = response.encode()?;
+        self.send(&bytes, response.kind());
+        Ok(bytes)
+    }
+
+    pub fn send_error(&mut self, error: impl std::fmt::Display) {
+        let response = MyelonResponse::Error(error.to_string());
+        let bytes = response
+            .encode()
+            .expect("MyelonResponse::Error should always serialize");
+        self.send(&bytes, response.kind());
     }
 }
 
@@ -240,6 +277,126 @@ impl ResponseConsumer {
 
     pub fn recv_message_blocking(&mut self) -> (u8, Vec<u8>) {
         self.inner.recv_message_blocking()
+    }
+
+    pub fn recv_response_blocking(&mut self) -> CandleResult<MyelonResponse> {
+        let (kind, payload) = self.recv_message_blocking();
+        MyelonResponse::decode(kind, &payload)
+    }
+}
+
+#[derive(Debug)]
+pub enum MyelonRequest {
+    RunPrefill { sequences: Vec<Sequence> },
+    RunDecode { sequences: Vec<DecodeSequence> },
+    FinishDecode { sequence_id: usize },
+    Cancel { sequence_id: usize },
+    Shutdown,
+}
+
+impl MyelonRequest {
+    pub const fn kind(&self) -> MsgKind {
+        match self {
+            Self::RunPrefill { .. } => MsgKind::RunPrefill,
+            Self::RunDecode { .. } => MsgKind::RunDecode,
+            Self::FinishDecode { .. } => MsgKind::FinishDecode,
+            Self::Cancel { .. } => MsgKind::Cancel,
+            Self::Shutdown => MsgKind::Shutdown,
+        }
+    }
+
+    pub fn encode(&self) -> CandleResult<Vec<u8>> {
+        match self {
+            Self::RunPrefill { sequences } => {
+                bincode::serialize(&(sequences, true)).map_err(myelon_to_candle)
+            }
+            Self::RunDecode { sequences } => {
+                bincode::serialize(&(sequences, false)).map_err(myelon_to_candle)
+            }
+            Self::FinishDecode { sequence_id } | Self::Cancel { sequence_id } => {
+                bincode::serialize(sequence_id).map_err(myelon_to_candle)
+            }
+            Self::Shutdown => Ok(Vec::new()),
+        }
+    }
+
+    pub fn decode(kind: u8, payload: &[u8]) -> CandleResult<Self> {
+        match MsgKind::from_u8(kind)? {
+            MsgKind::RunPrefill => {
+                let (sequences, is_prefill): (Vec<Sequence>, bool) =
+                    bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                if !is_prefill {
+                    candle_core::bail!("RunPrefill request received with is_prefill=false");
+                }
+                Ok(Self::RunPrefill { sequences })
+            }
+            MsgKind::RunDecode => {
+                let (sequences, is_prefill): (Vec<DecodeSequence>, bool) =
+                    bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                if is_prefill {
+                    candle_core::bail!("RunDecode request received with is_prefill=true");
+                }
+                Ok(Self::RunDecode { sequences })
+            }
+            MsgKind::FinishDecode => {
+                let sequence_id = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::FinishDecode { sequence_id })
+            }
+            MsgKind::Cancel => {
+                let sequence_id = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::Cancel { sequence_id })
+            }
+            MsgKind::Shutdown => {
+                if !payload.is_empty() {
+                    candle_core::bail!("Shutdown request must not carry a payload");
+                }
+                Ok(Self::Shutdown)
+            }
+            MsgKind::RunResponse | MsgKind::Error => {
+                candle_core::bail!("response kind {} is not a request", kind);
+            }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum MyelonResponse {
+    RunResponse(Vec<u32>),
+    Error(String),
+}
+
+impl MyelonResponse {
+    pub const fn kind(&self) -> MsgKind {
+        match self {
+            Self::RunResponse(_) => MsgKind::RunResponse,
+            Self::Error(_) => MsgKind::Error,
+        }
+    }
+
+    pub fn encode(&self) -> CandleResult<Vec<u8>> {
+        match self {
+            Self::RunResponse(output_ids) => {
+                bincode::serialize(output_ids).map_err(myelon_to_candle)
+            }
+            Self::Error(error) => Ok(error.as_bytes().to_vec()),
+        }
+    }
+
+    pub fn decode(kind: u8, payload: &[u8]) -> CandleResult<Self> {
+        match MsgKind::from_u8(kind)? {
+            MsgKind::RunResponse => {
+                let output_ids = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::RunResponse(output_ids))
+            }
+            MsgKind::Error => Ok(Self::Error(String::from_utf8_lossy(payload).into_owned())),
+            MsgKind::RunPrefill
+            | MsgKind::RunDecode
+            | MsgKind::FinishDecode
+            | MsgKind::Cancel
+            | MsgKind::Shutdown => {
+                candle_core::bail!("request kind {} is not a response", kind);
+            }
+        }
     }
 }
 
@@ -307,41 +464,37 @@ impl MyelonEngineTransport {
     }
 
     pub fn run_prefill(&mut self, sequences: Vec<Sequence>) -> CandleResult<Vec<u32>> {
-        self.publish_and_collect(&(sequences, true), MsgKind::RunPrefill)
+        self.publish_and_collect(&MyelonRequest::RunPrefill { sequences })
     }
 
     pub fn run_decode(&mut self, sequences: Vec<DecodeSequence>) -> CandleResult<Vec<u32>> {
-        self.publish_and_collect(&(sequences, false), MsgKind::RunDecode)
+        self.publish_and_collect(&MyelonRequest::RunDecode { sequences })
     }
 
     pub fn finish_decode(&mut self, sequence_id: usize) -> CandleResult<()> {
-        self.publish_only(&sequence_id, MsgKind::FinishDecode)
+        self.publish_only(&MyelonRequest::FinishDecode { sequence_id })
     }
 
     pub fn shutdown(&mut self) {
         self.rpc_producer.publish(&[], MsgKind::Shutdown);
     }
 
-    fn publish_only<T: Serialize>(&mut self, payload: &T, kind: MsgKind) -> CandleResult<()> {
-        let bytes = bincode::serialize(payload).map_err(myelon_to_candle)?;
+    fn publish_only(&mut self, request: &MyelonRequest) -> CandleResult<()> {
+        let bytes = request.encode()?;
         if !self.logged_first_request {
             log_info!(
                 "Dispatching first Myelon request kind={} bytes={}.",
-                kind.as_u8(),
+                request.kind().as_u8(),
                 bytes.len()
             );
             self.logged_first_request = true;
         }
-        self.rpc_producer.publish(&bytes, kind);
+        self.rpc_producer.publish(&bytes, request.kind());
         Ok(())
     }
 
-    fn publish_and_collect<T: Serialize>(
-        &mut self,
-        payload: &T,
-        kind: MsgKind,
-    ) -> CandleResult<Vec<u32>> {
-        self.publish_only(payload, kind)?;
+    fn publish_and_collect(&mut self, request: &MyelonRequest) -> CandleResult<Vec<u32>> {
+        self.publish_only(request)?;
         self.collect_outputs()
     }
 
@@ -349,30 +502,28 @@ impl MyelonEngineTransport {
         let mut first_output: Option<Vec<u32>> = None;
 
         for consumer in &mut self.response_consumers {
-            let (kind, payload) = consumer.recv_message_blocking();
+            let response = consumer.recv_response_blocking()?;
             if !self.logged_first_response {
                 log_info!(
                     "Received first Myelon response kind={} bytes={}.",
-                    kind,
-                    payload.len()
+                    response.kind().as_u8(),
+                    response.encode()?.len()
                 );
                 self.logged_first_response = true;
             }
-            if kind == MsgKind::RunResponse.as_u8() {
-                let output_ids: Vec<u32> =
-                    bincode::deserialize(&payload).map_err(myelon_to_candle)?;
-                if let Some(expected) = &first_output {
-                    if expected != &output_ids {
-                        candle_core::bail!("Myelon runner outputs diverged across ranks");
+            match response {
+                MyelonResponse::RunResponse(output_ids) => {
+                    if let Some(expected) = &first_output {
+                        if expected != &output_ids {
+                            candle_core::bail!("Myelon runner outputs diverged across ranks");
+                        }
+                    } else {
+                        first_output = Some(output_ids);
                     }
-                } else {
-                    first_output = Some(output_ids);
                 }
-            } else if kind == MsgKind::Error.as_u8() {
-                let error = String::from_utf8_lossy(&payload);
-                candle_core::bail!("runner Myelon error: {}", error);
-            } else {
-                candle_core::bail!("unexpected Myelon response kind {}", kind);
+                MyelonResponse::Error(error) => {
+                    candle_core::bail!("runner Myelon error: {}", error);
+                }
             }
         }
 
@@ -455,5 +606,42 @@ mod tests {
         assert!(consumer.has_coordination_support());
 
         drop(producer);
+    }
+
+    #[test]
+    fn request_round_trip_preserves_existing_prefill_wire_contract() {
+        let request = MyelonRequest::RunPrefill {
+            sequences: Vec::new(),
+        };
+        let bytes = request.encode().unwrap();
+        let decoded = MyelonRequest::decode(MsgKind::RunPrefill.as_u8(), &bytes).unwrap();
+
+        match decoded {
+            MyelonRequest::RunPrefill { sequences } => assert!(sequences.is_empty()),
+            other => panic!("unexpected request: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn shutdown_request_requires_empty_payload() {
+        let error = MyelonRequest::decode(MsgKind::Shutdown.as_u8(), &[1, 2]).unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("Shutdown request must not carry a payload"));
+    }
+
+    #[test]
+    fn response_round_trip_preserves_output_payloads() {
+        let response = MyelonResponse::RunResponse(vec![1, 2, 3]);
+        let bytes = response.encode().unwrap();
+        let decoded = MyelonResponse::decode(MsgKind::RunResponse.as_u8(), &bytes).unwrap();
+
+        assert_eq!(decoded, response);
+    }
+
+    #[test]
+    fn request_kind_rejects_response_payloads() {
+        let error = MyelonRequest::decode(MsgKind::Error.as_u8(), b"boom").unwrap_err();
+        assert!(error.to_string().contains("is not a request"));
     }
 }
