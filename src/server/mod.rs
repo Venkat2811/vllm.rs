@@ -877,7 +877,12 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub cpu: bool,
 
-    #[arg(long = "d", value_delimiter = ',')]
+    #[arg(
+        short = 'd',
+        long = "device-ids",
+        visible_alias = "d",
+        value_delimiter = ','
+    )]
     pub device_ids: Option<Vec<usize>>,
 
     /// Explicit shard count. Defaults to the number of device IDs, or 1 when no device IDs are provided.
