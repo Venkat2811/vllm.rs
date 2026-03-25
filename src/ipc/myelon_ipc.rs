@@ -1,11 +1,9 @@
 use anyhow::{Context, Result};
-use myelon_playground::lock_free::SharedCursor;
-use myelon_playground::{
-    attach_shared_consumer, build_shared_single_producer, ensure_coordination_cursor,
-    publish_framed_payload, recv_framed_message, FrameMeta, SharedConsumer, SharedProducer,
+use myelon_playground::transport::{
+    FramedTransportConsumer, FramedTransportFrame, FramedTransportProducer,
 };
 pub use myelon_playground::{
-    MyelonTransportLayout, MyelonWaitStrategy, RunnerMyelonTransportConfig,
+    FrameMeta, MyelonTransportLayout, MyelonWaitStrategy, RunnerMyelonTransportConfig,
 };
 
 pub const RPC_FRAME_HEADER_BYTES: usize = 12;
@@ -35,6 +33,30 @@ impl Default for RpcFrame {
     }
 }
 
+impl FramedTransportFrame for RpcFrame {
+    fn payload_capacity() -> usize {
+        RPC_FRAME_DATA_BYTES
+    }
+
+    fn frame_meta(&self) -> FrameMeta<'_> {
+        FrameMeta {
+            len: self.len as usize,
+            kind: self.kind,
+            flags: self.flags,
+            msg_id: self.msg_id,
+            data: &self.data[..self.len as usize],
+        }
+    }
+
+    fn write_frame(&mut self, payload: &[u8], kind: u8, msg_id: u32, flags: u8) {
+        self.len = payload.len() as u32;
+        self.kind = kind;
+        self.flags = flags;
+        self.msg_id = msg_id;
+        self.data[..payload.len()].copy_from_slice(payload);
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ResponseFrame {
@@ -57,6 +79,30 @@ impl Default for ResponseFrame {
     }
 }
 
+impl FramedTransportFrame for ResponseFrame {
+    fn payload_capacity() -> usize {
+        RESPONSE_FRAME_DATA_BYTES
+    }
+
+    fn frame_meta(&self) -> FrameMeta<'_> {
+        FrameMeta {
+            len: self.len as usize,
+            kind: self.kind,
+            flags: self.flags,
+            msg_id: self.msg_id,
+            data: &self.data[..self.len as usize],
+        }
+    }
+
+    fn write_frame(&mut self, payload: &[u8], kind: u8, msg_id: u32, flags: u8) {
+        self.len = payload.len() as u32;
+        self.kind = kind;
+        self.flags = flags;
+        self.msg_id = msg_id;
+        self.data[..payload.len()].copy_from_slice(payload);
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum MsgKind {
@@ -76,145 +122,75 @@ impl MsgKind {
 }
 
 pub struct RpcBroadcastProducer {
-    _coordination_cursor: SharedCursor,
-    inner: SharedProducer<RpcFrame>,
+    inner: FramedTransportProducer<RpcFrame>,
 }
 
 impl RpcBroadcastProducer {
     pub fn create(name: &str, depth: usize) -> Result<Self> {
-        let coordination_cursor = ensure_coordination_cursor(name)?;
-        let inner = build_shared_single_producer::<RpcFrame>(name, depth)
-            .build_producer(RpcFrame::default)
+        let inner = FramedTransportProducer::<RpcFrame>::create(name, depth)
             .with_context(|| format!("failed to create rpc ring '{name}'"))?;
-        Ok(Self {
-            _coordination_cursor: coordination_cursor,
-            inner,
-        })
+        Ok(Self { inner })
     }
 
     pub fn publish(&mut self, payload: &[u8], kind: MsgKind) {
-        publish_framed_payload(
-            payload,
-            kind.as_u8(),
-            RPC_FRAME_DATA_BYTES,
-            |frame| self.inner.publish(|slot| *slot = frame),
-            make_rpc_frame,
-        );
+        self.inner.publish(payload, kind.as_u8());
     }
 }
 
 pub struct RpcBroadcastConsumer {
-    inner: SharedConsumer<RpcFrame>,
-    wait_strategy: MyelonWaitStrategy,
+    inner: FramedTransportConsumer<RpcFrame>,
 }
 
 impl RpcBroadcastConsumer {
     pub fn attach(name: &str, depth: usize, wait_strategy: MyelonWaitStrategy) -> Result<Self> {
-        let inner = attach_shared_consumer::<RpcFrame>(name, depth)
-            .build_consumer()
+        let inner = FramedTransportConsumer::<RpcFrame>::attach(name, depth, wait_strategy)
             .with_context(|| format!("failed to attach rpc ring '{name}'"))?;
-        Ok(Self {
-            inner,
-            wait_strategy,
-        })
+        Ok(Self { inner })
+    }
+
+    pub fn has_coordination_support(&self) -> bool {
+        self.inner.has_coordination_support()
     }
 
     pub fn recv_message_blocking(&mut self) -> (u8, Vec<u8>) {
-        recv_framed_message(
-            || match self.wait_strategy {
-                MyelonWaitStrategy::BusySpin => self.inner.consume_next(),
-                MyelonWaitStrategy::Block => self.inner.consume_next_with_sleep(),
-            },
-            |frame| FrameMeta {
-                len: frame.len as usize,
-                kind: frame.kind,
-                flags: frame.flags,
-                msg_id: frame.msg_id,
-                data: &frame.data[..frame.len as usize],
-            },
-        )
+        self.inner.recv_message_blocking()
     }
 }
 
 pub struct ResponseProducer {
-    _coordination_cursor: SharedCursor,
-    inner: SharedProducer<ResponseFrame>,
+    inner: FramedTransportProducer<ResponseFrame>,
 }
 
 impl ResponseProducer {
     pub fn create(name: &str, depth: usize) -> Result<Self> {
-        let coordination_cursor = ensure_coordination_cursor(name)?;
-        let inner = build_shared_single_producer::<ResponseFrame>(name, depth)
-            .build_producer(ResponseFrame::default)
+        let inner = FramedTransportProducer::<ResponseFrame>::create(name, depth)
             .with_context(|| format!("failed to create response ring '{name}'"))?;
-        Ok(Self {
-            _coordination_cursor: coordination_cursor,
-            inner,
-        })
+        Ok(Self { inner })
     }
 
     pub fn send(&mut self, payload: &[u8], kind: MsgKind) {
-        publish_framed_payload(
-            payload,
-            kind.as_u8(),
-            RESPONSE_FRAME_DATA_BYTES,
-            |frame| self.inner.publish(|slot| *slot = frame),
-            make_response_frame,
-        );
+        self.inner.publish(payload, kind.as_u8());
     }
 }
 
 pub struct ResponseConsumer {
-    inner: SharedConsumer<ResponseFrame>,
-    wait_strategy: MyelonWaitStrategy,
+    inner: FramedTransportConsumer<ResponseFrame>,
 }
 
 impl ResponseConsumer {
     pub fn attach(name: &str, depth: usize, wait_strategy: MyelonWaitStrategy) -> Result<Self> {
-        let inner = attach_shared_consumer::<ResponseFrame>(name, depth)
-            .build_consumer()
+        let inner = FramedTransportConsumer::<ResponseFrame>::attach(name, depth, wait_strategy)
             .with_context(|| format!("failed to attach response ring '{name}'"))?;
-        Ok(Self {
-            inner,
-            wait_strategy,
-        })
+        Ok(Self { inner })
+    }
+
+    pub fn has_coordination_support(&self) -> bool {
+        self.inner.has_coordination_support()
     }
 
     pub fn recv_message_blocking(&mut self) -> (u8, Vec<u8>) {
-        recv_framed_message(
-            || match self.wait_strategy {
-                MyelonWaitStrategy::BusySpin => self.inner.consume_next(),
-                MyelonWaitStrategy::Block => self.inner.consume_next_with_sleep(),
-            },
-            |frame| FrameMeta {
-                len: frame.len as usize,
-                kind: frame.kind,
-                flags: frame.flags,
-                msg_id: frame.msg_id,
-                data: &frame.data[..frame.len as usize],
-            },
-        )
+        self.inner.recv_message_blocking()
     }
-}
-
-fn make_rpc_frame(payload: &[u8], kind: u8, msg_id: u32, flags: u8) -> RpcFrame {
-    let mut frame = RpcFrame::default();
-    frame.len = payload.len() as u32;
-    frame.kind = kind;
-    frame.flags = flags;
-    frame.msg_id = msg_id;
-    frame.data[..payload.len()].copy_from_slice(payload);
-    frame
-}
-
-fn make_response_frame(payload: &[u8], kind: u8, msg_id: u32, flags: u8) -> ResponseFrame {
-    let mut frame = ResponseFrame::default();
-    frame.len = payload.len() as u32;
-    frame.kind = kind;
-    frame.flags = flags;
-    frame.msg_id = msg_id;
-    frame.data[..payload.len()].copy_from_slice(payload);
-    frame
 }
 
 #[cfg(test)]
@@ -223,7 +199,7 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use myelon_playground::frame_flags;
+    use myelon_playground::{frame_flags, publish_framed_payload};
 
     static UNIQUE_SUFFIX: AtomicU64 = AtomicU64::new(0);
 
@@ -254,7 +230,11 @@ mod tests {
             MsgKind::RunDecode.as_u8(),
             RPC_FRAME_DATA_BYTES,
             |frame| frames.push(frame),
-            make_rpc_frame,
+            |chunk, kind, msg_id, flags| {
+                let mut frame = RpcFrame::default();
+                frame.write_frame(chunk, kind, msg_id, flags);
+                frame
+            },
         );
 
         assert_eq!(frames.len(), 3);
@@ -273,7 +253,7 @@ mod tests {
         let consumer =
             RpcBroadcastConsumer::attach(&ring_name, 8, MyelonWaitStrategy::Block).unwrap();
 
-        assert!(consumer.inner.has_coordination_support());
+        assert!(consumer.has_coordination_support());
 
         drop(producer);
     }
@@ -284,7 +264,7 @@ mod tests {
         let producer = ResponseProducer::create(&ring_name, 8).unwrap();
         let consumer = ResponseConsumer::attach(&ring_name, 8, MyelonWaitStrategy::Block).unwrap();
 
-        assert!(consumer.inner.has_coordination_support());
+        assert!(consumer.has_coordination_support());
 
         drop(producer);
     }
