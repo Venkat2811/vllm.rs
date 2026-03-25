@@ -303,6 +303,9 @@ pub struct EngineConfig {
     pub device_ids: Option<Vec<usize>>,
     pub force_runner: Option<bool>,
     pub myelon_ipc: Option<bool>,
+    pub myelon_rpc_depth: Option<usize>,
+    pub myelon_response_depth: Option<usize>,
+    pub myelon_busy_spin: Option<bool>,
     pub generation_cfg: Option<GenerationConfig>,
     pub seed: Option<u64>,
     pub prefix_cache: Option<bool>,
@@ -373,6 +376,12 @@ pub struct EngineConfig {
     #[pyo3(get, set)]
     pub myelon_ipc: Option<bool>,
     #[pyo3(get, set)]
+    pub myelon_rpc_depth: Option<usize>,
+    #[pyo3(get, set)]
+    pub myelon_response_depth: Option<usize>,
+    #[pyo3(get, set)]
+    pub myelon_busy_spin: Option<bool>,
+    #[pyo3(get, set)]
     pub generation_cfg: Option<GenerationConfig>,
     #[pyo3(get, set)]
     pub seed: Option<u64>,
@@ -420,6 +429,9 @@ impl EngineConfig {
         device_ids: Option<Vec<usize>>,
         force_runner: Option<bool>,
         myelon_ipc: Option<bool>,
+        myelon_rpc_depth: Option<usize>,
+        myelon_response_depth: Option<usize>,
+        myelon_busy_spin: Option<bool>,
         generation_cfg: Option<GenerationConfig>,
         seed: Option<u64>,
         prefix_cache: Option<bool>,
@@ -476,6 +488,9 @@ impl EngineConfig {
             device_ids: Some(device_ids),
             force_runner,
             myelon_ipc,
+            myelon_rpc_depth,
+            myelon_response_depth,
+            myelon_busy_spin,
             generation_cfg,
             seed,
             prefix_cache,
