@@ -364,8 +364,14 @@ vllm-rs --m AxionML/Qwen3.5-9B-NVFP4 --ui-server --prefix-cache
 For local CUDA validation on a single GPU, `vllm-rs` now supports an explicit subprocess runner path
 and a Myelon hot-path handoff:
 
+- `--num-shards`: make the intended topology explicit; defaults to `1` when omitted
 - `--force-runner`: use the subprocess runner even on one local device
 - `--myelon-ipc`: force subprocess runner mode and switch prefill/decode/finish traffic to Myelon IPC
+
+At startup, `vllm-rs` now logs the runner decision in a normalized form:
+
+- `Runner topology mode=direct reason=single_shard_direct num_shards=1 device_ids=[0]`
+- `Runner topology mode=process reason=forced_runner num_shards=1 device_ids=[0]`
 
 The quickest A/B check is the checked-in smoke script:
 
@@ -385,6 +391,7 @@ You can override the defaults through environment variables:
 VLLM_MODEL_PATH=/path/to/local/model \
 VLLM_PROMPT="Say hello in one short sentence." \
 VLLM_MAX_TOKENS=4 \
+VLLM_NUM_SHARDS=1 \
 VLLM_TIMEOUT_SECONDS=60 \
 ./scripts/run_myelon_smoke_ab.sh
 ```

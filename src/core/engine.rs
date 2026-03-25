@@ -274,7 +274,7 @@ impl LLMEngine {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let model_loaded = Arc::new(AtomicBool::new(false));
         let (mut econfig, use_runner) =
-            prepare_engine_config(econfig, &config, &config_tokenizer, &mut generation_cfg);
+            prepare_engine_config(econfig, &config, &config_tokenizer, &mut generation_cfg)?;
         #[cfg(not(feature = "myelon"))]
         if econfig.myelon_ipc.unwrap_or(false) {
             candle_core::bail!("myelon_ipc requires building with the `myelon` feature");

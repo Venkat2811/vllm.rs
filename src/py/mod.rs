@@ -284,7 +284,7 @@ impl EngineConfig {
     #[pyo3(signature = (model_id=None, weight_path=None, weight_file=None,
         hf_token=None, hf_token_path=None, enforce_parser=None,
         max_num_seqs=Some(32), config_model_len=None, max_model_len=Some(1024), max_tokens=None,
-        isq=None, num_shards=Some(1), device_ids=None, force_runner=Some(false), myelon_ipc=Some(false),
+        isq=None, num_shards=None, device_ids=None, force_runner=Some(false), myelon_ipc=Some(false),
         generation_cfg=None, seed=None, prefix_cache=None, prefix_cache_max_tokens=None,
         fp8_kvcache=None, server_mode=None, cpu_mem_fold=None, kv_fraction=None, mamba_fraction=None, pd_config=None,
         mcp_command=None, mcp_config=None, mcp_args=None,
