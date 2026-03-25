@@ -42,6 +42,9 @@ def build_command(
     max_tokens: str,
     seed: str,
     device_ids: str | None,
+    myelon_rpc_depth: str | None,
+    myelon_response_depth: str | None,
+    myelon_busy_spin: bool,
     extra_args: list[str],
 ) -> list[str]:
     command = [
@@ -64,6 +67,12 @@ def build_command(
     ]
     if device_ids:
         command.extend(["--device-ids", device_ids])
+    if myelon_rpc_depth:
+        command.extend(["--myelon-rpc-depth", myelon_rpc_depth])
+    if myelon_response_depth:
+        command.extend(["--myelon-response-depth", myelon_response_depth])
+    if myelon_busy_spin:
+        command.append("--myelon-busy-spin")
     return command
 
 
@@ -151,6 +160,13 @@ def main() -> int:
     seed = env_str("VLLM_SEED", "123")
     num_shards = env_str("VLLM_NUM_SHARDS", "1")
     device_ids = os.environ.get("VLLM_DEVICE_IDS")
+    myelon_rpc_depth = os.environ.get("VLLM_MYELON_RPC_DEPTH")
+    myelon_response_depth = os.environ.get("VLLM_MYELON_RESPONSE_DEPTH")
+    myelon_busy_spin = env_str("VLLM_MYELON_BUSY_SPIN", "0").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
     timeout_seconds = int(env_str("VLLM_TIMEOUT_SECONDS", "60"))
     build_features = env_str("VLLM_BUILD_FEATURES", "cuda,myelon")
     if "VLLM_BUILD_FEATURES" not in os.environ:
@@ -189,6 +205,9 @@ def main() -> int:
             max_tokens,
             seed,
             device_ids,
+            myelon_rpc_depth,
+            myelon_response_depth,
+            myelon_busy_spin,
             extra_args,
         )
         results.append(run_case(repo_root, label, command, timeout_seconds))
@@ -201,6 +220,11 @@ def main() -> int:
         "seed": int(seed),
         "num_shards": int(num_shards),
         "device_ids": device_ids,
+        "myelon_rpc_depth": int(myelon_rpc_depth) if myelon_rpc_depth else None,
+        "myelon_response_depth": int(myelon_response_depth)
+        if myelon_response_depth
+        else None,
+        "myelon_busy_spin": myelon_busy_spin,
         "build_features": build_features,
         "results": results,
     }

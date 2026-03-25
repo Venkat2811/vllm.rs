@@ -86,8 +86,45 @@ const MYELON_RPC_DEPTH: usize = 1024;
 const MYELON_RESPONSE_DEPTH: usize = 256;
 
 #[cfg(feature = "myelon")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ResolvedMyelonTransportConfig {
+    rpc_depth: usize,
+    response_depth: usize,
+    wait_strategy: MyelonWaitStrategy,
+}
+
+#[cfg(feature = "myelon")]
 fn myelon_to_candle<E: std::fmt::Display>(error: E) -> candle_core::Error {
     candle_core::Error::Msg(error.to_string())
+}
+
+#[cfg(feature = "myelon")]
+fn resolve_myelon_transport_config(
+    econfig: &EngineConfig,
+) -> std::result::Result<ResolvedMyelonTransportConfig, candle_core::Error> {
+    let rpc_depth = econfig.myelon_rpc_depth.unwrap_or(MYELON_RPC_DEPTH);
+    if rpc_depth == 0 {
+        candle_core::bail!("myelon_rpc_depth must be greater than zero");
+    }
+
+    let response_depth = econfig
+        .myelon_response_depth
+        .unwrap_or(MYELON_RESPONSE_DEPTH);
+    if response_depth == 0 {
+        candle_core::bail!("myelon_response_depth must be greater than zero");
+    }
+
+    let wait_strategy = if econfig.myelon_busy_spin.unwrap_or(false) {
+        MyelonWaitStrategy::BusySpin
+    } else {
+        MyelonWaitStrategy::Block
+    };
+
+    Ok(ResolvedMyelonTransportConfig {
+        rpc_depth,
+        response_depth,
+        wait_strategy,
+    })
 }
 
 #[cfg(feature = "myelon")]
@@ -103,21 +140,25 @@ impl MyelonEngineTransport {
     fn attach(
         runner_streams: &mut [LocalStream],
         session_label: &str,
-        wait_strategy: MyelonWaitStrategy,
+        transport_config: ResolvedMyelonTransportConfig,
     ) -> Result<Self> {
         let layout = MyelonTransportLayout::for_session(
             session_label,
             runner_streams.len(),
-            MYELON_RPC_DEPTH,
-            MYELON_RESPONSE_DEPTH,
+            transport_config.rpc_depth,
+            transport_config.response_depth,
         )
         .map_err(myelon_to_candle)?;
         let rpc_producer = RpcBroadcastProducer::create(layout.rpc_ring_name(), layout.rpc_depth())
             .map_err(myelon_to_candle)?;
 
         for (rank, stream) in runner_streams.iter_mut().enumerate() {
-            let config = RunnerMyelonTransportConfig::for_rank(&layout, rank, wait_strategy)
-                .map_err(myelon_to_candle)?;
+            let config = RunnerMyelonTransportConfig::for_rank(
+                &layout,
+                rank,
+                transport_config.wait_strategy,
+            )
+            .map_err(myelon_to_candle)?;
             send_local(
                 &mut vec![stream.try_clone()?],
                 &MessageType::InitMyelonTransport(config),
@@ -137,7 +178,7 @@ impl MyelonEngineTransport {
             let consumer = ResponseConsumer::attach(
                 response_ring_name,
                 layout.response_depth(),
-                wait_strategy,
+                transport_config.wait_strategy,
             )
             .map_err(myelon_to_candle)?;
             response_consumers.push(consumer);
@@ -1304,10 +1345,11 @@ impl LLMEngine {
         let mut runners = self.runners.write();
         match &mut *runners {
             RunnerType::Process(ref mut runner_streams) => {
+                let transport_config = resolve_myelon_transport_config(&self.econfig)?;
                 self.myelon_transport = Some(MyelonEngineTransport::attach(
                     runner_streams,
                     &session_label,
-                    MyelonWaitStrategy::Block,
+                    transport_config,
                 )?);
                 log_info!(
                     "Enabled Myelon IPC hot path across {} runner(s).",
@@ -1994,6 +2036,10 @@ impl LLMEngine {
 mod tests {
     use super::LLMEngine;
     use crate::utils::guidance::GuidanceTokens;
+    #[cfg(feature = "myelon")]
+    use super::{resolve_myelon_transport_config, MyelonWaitStrategy};
+    #[cfg(feature = "myelon")]
+    use crate::utils::config::EngineConfig;
 
     #[test]
     fn trim_prompt_replay_prefix_accepts_single_reasoning_token() {
@@ -2063,5 +2109,82 @@ mod tests {
             LLMEngine::trim_prompt_replay_prefix(&[], &guidance_tokens),
             None
         );
+    }
+
+    #[cfg(feature = "myelon")]
+    fn test_engine_config() -> EngineConfig {
+        EngineConfig::new(
+            None,
+            Some("/tmp/model".to_string()),
+            None,
+            None,
+            None,
+            None,
+            Some(1),
+            None,
+            Some(128),
+            Some(8),
+            None,
+            Some(1),
+            Some(vec![0]),
+            Some(false),
+            Some(true),
+            None,
+            None,
+            Some(false),
+            None,
+            Some(123),
+            Some(false),
+            None,
+            Some(false),
+            Some(false),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
+    }
+
+    #[cfg(feature = "myelon")]
+    #[test]
+    fn myelon_transport_config_defaults_to_blocking_depths() {
+        let resolved = resolve_myelon_transport_config(&test_engine_config()).unwrap();
+        assert_eq!(resolved.rpc_depth, 1024);
+        assert_eq!(resolved.response_depth, 256);
+        assert_eq!(resolved.wait_strategy, MyelonWaitStrategy::Block);
+    }
+
+    #[cfg(feature = "myelon")]
+    #[test]
+    fn myelon_transport_config_honors_busy_spin_and_custom_depths() {
+        let mut econfig = test_engine_config();
+        econfig.myelon_rpc_depth = Some(2048);
+        econfig.myelon_response_depth = Some(512);
+        econfig.myelon_busy_spin = Some(true);
+
+        let resolved = resolve_myelon_transport_config(&econfig).unwrap();
+        assert_eq!(resolved.rpc_depth, 2048);
+        assert_eq!(resolved.response_depth, 512);
+        assert_eq!(resolved.wait_strategy, MyelonWaitStrategy::BusySpin);
+    }
+
+    #[cfg(feature = "myelon")]
+    #[test]
+    fn myelon_transport_config_rejects_zero_depths() {
+        let mut econfig = test_engine_config();
+        econfig.myelon_rpc_depth = Some(0);
+        let error = resolve_myelon_transport_config(&econfig).unwrap_err();
+        assert!(error.to_string().contains("myelon_rpc_depth"));
+
+        let mut econfig = test_engine_config();
+        econfig.myelon_response_depth = Some(0);
+        let error = resolve_myelon_transport_config(&econfig).unwrap_err();
+        assert!(error.to_string().contains("myelon_response_depth"));
     }
 }

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use myelon_playground::{
-    attach_shared_consumer, build_shared_single_producer, ensure_coordination_cursor, SharedConsumer,
-    SharedProducer,
+    attach_shared_consumer, build_shared_single_producer, ensure_coordination_cursor,
+    SharedConsumer, SharedProducer,
 };
 pub use myelon_playground::{
     MyelonTransportLayout, MyelonWaitStrategy, RunnerMyelonTransportConfig,
