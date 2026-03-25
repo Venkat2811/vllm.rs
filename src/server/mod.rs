@@ -880,6 +880,10 @@ pub struct Args {
     #[arg(long = "d", value_delimiter = ',')]
     pub device_ids: Option<Vec<usize>>,
 
+    /// Explicit shard count. Defaults to the number of device IDs, or 1 when no device IDs are provided.
+    #[arg(long)]
+    pub num_shards: Option<usize>,
+
     /// Force subprocess runner mode even on a single local device.
     #[arg(long, default_value_t = false)]
     pub force_runner: bool,

@@ -10,6 +10,7 @@ max_model_len="${VLLM_MAX_MODEL_LEN:-256}"
 max_tokens="${VLLM_MAX_TOKENS:-4}"
 seed="${VLLM_SEED:-123}"
 timeout_seconds="${VLLM_TIMEOUT_SECONDS:-60}"
+num_shards="${VLLM_NUM_SHARDS:-1}"
 
 if [[ ! -d "${model_path}" ]]; then
     echo "model path does not exist: ${model_path}" >&2
@@ -35,6 +36,7 @@ common_args=(
     --prompts "${prompt}"
     --dtype bf16
     --seed "${seed}"
+    --num-shards "${num_shards}"
 )
 
 run_case() {
