@@ -6,7 +6,8 @@ use myelon_playground::transport::{
     FramedTransportConsumer, FramedTransportFrame, FramedTransportProducer,
 };
 pub use myelon_playground::{
-    FrameMeta, MyelonTransportLayout, MyelonWaitStrategy, RunnerMyelonTransportConfig,
+    FrameMeta, MyelonTransportConfig, MyelonTransportLayout, MyelonWaitStrategy,
+    RunnerMyelonTransportConfig,
 };
 
 use crate::core::sequence::{DecodeSequence, Sequence};
@@ -141,16 +142,6 @@ impl MsgKind {
     }
 }
 
-const MYELON_RPC_DEPTH: usize = 1024;
-const MYELON_RESPONSE_DEPTH: usize = 256;
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ResolvedMyelonTransportConfig {
-    pub rpc_depth: usize,
-    pub response_depth: usize,
-    pub wait_strategy: MyelonWaitStrategy,
-}
-
 fn myelon_to_candle<E: std::fmt::Display>(error: E) -> candle_core::Error {
     candle_core::Error::Msg(error.to_string())
 }
@@ -159,28 +150,8 @@ pub fn resolve_myelon_transport_config(
     rpc_depth: Option<usize>,
     response_depth: Option<usize>,
     busy_spin: Option<bool>,
-) -> CandleResult<ResolvedMyelonTransportConfig> {
-    let rpc_depth = rpc_depth.unwrap_or(MYELON_RPC_DEPTH);
-    if rpc_depth == 0 {
-        candle_core::bail!("myelon_rpc_depth must be greater than zero");
-    }
-
-    let response_depth = response_depth.unwrap_or(MYELON_RESPONSE_DEPTH);
-    if response_depth == 0 {
-        candle_core::bail!("myelon_response_depth must be greater than zero");
-    }
-
-    let wait_strategy = if busy_spin.unwrap_or(false) {
-        MyelonWaitStrategy::BusySpin
-    } else {
-        MyelonWaitStrategy::Block
-    };
-
-    Ok(ResolvedMyelonTransportConfig {
-        rpc_depth,
-        response_depth,
-        wait_strategy,
-    })
+) -> CandleResult<MyelonTransportConfig> {
+    MyelonTransportConfig::resolve(rpc_depth, response_depth, busy_spin).map_err(myelon_to_candle)
 }
 
 pub struct RpcBroadcastProducer {
@@ -411,7 +382,7 @@ impl MyelonEngineTransport {
     pub fn attach(
         runner_streams: &mut [LocalStream],
         session_label: &str,
-        transport_config: ResolvedMyelonTransportConfig,
+        transport_config: MyelonTransportConfig,
     ) -> CandleResult<Self> {
         let layout = MyelonTransportLayout::for_session(
             session_label,
