@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 import json
 import os
-import platform
 import re
 import subprocess
 import sys
 import time
 from pathlib import Path
 
+from myelon_validation_common import (
+    default_build_features,
+    env_str,
+    parse_device_ids,
+    validate_requested_topology,
+)
 
 RESPONSE_RE = re.compile(r"Response:\s*(.*)")
 PROMPT_METRICS_RE = re.compile(
@@ -19,93 +24,6 @@ DECODE_METRICS_RE = re.compile(
 TOPOLOGY_RE = re.compile(
     r"Runner topology mode=(\w+) reason=([^\s]+) num_shards=(\d+) device_ids=\[([^\]]*)\]"
 )
-
-
-def env_str(name: str, default: str) -> str:
-    value = os.environ.get(name)
-    if value is None or value == "":
-        return default
-    return value
-
-
-def default_build_features() -> str:
-    if platform.system() == "Darwin":
-        return "metal,myelon"
-    return "cuda,myelon"
-
-
-def parse_device_ids(device_ids: str | None) -> list[int] | None:
-    if device_ids is None or device_ids.strip() == "":
-        return None
-    parsed = []
-    for raw in device_ids.split(","):
-        stripped = raw.strip()
-        if stripped == "":
-            raise ValueError(f"invalid VLLM_DEVICE_IDS value '{device_ids}': empty entry")
-        parsed.append(int(stripped))
-    return parsed
-
-
-def detect_cuda_device_count() -> int | None:
-    visible = os.environ.get("CUDA_VISIBLE_DEVICES")
-    if visible is not None and visible.strip() != "":
-        tokens = [part.strip() for part in visible.split(",") if part.strip()]
-        return len(tokens)
-
-    try:
-        completed = subprocess.run(
-            ["nvidia-smi", "--query-gpu=index", "--format=csv,noheader"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return None
-
-    if completed.returncode != 0:
-        return None
-
-    lines = [line.strip() for line in completed.stdout.splitlines() if line.strip()]
-    return len(lines)
-
-
-def validate_requested_topology(
-    parsed_num_shards: int,
-    parsed_device_ids: list[int] | None,
-    build_features: str,
-) -> int | None:
-    if parsed_num_shards <= 0:
-        raise ValueError("VLLM_NUM_SHARDS must be greater than zero")
-
-    if parsed_device_ids is not None and len(parsed_device_ids) != parsed_num_shards:
-        raise ValueError(
-            "VLLM_NUM_SHARDS must match the number of ids in VLLM_DEVICE_IDS: "
-            f"num_shards={parsed_num_shards}, device_ids={parsed_device_ids}"
-        )
-
-    if "cuda" not in build_features.split(","):
-        return None
-
-    detected_count = detect_cuda_device_count()
-    if detected_count is None:
-        return None
-
-    if parsed_device_ids is None:
-        if parsed_num_shards > detected_count:
-            raise ValueError(
-                f"requested num_shards={parsed_num_shards} but only {detected_count} CUDA "
-                "device(s) are visible on this host"
-            )
-        return detected_count
-
-    invalid_ids = [device_id for device_id in parsed_device_ids if device_id >= detected_count]
-    if invalid_ids:
-        raise ValueError(
-            f"requested device_ids={parsed_device_ids} but only {detected_count} CUDA "
-            f"device(s) are visible on this host"
-        )
-    return detected_count
 
 
 def build_command(
