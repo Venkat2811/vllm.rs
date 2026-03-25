@@ -166,6 +166,7 @@ def main() -> int:
     max_tokens = env_str("VLLM_MAX_TOKENS", "4")
     seed = env_str("VLLM_SEED", "123")
     num_shards = env_str("VLLM_NUM_SHARDS", "1")
+    parsed_num_shards = int(num_shards)
     device_ids = os.environ.get("VLLM_DEVICE_IDS")
     myelon_rpc_depth = os.environ.get("VLLM_MYELON_RPC_DEPTH")
     myelon_response_depth = os.environ.get("VLLM_MYELON_RESPONSE_DEPTH")
@@ -197,11 +198,19 @@ def main() -> int:
         check=True,
     )
 
-    cases = [
-        ("direct", ["--num-shards", num_shards]),
-        ("runner", ["--num-shards", num_shards, "--force-runner"]),
-        ("myelon", ["--num-shards", num_shards, "--myelon-ipc"]),
-    ]
+    if parsed_num_shards == 1:
+        cases = [
+            ("direct", ["--num-shards", num_shards]),
+            ("runner", ["--num-shards", num_shards, "--force-runner"]),
+            ("myelon", ["--num-shards", num_shards, "--myelon-ipc"]),
+        ]
+        comparison_scope = "single_shard_correctness_smoke"
+    else:
+        cases = [
+            ("runner", ["--num-shards", num_shards, "--force-runner"]),
+            ("myelon", ["--num-shards", num_shards, "--myelon-ipc"]),
+        ]
+        comparison_scope = "multi_shard_process_ab"
 
     results = []
     for label, extra_args in cases:
@@ -226,7 +235,7 @@ def main() -> int:
         "max_model_len": int(max_model_len),
         "max_tokens": int(max_tokens),
         "seed": int(seed),
-        "num_shards": int(num_shards),
+        "num_shards": parsed_num_shards,
         "device_ids": device_ids,
         "myelon_rpc_depth": int(myelon_rpc_depth) if myelon_rpc_depth else None,
         "myelon_response_depth": int(myelon_response_depth)
@@ -234,13 +243,15 @@ def main() -> int:
         else None,
         "myelon_busy_spin": myelon_busy_spin,
         "max_myelon_prompt_ratio": max_myelon_prompt_ratio,
+        "comparison_scope": comparison_scope,
+        "direct_case_included": parsed_num_shards == 1,
         "build_features": build_features,
         "results": results,
     }
 
-    direct_response = results[0]["metrics"]["response"]
+    baseline_response = results[0]["metrics"]["response"]
     report["all_responses_match"] = all(
-        result["metrics"]["response"] == direct_response for result in results
+        result["metrics"]["response"] == baseline_response for result in results
     )
 
     results_by_label = {result["label"]: result for result in results}
