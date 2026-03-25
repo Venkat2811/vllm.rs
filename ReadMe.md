@@ -409,12 +409,16 @@ By default the scripts build with `cuda,myelon` on Linux and `metal,myelon` on m
 For a machine-readable artifact, use the companion report script:
 
 ```bash
+VLLM_MAX_MYELON_PROMPT_RATIO=4.0 \
 VLLM_AB_REPORT_OUT=/tmp/myelon_ab_report.json \
 ./scripts/run_myelon_ab_report.py
 ```
 
 It runs the same three cases, writes a JSON report, and fails if any leg exits non-zero or if the
-responses diverge across direct, subprocess-runner, and Myelon modes.
+responses diverge across direct, subprocess-runner, and Myelon modes. It also fails if the Myelon
+leg is not actually active, or if the Myelon prompt latency exceeds the subprocess-runner prompt
+latency by more than `VLLM_MAX_MYELON_PROMPT_RATIO` (default `4.0`), which guards against a return
+of the old fixed TP=1 handoff cliff.
 
 For repeated Myelon restart / stale-handle validation on the same host, use:
 
