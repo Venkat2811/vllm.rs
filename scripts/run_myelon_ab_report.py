@@ -28,6 +28,13 @@ def env_str(name: str, default: str) -> str:
     return value
 
 
+def env_float(name: str, default: float) -> float:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return default
+    return float(value)
+
+
 def default_build_features() -> str:
     if platform.system() == "Darwin":
         return "metal,myelon"
@@ -169,6 +176,7 @@ def main() -> int:
     }
     timeout_seconds = int(env_str("VLLM_TIMEOUT_SECONDS", "60"))
     build_features = env_str("VLLM_BUILD_FEATURES", "cuda,myelon")
+    max_myelon_prompt_ratio = env_float("VLLM_MAX_MYELON_PROMPT_RATIO", 4.0)
     if "VLLM_BUILD_FEATURES" not in os.environ:
         build_features = default_build_features()
     output_path = Path(
@@ -225,6 +233,7 @@ def main() -> int:
         if myelon_response_depth
         else None,
         "myelon_busy_spin": myelon_busy_spin,
+        "max_myelon_prompt_ratio": max_myelon_prompt_ratio,
         "build_features": build_features,
         "results": results,
     }
@@ -234,6 +243,14 @@ def main() -> int:
         result["metrics"]["response"] == direct_response for result in results
     )
 
+    results_by_label = {result["label"]: result for result in results}
+    runner_prompt_seconds = results_by_label["runner"]["metrics"]["prompt_seconds"]
+    myelon_prompt_seconds = results_by_label["myelon"]["metrics"]["prompt_seconds"]
+    prompt_ratio = None
+    if runner_prompt_seconds is not None and myelon_prompt_seconds is not None:
+        prompt_ratio = myelon_prompt_seconds / runner_prompt_seconds
+    report["myelon_prompt_ratio_vs_runner"] = prompt_ratio
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(output_path)
@@ -242,6 +259,17 @@ def main() -> int:
         return 1
     if not report["all_responses_match"]:
         return 2
+    if not results_by_label["myelon"]["metrics"]["myelon_enabled"]:
+        return 3
+    if prompt_ratio is not None and prompt_ratio > max_myelon_prompt_ratio:
+        print(
+            (
+                "myelon prompt ratio exceeds guardrail: "
+                f"{prompt_ratio:.2f} > {max_myelon_prompt_ratio:.2f}"
+            ),
+            file=sys.stderr,
+        )
+        return 4
     return 0
 
 
