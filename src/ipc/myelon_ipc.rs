@@ -3,11 +3,10 @@ use candle_core::Result as CandleResult;
 use interprocess::local_socket::Stream as LocalStream;
 use interprocess::TryClone;
 use myelon_playground::transport::{
-    FramedTransportConsumer, FramedTransportFrame, FramedTransportProducer,
+    FixedFrame, FramedTransportConsumer, FramedTransportProducer,
 };
 pub use myelon_playground::{
-    FrameMeta, MyelonTransportConfig, MyelonTransportLayout, MyelonWaitStrategy,
-    RunnerMyelonTransportConfig,
+    MyelonTransportConfig, MyelonTransportLayout, MyelonWaitStrategy, RunnerMyelonTransportConfig,
 };
 
 use crate::core::sequence::{DecodeSequence, Sequence};
@@ -19,97 +18,8 @@ pub const RESPONSE_FRAME_HEADER_BYTES: usize = 12;
 pub const RPC_FRAME_DATA_BYTES: usize = 64 * 1024 - RPC_FRAME_HEADER_BYTES;
 pub const RESPONSE_FRAME_DATA_BYTES: usize = 4 * 1024 - RESPONSE_FRAME_HEADER_BYTES;
 
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct RpcFrame {
-    pub len: u32,
-    pub kind: u8,
-    pub flags: u8,
-    pub msg_id: u32,
-    pub data: [u8; RPC_FRAME_DATA_BYTES],
-}
-
-impl Default for RpcFrame {
-    fn default() -> Self {
-        Self {
-            len: 0,
-            kind: 0,
-            flags: 0,
-            msg_id: 0,
-            data: [0u8; RPC_FRAME_DATA_BYTES],
-        }
-    }
-}
-
-impl FramedTransportFrame for RpcFrame {
-    fn payload_capacity() -> usize {
-        RPC_FRAME_DATA_BYTES
-    }
-
-    fn frame_meta(&self) -> FrameMeta<'_> {
-        FrameMeta {
-            len: self.len as usize,
-            kind: self.kind,
-            flags: self.flags,
-            msg_id: self.msg_id,
-            data: &self.data[..self.len as usize],
-        }
-    }
-
-    fn write_frame(&mut self, payload: &[u8], kind: u8, msg_id: u32, flags: u8) {
-        self.len = payload.len() as u32;
-        self.kind = kind;
-        self.flags = flags;
-        self.msg_id = msg_id;
-        self.data[..payload.len()].copy_from_slice(payload);
-    }
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct ResponseFrame {
-    pub len: u32,
-    pub kind: u8,
-    pub flags: u8,
-    pub msg_id: u32,
-    pub data: [u8; RESPONSE_FRAME_DATA_BYTES],
-}
-
-impl Default for ResponseFrame {
-    fn default() -> Self {
-        Self {
-            len: 0,
-            kind: 0,
-            flags: 0,
-            msg_id: 0,
-            data: [0u8; RESPONSE_FRAME_DATA_BYTES],
-        }
-    }
-}
-
-impl FramedTransportFrame for ResponseFrame {
-    fn payload_capacity() -> usize {
-        RESPONSE_FRAME_DATA_BYTES
-    }
-
-    fn frame_meta(&self) -> FrameMeta<'_> {
-        FrameMeta {
-            len: self.len as usize,
-            kind: self.kind,
-            flags: self.flags,
-            msg_id: self.msg_id,
-            data: &self.data[..self.len as usize],
-        }
-    }
-
-    fn write_frame(&mut self, payload: &[u8], kind: u8, msg_id: u32, flags: u8) {
-        self.len = payload.len() as u32;
-        self.kind = kind;
-        self.flags = flags;
-        self.msg_id = msg_id;
-        self.data[..payload.len()].copy_from_slice(payload);
-    }
-}
+pub type RpcFrame = FixedFrame<RPC_FRAME_DATA_BYTES>;
+pub type ResponseFrame = FixedFrame<RESPONSE_FRAME_DATA_BYTES>;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
@@ -509,7 +419,9 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use myelon_playground::{frame_flags, publish_framed_payload};
+    use myelon_playground::{
+        frame_flags, publish_framed_payload, transport::FramedTransportFrame,
+    };
 
     static UNIQUE_SUFFIX: AtomicU64 = AtomicU64::new(0);
 
