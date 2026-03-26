@@ -9,3 +9,5 @@ AGENTS.md
 CLAUDE.md
 *.nsys-rep
 *.sqlite
+__pycache__/
+*.py[cod]
