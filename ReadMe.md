@@ -415,8 +415,30 @@ VLLM_TIMEOUT_SECONDS=60 \
 ./scripts/run_myelon_smoke_ab.sh
 ```
 
-This is the Linux bring-up path used for local Myelon validation before moving to multi-GPU or
-macOS verification.
+This is the single-shard bring-up path used for local Myelon validation before moving to the
+multi-GPU Linux matrix.
+
+Apple Silicon status on branch `myelon-integration-1` is now explicit:
+
+- host verified: Apple M3 Max MacBook Pro, 96 GB RAM
+- build features: `metal,myelon`
+- model used for the archived smoke: `Qwen/Qwen3-0.6B`
+- `VLLM_NUM_SHARDS=1` is now archived as a real three-leg smoke on macOS:
+  1. direct path
+  2. forced subprocess runner
+  3. forced subprocess runner with Myelon IPC
+- all three legs exited `0` with matching responses in
+  `artifacts/myelon_macos_2026-03-26_m3max_qwen3_0_6b/ab_report.json`
+- repeat-run Myelon recovery also passed `3/3` on the same host in
+  `artifacts/myelon_macos_2026-03-26_m3max_qwen3_0_6b/recovery_report.json`
+
+Deferred or unsupported cases remain explicit:
+
+- TP greater than `1` is still the real open validation gap and needs a multi-GPU Linux host
+- macOS `metal,myelon` should currently be treated as single-shard smoke coverage, not as proof of
+  multi-rank support or a performance win
+- the local `myelon-playground` dependency path in `Cargo.toml` is expected to resolve from the
+  current `myelon-launch` workspace layout
 
 By default the scripts build with `cuda,myelon` on Linux and `metal,myelon` on macOS. Override
 `VLLM_BUILD_FEATURES` if you need a different backend mix.
