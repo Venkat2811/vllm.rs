@@ -706,6 +706,7 @@ impl BlockManager {
         pub, // visibility
         try_transfer_prefill, // function name to create
         transfer_prefill, // thread-mode method name
+        transfer_prefill, // Myelon transport method name
         (seq: &Sequence), // arguments
         MessageType::TransferPrefill, // message to send
         (seq.clone()), // message payload (must clone)
@@ -718,6 +719,7 @@ impl BlockManager {
         pub, // visibility
         try_receive_prefill,
         try_receive_prefill,
+        receive_prefill,
         (available_tokens: usize),
         MessageType::ReceivePrefill,
         (available_tokens),
@@ -729,6 +731,7 @@ impl BlockManager {
     def_broadcast_message_to_runners!(
         pub,
         try_check_prefill_status,
+        check_prefill_status,
         check_prefill_status,
         (seq_id: usize),
         MessageType::CheckPrefillStatus,
@@ -754,6 +757,7 @@ impl BlockManager {
         pub,
         try_send_kvcache,
         send_kvcache,
+        send_kvcache,
         (seq: &Sequence, token: u32),
         MessageType::KvCacheSend,
         ((seq.clone(), token)),
@@ -765,6 +769,7 @@ impl BlockManager {
     def_broadcast_message_to_runners!(
         pub,
         try_receive_kvcache,
+        receive_kvcache,
         receive_kvcache,
         (seq: &Sequence),
         MessageType::KvCacheReceive,
@@ -780,6 +785,7 @@ impl BlockManager {
         pub,
         try_release_remote_kvcache,
         release_remote_kvcache,
+        release_remote_kvcache,
         (seq_id: usize),
         MessageType::KvCacheRelease,
         (seq_id),
@@ -791,6 +797,7 @@ impl BlockManager {
     def_broadcast_message_to_runners!(
         pub,
         try_check_kvcache_release,
+        check_kvcache_release,
         check_kvcache_release,
         (seq_id: usize),
         MessageType::CheckKvCacheRelease,

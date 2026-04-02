@@ -83,12 +83,37 @@ So on this host:
 
 ## Immediate Implications
 
-Current Myelon PD on process runners is not just "buggy performance". It is structurally incomplete for the existing PD control/KV-export model.
+Current Myelon PD on process runners was not just "buggy performance". It was structurally incomplete for the existing PD control/KV-export model.
 
-One of these must happen before PD + Myelon can work in current architecture:
+That gap is now fixed on the current branch by extending the Myelon protocol with the PD helper verbs and routing process-runner PD helpers through `MyelonEngineTransport` after Myelon handoff.
 
-1. Extend the Myelon protocol to support the PD helper verbs, especially `KvCacheSend` and likely `KvCacheReceive` / release-status helpers.
-2. Keep the legacy local socket control loop alive alongside the Myelon execution loop.
-3. Do not enable Myelon on PD server runners, and only use it where the remaining control path is still compatible.
+## Update After Helper-Verb Extension
 
-This is separate from TP inside prefill/decode nodes. TP-within-node may still be viable even if current PD server KV export is not.
+Implemented on the current branch:
+
+1. The Myelon protocol now carries:
+   - `TransferPrefill`
+   - `ReceivePrefill`
+   - `CheckPrefillStatus`
+   - `KvCacheSend`
+   - `KvCacheReceive`
+   - `KvCacheRelease`
+   - `CheckKvCacheRelease`
+2. Once Myelon handoff happens, process-runner PD helpers no longer try to use the abandoned socket loop.
+3. The runner-side Myelon loop now executes those helper verbs directly against the existing `ModelRunner` PD methods.
+
+Confirmed result on this host after the extension:
+
+- TCP `myelon_pd` first-transfer fallback now completes end-to-end.
+- TCP `myelon_pd` warmed synthetic repeated run now also completes end-to-end.
+- PD server logs now show the formerly missing step:
+  - `Runner received Myelon KvCacheSend for seq ...`
+  - followed by successful KV transfer and client completion
+
+Current status after the fix:
+
+- TCP runner PD: green
+- TCP Myelon PD: green on the current `Qwen/Qwen3-0.6B` first-transfer and warmed synthetic slices
+- LocalIPC PD: still blocked for real KV transfer on this VM by `CUDA_ERROR_PEER_ACCESS_UNSUPPORTED`
+
+This is still separate from TP inside prefill/decode nodes. TP-within-node may be pursued independently of the LocalIPC PD limitation on this VM.

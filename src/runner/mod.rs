@@ -331,12 +331,71 @@ pub fn send_and_expect_ack(
 #[macro_export]
 macro_rules! def_broadcast_message_to_runners {
     (
+        $vis:vis,
+        $fn_name:ident,
+        $thread_fn_name:ident,
+        ($($arg_name:ident: $arg_type:ty),*),
+        $msg_variant:path,
+        ($($msg_arg:expr),*),
+        $resp_variant:path,
+        $return_ty:ty
+    ) => {
+        $vis fn $fn_name(&self, $($arg_name: $arg_type),*) -> Result<$return_ty>
+        where
+            $return_ty: std::fmt::Debug + Send,
+        {
+            match &mut *self.runners.write() {
+                RunnerType::Thread(model_runner) => {
+                    model_runner.$thread_fn_name($($arg_name),*)
+                }
+                RunnerType::Process(ref mut runner_group) => {
+                    let cloned_streams: Vec<LocalStream> = runner_group
+                        .streams
+                        .iter_mut()
+                        .map(|s| s.try_clone().expect("Failed to clone runner stream"))
+                        .collect();
+
+                    let all_results: Result<Vec<$return_ty>> = cloned_streams
+                        .into_par_iter()
+                        .map(|mut stream| {
+                            send_local(
+                                &mut vec![stream.try_clone()?],
+                                &$msg_variant($($msg_arg),*),
+                                false,
+                            )?;
+
+                            let response = receive_local(&mut stream, false)?;
+                            match response {
+                                $resp_variant(value) => Ok(value),
+                                other => {
+                                    candle_core::bail!("Unexpected response for {}: {:?}", stringify!($fn_name), other)
+                                }
+                            }
+                        })
+                        .collect();
+
+                    match all_results {
+                        Ok(mut values) => {
+                            if values.is_empty() {
+                                candle_core::bail!("No values received from runners for {}", stringify!($fn_name));
+                            }
+                            Ok(values.pop().unwrap())
+                        }
+                        Err(e) => Err(e),
+                    }
+                }
+            }
+        }
+    };
+    (
         // The visibility (e.g., `pub`)
         $vis:vis,
         // The name of the function to create (e.g., `try_receive_kv_cache`)
         $fn_name:ident,
         // The name of the method on the thread-mode runner (e.g., `receive_kv_cache`)
         $thread_fn_name:ident,
+        // The name of the method on the Myelon engine transport
+        $myelon_fn_name:ident,
         // The arguments for the function (e.g., `(seq: Sequence)`)
         ($($arg_name:ident: $arg_type:ty),*),
         // The MessageType variant to send (e.g., `MessageType::KvCacheReceive`)
@@ -357,9 +416,14 @@ macro_rules! def_broadcast_message_to_runners {
                     // Thread Mode: Call the method directly.
                     model_runner.$thread_fn_name($($arg_name),*)
                 }
-                RunnerType::Process(ref mut runner_streams) => {
+                RunnerType::Process(ref mut runner_group) => {
+                    #[cfg(feature = "myelon")]
+                    if let Some(transport) = runner_group.myelon_transport.as_mut() {
+                        return transport.$myelon_fn_name($($arg_name),*);
+                    }
                     // Process Mode: Broadcast to all subprocess runners.
-                    let cloned_streams: Vec<LocalStream> = runner_streams
+                    let cloned_streams: Vec<LocalStream> = runner_group
+                        .streams
                         .iter_mut()
                         .map(|s| s.try_clone().expect("Failed to clone runner stream"))
                         .collect();
