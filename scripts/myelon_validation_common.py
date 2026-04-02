@@ -13,7 +13,7 @@ def env_str(name: str, default: str) -> str:
 def default_build_features() -> str:
     if platform.system() == "Darwin":
         return "metal,myelon"
-    return "cuda,myelon"
+    return "cuda,myelon,nccl"
 
 
 def parse_device_ids(device_ids: str | None) -> list[int] | None:
@@ -67,7 +67,15 @@ def validate_requested_topology(
             f"num_shards={parsed_num_shards}, device_ids={parsed_device_ids}"
         )
 
-    if "cuda" not in build_features.split(","):
+    enabled_features = {feature.strip() for feature in build_features.split(",") if feature.strip()}
+
+    if parsed_num_shards > 1 and "nccl" not in enabled_features:
+        raise ValueError(
+            "multi-GPU tensor parallel requires the `nccl` cargo feature; "
+            f"requested num_shards={parsed_num_shards} with build_features={build_features!r}"
+        )
+
+    if "cuda" not in enabled_features:
         return None
 
     detected_count = detect_cuda_device_count()
