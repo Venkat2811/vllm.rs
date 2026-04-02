@@ -640,6 +640,18 @@ fn main() -> anyhow::Result<()> {
                         .send_response(&response)
                         .expect("serialize Myelon kv cache release status response");
                 }
+                MyelonRequest::KvCacheSwap { mappings, swap_in } => {
+                    let response = match runner.swap_kvcache(mappings, swap_in) {
+                        Ok(value) => MyelonResponse::KvCacheSwapResponse(value),
+                        Err(error) => {
+                            response_producer.send_error(error);
+                            continue;
+                        }
+                    };
+                    response_producer
+                        .send_response(&response)
+                        .expect("serialize Myelon kv cache swap response");
+                }
                 MyelonRequest::Shutdown => {
                     vllm_rs::log_info!("Runner received Myelon shutdown.");
                     break;
