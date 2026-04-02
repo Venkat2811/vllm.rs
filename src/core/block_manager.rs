@@ -40,6 +40,7 @@ pub struct BlockManager {
     block_size: usize,
     runners: Arc<RwLock<RunnerType>>,
     prefix_cache: Option<PrefixCache>,
+    myelon_ipc_enabled: bool,
     mamba_prefix_enabled: bool,
     mamba_snapshot_block_stride_blocks: usize,
     mamba_prefix_hashes_by_block: HashMap<usize, HashSet<u64>>,
@@ -54,6 +55,7 @@ impl BlockManager {
         num_cpu_blocks: usize,
         block_size: usize,
         prefix_cache: PrefixCacheConfig,
+        myelon_ipc_enabled: bool,
         mamba_prefix_enabled: bool,
     ) -> Self {
         let mut blocks = Vec::with_capacity(num_blocks);
@@ -102,6 +104,7 @@ impl BlockManager {
             block_size,
             runners,
             prefix_cache,
+            myelon_ipc_enabled,
             mamba_prefix_enabled,
             mamba_snapshot_block_stride_blocks,
             mamba_prefix_hashes_by_block: HashMap::new(),
@@ -650,6 +653,9 @@ impl BlockManager {
     }
 
     fn clear_blocks_guard(&mut self, block_ids: Vec<u32>, context: &str) {
+        if self.myelon_ipc_enabled {
+            return;
+        }
         let mut safe = Vec::new();
         for block_id in block_ids {
             let idx = block_id as usize;

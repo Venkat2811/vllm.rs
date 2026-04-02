@@ -9,6 +9,7 @@ from myelon_benchmark_common import (
     build_command,
     metrics_are_complete,
     run_case,
+    run_case_with_retries,
     summarize_numeric_runs,
 )
 from myelon_validation_common import (
@@ -94,7 +95,9 @@ def main() -> int:
     mode = env_str("VLLM_BENCHMARK_MODE", "single_gpu")
     warmup_runs = env_int("VLLM_BENCHMARK_WARMUP_RUNS", 1)
     measured_runs = env_int("VLLM_BENCHMARK_MEASURED_RUNS", 5)
+    max_attempts = env_int("VLLM_BENCHMARK_MAX_ATTEMPTS", 3)
     timeout_seconds = env_int("VLLM_TIMEOUT_SECONDS", 300)
+    retry_sleep_seconds = float(env_str("VLLM_BENCHMARK_RETRY_SLEEP_SECONDS", "2"))
     build_features = env_str("VLLM_BUILD_FEATURES", "")
     build_profile = env_str("VLLM_BUILD_PROFILE", "release")
     device_ids = os.environ.get("VLLM_DEVICE_IDS")
@@ -120,6 +123,9 @@ def main() -> int:
         return 1
     if warmup_runs < 0 or measured_runs <= 0:
         print("warmup runs must be >= 0 and measured runs must be > 0", file=sys.stderr)
+        return 1
+    if max_attempts <= 0:
+        print("max attempts must be > 0", file=sys.stderr)
         return 1
 
     expected_num_shards = 1 if mode == "single_gpu" else 2
@@ -171,11 +177,13 @@ def main() -> int:
 
         warmups = []
         for index in range(warmup_runs):
-            warmup = run_case(
+            warmup = run_case_with_retries(
                 repo_root,
                 f"{label}-warmup-{index + 1}",
                 case_command,
                 timeout_seconds,
+                max_attempts,
+                retry_sleep_seconds,
             )
             warmups.append(warmup)
             if warmup["exit_code"] != 0:
@@ -219,11 +227,13 @@ def main() -> int:
 
         measured = []
         for index in range(measured_runs):
-            run = run_case(
+            run = run_case_with_retries(
                 repo_root,
                 f"{label}-measured-{index + 1}",
                 case_command,
                 timeout_seconds,
+                max_attempts,
+                retry_sleep_seconds,
             )
             measured.append(run)
             if run["exit_code"] != 0:
@@ -298,6 +308,8 @@ def main() -> int:
         "seed": int(seed),
         "warmup_runs": warmup_runs,
         "measured_runs": measured_runs,
+        "max_attempts": max_attempts,
+        "retry_sleep_seconds": retry_sleep_seconds,
         "build_features": build_features,
         "build_profile": build_profile,
         "device_ids": device_ids,

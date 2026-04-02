@@ -145,6 +145,34 @@ def run_case(repo_root: Path, label: str, command: list[str], timeout_seconds: i
     }
 
 
+def run_case_with_retries(
+    repo_root: Path,
+    label: str,
+    command: list[str],
+    timeout_seconds: int,
+    max_attempts: int,
+    retry_sleep_seconds: float,
+) -> dict:
+    attempts = []
+    for attempt_index in range(max_attempts):
+        run = run_case(repo_root, label, command, timeout_seconds)
+        attempts.append(run)
+        if run["exit_code"] == 0 and metrics_are_complete(run["metrics"]):
+            final_run = dict(run)
+            final_run["attempt_count"] = attempt_index + 1
+            final_run["retried"] = attempt_index > 0
+            final_run["attempts"] = [dict(attempt) for attempt in attempts]
+            return final_run
+        if attempt_index + 1 < max_attempts and retry_sleep_seconds > 0:
+            time.sleep(retry_sleep_seconds)
+
+    final_run = dict(attempts[-1])
+    final_run["attempt_count"] = len(attempts)
+    final_run["retried"] = len(attempts) > 1
+    final_run["attempts"] = [dict(attempt) for attempt in attempts]
+    return final_run
+
+
 def summarize_numeric_runs(runs: list[dict]) -> dict:
     summary: dict[str, dict[str, float | int]] = {}
     for key in NUMERIC_METRICS:
