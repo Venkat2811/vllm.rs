@@ -1,0 +1,218 @@
+2026-04-02T16:52:20.389820Z  INFO vllm_rs::utils: CUDA compute capability: 12.0
+2026-04-02T16:52:20.389855Z  WARN vllm_rs: Enter server mode.
+2026-04-02T16:52:21.000385Z  WARN vllm_rs::utils: This model has maximum context 40960 but the current config is Some(4096)!
+2026-04-02T16:52:21.000411Z  WARN vllm_rs::utils: Runner topology mode=process reason=forced_runner num_shards=1 device_ids=[1]
+2026-04-02T16:52:21.000654Z  INFO vllm_rs::core::engine: Use ROPE interleaved false
+2026-04-02T16:52:21.000657Z  INFO vllm_rs::core::engine: EngineConfig { model_id: None, weight_path: Some("/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca"), weight_file: None, enforce_parser: None, hf_token: None, hf_token_path: None, num_blocks: 128, kv_fraction: None, mamba_fraction: None, cpu_mem_fold: None, kvcache_memory_bytes: 0, mamba_memory_bytes: 0, mamba_slot_bytes: 0, mamba_cache_capacity: None, block_size: 64, max_num_seqs: 8, max_num_batched_tokens: 8192, config_model_len: Some(40960), max_model_len: Some(4096), max_tokens: Some(16384), isq: None, num_shards: Some(1), device_ids: Some([1]), force_runner: Some(true), myelon_ipc: Some(false), myelon_rpc_depth: None, myelon_response_depth: None, myelon_busy_spin: Some(false), generation_cfg: Some(GenerationConfig { temperature: Some(0.6), top_p: Some(0.95), top_k: Some(20), frequency_penalty: None, presence_penalty: None, bos_token_id: Some(151643), eos_token_id: Some(Multiple([151645, 151643])) }), seed: Some(123), prefix_cache: Some(true), prefix_cache_max_tokens: None, fp8_kvcache: Some(false), server_mode: Some(true), pd_config: Some(PdConfig { role: Client, method: LocalIpc, url: None }), mcp_command: None, mcp_config: None, mcp_args: None, tool_prompt_template: None, pd_server_prefix_cache_ratio: None, pd_client_prefix_cache_ratio: None, yarn_scaling_factor: None }
+2026-04-02T16:52:21.000680Z  INFO vllm_rs::core::engine: TokenizerConfig { model_max_length: Some(131072.0), add_bos_token: Some(false), add_eos_token: None, chat_template: Some("{%- if tools %}\n    {{- '<|im_start|>system\\n' }}\n    {%- if messages[0].role == 'system' %}\n        {{- messages[0].content + '\\n\\n' }}\n    {%- endif %}\n    {{- \"# Tools\\n\\nYou may call one or more functions to assist with the user query.\\n\\nYou are provided with function signatures within <tools></tools> XML tags:\\n<tools>\" }}\n    {%- for tool in tools %}\n        {{- \"\\n\" }}\n        {{- tool | tojson }}\n    {%- endfor %}\n    {{- \"\\n</tools>\\n\\nFor each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:\\n<tool_call>\\n{\\\"name\\\": <function-name>, \\\"arguments\\\": <args-json-object>}\\n</tool_call><|im_end|>\\n\" }}\n{%- else %}\n    {%- if messages[0].role == 'system' %}\n        {{- '<|im_start|>system\\n' + messages[0].content + '<|im_end|>\\n' }}\n    {%- endif %}\n{%- endif %}\n{%- set ns = namespace(multi_step_tool=true, last_query_index=messages|length - 1) %}\n{%- for message in messages[::-1] %}\n    {%- set index = (messages|length - 1) - loop.index0 %}\n    {%- if ns.multi_step_tool and message.role == \"user\" and message.content is string and not(message.content.startswith('<tool_response>') and message.content.endswith('</tool_response>')) %}\n        {%- set ns.multi_step_tool = false %}\n        {%- set ns.last_query_index = index %}\n    {%- endif %}\n{%- endfor %}\n{%- for message in messages %}\n    {%- if message.content is string %}\n        {%- set content = message.content %}\n    {%- else %}\n        {%- set content = '' %}\n    {%- endif %}\n    {%- if (message.role == \"user\") or (message.role == \"system\" and not loop.first) %}\n        {{- '<|im_start|>' + message.role + '\\n' + content + '<|im_end|>' + '\\n' }}\n    {%- elif message.role == \"assistant\" %}\n        {%- set reasoning_content = '' %}\n        {%- if message.reasoning_content is string %}\n            {%- set reasoning_content = message.reasoning_content %}\n        {%- else %}\n            {%- if '</think>' in content %}\n                {%- set reasoning_content = content.split('</think>')[0].rstrip('\\n').split('<think>')[-1].lstrip('\\n') %}\n                {%- set content = content.split('</think>')[-1].lstrip('\\n') %}\n            {%- endif %}\n        {%- endif %}\n        {%- if loop.index0 > ns.last_query_index %}\n            {%- if loop.last or (not loop.last and reasoning_content) %}\n                {{- '<|im_start|>' + message.role + '\\n<think>\\n' + reasoning_content.strip('\\n') + '\\n</think>\\n\\n' + content.lstrip('\\n') }}\n            {%- else %}\n                {{- '<|im_start|>' + message.role + '\\n' + content }}\n            {%- endif %}\n        {%- else %}\n            {{- '<|im_start|>' + message.role + '\\n' + content }}\n        {%- endif %}\n        {%- if message.tool_calls %}\n            {%- for tool_call in message.tool_calls %}\n                {%- if (loop.first and content) or (not loop.first) %}\n                    {{- '\\n' }}\n                {%- endif %}\n                {%- if tool_call.function %}\n                    {%- set tool_call = tool_call.function %}\n                {%- endif %}\n                {{- '<tool_call>\\n{\"name\": \"' }}\n                {{- tool_call.name }}\n                {{- '\", \"arguments\": ' }}\n                {%- if tool_call.arguments is string %}\n                    {{- tool_call.arguments }}\n                {%- else %}\n                    {{- tool_call.arguments | tojson }}\n                {%- endif %}\n                {{- '}\\n</tool_call>' }}\n            {%- endfor %}\n        {%- endif %}\n        {{- '<|im_end|>\\n' }}\n    {%- elif message.role == \"tool\" %}\n        {%- if loop.first or (messages[loop.index0 - 1].role != \"tool\") %}\n            {{- '<|im_start|>user' }}\n        {%- endif %}\n        {{- '\\n<tool_response>\\n' }}\n        {{- content }}\n        {{- '\\n</tool_response>' }}\n        {%- if loop.last or (messages[loop.index0 + 1].role != \"tool\") %}\n            {{- '<|im_end|>\\n' }}\n        {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '<|im_start|>assistant\\n' }}\n    {%- if enable_thinking is defined and enable_thinking is false %}\n        {{- '<think>\\n\\n</think>\\n\\n' }}\n    {%- endif %}\n{%- endif %}"), bos_token: None, eos_token: Some("<|im_end|>") }
+
+2026-04-02T16:52:21.000708Z  INFO vllm_rs::core::engine: Config { architectures: Some(["Qwen3ForCausalLM"]), head_dim: Some(128), num_attention_heads: 16, num_key_value_heads: 8, max_position_embeddings: 40960, hidden_size: 1024, num_hidden_layers: 28, max_model_len: None, intermediate_size: 3072, rms_norm_eps: 1e-6, vocab_size: Some(151936), rope_theta: Some(1000000.0), attention_bias: Some(false), qkv_bias: None, attn_output_gate: None, attn_logit_softcapping: None, final_logit_softcapping: None, tie_word_embeddings: Some(true), bos_token_id: Some(151643), eos_token_id: Some(Multiple([151645, 151645, 151643])), use_sliding_window: Some(false), sliding_window: None, max_window_layers: Some(28), partial_rotary_factor: None, hidden_act: Silu, rope_scaling: None, quant: None, moe_cfg: None, fp8_kvcache: Some(false), quantization_config: None, is_multi_model: None, extra_config_json: Some("{\n  \"architectures\": [\n    \"Qwen3ForCausalLM\"\n  ],\n  \"attention_bias\": false,\n  \"attention_dropout\": 0.0,\n  \"bos_token_id\": 151643,\n  \"eos_token_id\": 151645,\n  \"head_dim\": 128,\n  \"hidden_act\": \"silu\",\n  \"hidden_size\": 1024,\n  \"initializer_range\": 0.02,\n  \"intermediate_size\": 3072,\n  \"max_position_embeddings\": 40960,\n  \"max_window_layers\": 28,\n  \"model_type\": \"qwen3\",\n  \"num_attention_heads\": 16,\n  \"num_hidden_layers\": 28,\n  \"num_key_value_heads\": 8,\n  \"rms_norm_eps\": 1e-06,\n  \"rope_scaling\": null,\n  \"rope_theta\": 1000000,\n  \"sliding_window\": null,\n  \"tie_word_embeddings\": true,\n  \"torch_dtype\": \"bfloat16\",\n  \"transformers_version\": \"4.51.0\",\n  \"use_cache\": true,\n  \"use_sliding_window\": false,\n  \"vocab_size\": 151936\n}") }
+
+2026-04-02T16:52:21.000718Z  INFO vllm_rs::core::engine: Using device IDs: [1]
+2026-04-02T16:52:21.000721Z  INFO vllm_rs::core::engine: Loading model with runner(s)...
+2026-04-02T16:52:21.001615Z  INFO vllm_rs::utils::progress: listener starting accepting runner 0
+2026-04-02T16:52:21.001613Z  INFO vllm_rs::utils::command: build command channel for the main process!
+2026-04-02T16:52:21.003228Z  INFO runner: Runner retry connecting to socket: 4cebbe57da79@vllm-rs-runner-0
+2026-04-02T16:52:21.003457Z  INFO vllm_rs::core::engine: listener starting accepting runner 0
+2026-04-02T16:52:21.103321Z  INFO runner: Runner retry connecting to socket: 4cebbe57da79@vllm-rs-runner-0
+2026-04-02T16:52:21.103357Z  INFO vllm_rs::core::engine: Accepted runner 0
+2026-04-02T16:52:21.203453Z  INFO runner: Runner connected to socket: 4cebbe57da79@vllm-rs-runner-0
+2026-04-02T16:52:21.203567Z  INFO vllm_rs::utils::command: connect to main process' command channel!
+2026-04-02T16:52:21.203610Z  WARN vllm_rs::utils::command: connected to the main process' command channel!
+2026-04-02T16:52:21.203613Z  INFO vllm_rs::runner: Waiting runner 0 initialize response...
+2026-04-02T16:52:21.203613Z  INFO vllm_rs::utils::heartbeat: enter heartbeat processing loop (CommandManager { daemon_streams: None, main_stream: Some(Stream(Stream(UnixStream { fd: FileDesc(OwnedFd { fd: 4 }), local: (unnamed), peer: "command_4cebbe57da79@vllm-rs-runner-heartbeat.sock" (abstract) }))) })
+2026-04-02T16:52:21.203642Z  INFO vllm_rs::utils::command: accept one daemon process in command channel!
+2026-04-02T16:52:21.203661Z  INFO vllm_rs::utils::command: one daemon process connected to the command channel!
+2026-04-02T16:52:21.203663Z  WARN vllm_rs::utils::command: command channel is built!
+2026-04-02T16:52:21.203607Z  INFO runner: Received init request: RunnerInitRequest { rank: 0, dev_id: 1, num_shards: 1, model_type: Qwen3, config: Config { architectures: Some(["Qwen3ForCausalLM"]), head_dim: Some(128), num_attention_heads: 16, num_key_value_heads: 8, max_position_embeddings: 40960, hidden_size: 1024, num_hidden_layers: 28, max_model_len: None, intermediate_size: 3072, rms_norm_eps: 1e-6, vocab_size: Some(151936), rope_theta: Some(1000000.0), attention_bias: Some(false), qkv_bias: None, attn_output_gate: None, attn_logit_softcapping: None, final_logit_softcapping: None, tie_word_embeddings: Some(true), bos_token_id: Some(151643), eos_token_id: Some(Multiple([151645, 151645, 151643])), use_sliding_window: Some(false), sliding_window: None, max_window_layers: Some(28), partial_rotary_factor: None, hidden_act: Silu, rope_scaling: None, quant: None, moe_cfg: None, fp8_kvcache: Some(false), quantization_config: None, is_multi_model: None, extra_config_json: Some("{\n  \"architectures\": [\n    \"Qwen3ForCausalLM\"\n  ],\n  \"attention_bias\": false,\n  \"attention_dropout\": 0.0,\n  \"bos_token_id\": 151643,\n  \"eos_token_id\": 151645,\n  \"head_dim\": 128,\n  \"hidden_act\": \"silu\",\n  \"hidden_size\": 1024,\n  \"initializer_range\": 0.02,\n  \"intermediate_size\": 3072,\n  \"max_position_embeddings\": 40960,\n  \"max_window_layers\": 28,\n  \"model_type\": \"qwen3\",\n  \"num_attention_heads\": 16,\n  \"num_hidden_layers\": 28,\n  \"num_key_value_heads\": 8,\n  \"rms_norm_eps\": 1e-06,\n  \"rope_scaling\": null,\n  \"rope_theta\": 1000000,\n  \"sliding_window\": null,\n  \"tie_word_embeddings\": true,\n  \"torch_dtype\": \"bfloat16\",\n  \"transformers_version\": \"4.51.0\",\n  \"use_cache\": true,\n  \"use_sliding_window\": false,\n  \"vocab_size\": 151936\n}") }, econfig: EngineConfig { model_id: None, weight_path: Some("/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca"), weight_file: None, enforce_parser: None, hf_token: None, hf_token_path: None, num_blocks: 128, kv_fraction: None, mamba_fraction: None, cpu_mem_fold: None, kvcache_memory_bytes: 0, mamba_memory_bytes: 0, mamba_slot_bytes: 0, mamba_cache_capacity: None, block_size: 64, max_num_seqs: 8, max_num_batched_tokens: 8192, config_model_len: Some(40960), max_model_len: Some(4096), max_tokens: Some(16384), isq: None, num_shards: Some(1), device_ids: Some([1]), force_runner: Some(true), myelon_ipc: Some(false), myelon_rpc_depth: None, myelon_response_depth: None, myelon_busy_spin: Some(false), generation_cfg: Some(GenerationConfig { temperature: Some(0.6), top_p: Some(0.95), top_k: Some(20), frequency_penalty: None, presence_penalty: None, bos_token_id: Some(151643), eos_token_id: Some(Multiple([151645, 151643])) }), seed: Some(123), prefix_cache: Some(true), prefix_cache_max_tokens: None, fp8_kvcache: Some(false), server_mode: Some(true), pd_config: Some(PdConfig { role: Client, method: LocalIpc, url: None }), mcp_command: None, mcp_config: None, mcp_args: None, tool_prompt_template: None, pd_server_prefix_cache_ratio: None, pd_client_prefix_cache_ratio: None, yarn_scaling_factor: None }, model_pathes: ModelPaths { tokenizer_filename: "/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca/tokenizer.json", tokenizer_config_filename: "/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca/tokenizer_config.json", config_filename: "/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca/config.json", generation_config_filename: "/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca/generation_config.json", filenames: ["/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca/model.safetensors"], auxiliary_filenames: [], chat_template_filename: None }, is_gguf: false, dtype: BF16, is_rope_i: false, nccl_id: NcclId(Id { id: ncclUniqueId { internal: [-22, 89, -36, -77, -116, -96, -97, -42, 2, 0, -37, -43, 31, 22, 104, 68, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } }) }
+2026-04-02T16:52:21.203671Z  INFO vllm_rs::utils::heartbeat: enter heartbeat processing loop (CommandManager { daemon_streams: Some([Stream(Stream(UnixStream { fd: FileDesc(OwnedFd { fd: 31 }), local: "command_4cebbe57da79@vllm-rs-runner-heartbeat.sock" (abstract), peer: (unnamed) }))]), main_stream: None })
+2026-04-02T16:52:21.549579Z  INFO runner: Loading model at rank 0
+2026-04-02T16:52:21.549601Z  INFO vllm_rs::utils::progress: Remote progress reporter initialized for rank 0
+2026-04-02T16:52:21.565666Z  INFO vllm_rs::transfer::comm: PD Client: Connected to LocalIPC server at @vllm-rs-transfer-0
+2026-04-02T16:52:21.566169Z  INFO vllm_rs::transfer::comm: [Client] PD Connection established.
+2026-04-02T16:52:22.677371Z  WARN vllm_rs::utils::kvcache_allocator: GPU 1: total 94.97 GB, free 88.74 GB, kv_fraction 95%, Max usable cache budget 84.30 GB
+2026-04-02T16:52:22.677402Z  WARN vllm_rs::utils::kvcache_allocator: KVCache Allocation: 512 GPU blocks (3.50 GB x 1), max usable kvcache tokens 32768 (112k bytes per token), scheduling limits [8 seqs x 4096 tokens]
+2026-04-02T16:52:22.677407Z  INFO vllm_rs::core::engine: KVCache allocation successfully planned!
+2026-04-02T16:52:22.677512Z  INFO vllm_rs::runner: Waiting runner 0 init kvcache response...
+2026-04-02T16:52:22.677512Z  WARN vllm_rs::utils::kvcache_allocator: Using FP8 KV Cache? false, cache dtype BF16
+2026-04-02T16:52:23.557133Z  INFO runner: Runner at rank 0 created (PD config: Some(PdConfig { role: Client, method: LocalIpc, url: None }))!
+2026-04-02T16:52:23.557192Z  INFO vllm_rs::core::engine: Runner 0 started!
+2026-04-02T16:52:23.557226Z  WARN vllm_rs::core::scheduler: Prefix cache enabled: 179 blocks (11456 tokens).
+2026-04-02T16:52:23.557442Z  INFO vllm_rs::core::engine: Tool call start token IDs set to: [151657]
+2026-04-02T16:52:23.557445Z  INFO vllm_rs::core::engine: Tool call end token IDs set to: [151658]
+2026-04-02T16:52:23.580086Z  INFO vllm_rs::core::scheduler: JSON end token ID (}) set to: 92
+2026-04-02T16:52:23.580146Z  WARN vllm_rs::core::engine: Maximum batched tokens 32768 (512 blocks x Block_Size 64 for KV cache). Additional CPU KV Cache blocks 102.
+2026-04-02T16:52:23.580609Z  INFO vllm_rs::core::engine: Missing suffix detected <think>
+
+</think>
+
+ -> [151667, 271, 151668, 271]
+2026-04-02T16:52:23.580615Z  WARN vllm_rs::core::engine: Model loaded.
+
+🧠 API server running at:
+   -  http://localhost:18080/v1/ (Local Access) 
+   -  http://31.22.104.68:18080/v1/ (Remote Access, IP may not correct under Docker)
+📡 Supported endpoints (OpenAI/Claude):
+   - POST /v1/chat/completions
+   - POST /v1/messages
+   - POST /v1/messages/count_tokens
+   - POST /v1/embeddings
+   - GET  /v1/models
+   - GET  /v1/usage
+   - POST /tokenize
+   - POST /detokenize
+
+🛑 EXIT: Ctrl+C to quit. If unresponsive: Ctrl+P → Ctrl+Q (last resort).
+
+2026-04-02T16:52:24.988468Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 0, 98 tokens] received! (session_id: None)
+
+2026-04-02T16:52:24.988527Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 0 (98 tokens, 0 cached blocks, raw_match=0 blocks)
+2026-04-02T16:52:25.090162Z  INFO vllm_rs::core::runner: User's thinking preference for reasoning models: None
+2026-04-02T16:52:25.090186Z  WARN vllm_rs::core::runner: Using sampling from generation_config: temp=Some(0.6), top_k=Some(20), top_p=Some(0.95), freq_penalty=None, pres_penalty=None
+2026-04-02T16:52:25.090857Z  INFO vllm_rs::core::engine: Prefilling [seq_id 0]: 99 tokens in 0.12s (804.88 tokens/s)
+2026-04-02T16:52:25.123241Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 1, 586 tokens] received! (session_id: None)
+
+2026-04-02T16:52:25.123404Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 1, 586 tokens) transfered to PD server.
+2026-04-02T16:52:25.251416Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 1 received
+2026-04-02T16:52:25.256589Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 0 (137 tokens, 2 blocks)
+2026-04-02T16:52:25.256637Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:25.256657Z  INFO vllm_rs::server::server: [Seq 0] ⏱️ Prompt: 98 tokens in 0.12s (796.75 t/s)
+2026-04-02T16:52:25.256662Z  INFO vllm_rs::server::server: [Seq 0] ⏱️ Decoded: 39 tokens in 0.17s (234.94 t/s)
+2026-04-02T16:52:25.261109Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 510 blocks (32640 tokens) free, used 0.4% (0.01GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.280294Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 2, 203 tokens] received! (session_id: None)
+
+2026-04-02T16:52:25.280420Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 2, 203 tokens) transfered to PD server.
+2026-04-02T16:52:25.280568Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:25.280605Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 1 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:25.286976Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:25.286983Z  INFO vllm_rs::server::server: [Seq 1] ⏱️ Prompt: 586 tokens in 0.19s (3167.57 t/s)
+2026-04-02T16:52:25.286988Z  INFO vllm_rs::server::server: [Seq 1] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:25.291539Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 500 blocks (32000 tokens) free, used 2.3% (0.08GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.311200Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 2 received
+2026-04-02T16:52:25.330943Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:25.330975Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 2 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:25.334707Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:25.334725Z  INFO vllm_rs::server::server: [Seq 2] ⏱️ Prompt: 203 tokens in 0.07s (2780.82 t/s)
+2026-04-02T16:52:25.334730Z  INFO vllm_rs::server::server: [Seq 2] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:25.339143Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 496 blocks (31744 tokens) free, used 3.1% (0.11GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.361930Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 3, 313 tokens] received! (session_id: None)
+
+2026-04-02T16:52:25.362039Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 3, 313 tokens) transfered to PD server.
+2026-04-02T16:52:25.373344Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 3 received
+2026-04-02T16:52:25.413741Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:25.413770Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 3 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:25.418357Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:25.418368Z  INFO vllm_rs::server::server: [Seq 3] ⏱️ Prompt: 313 tokens in 0.08s (3962.03 t/s)
+2026-04-02T16:52:25.418372Z  INFO vllm_rs::server::server: [Seq 3] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:25.422708Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 491 blocks (31424 tokens) free, used 4.1% (0.14GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.444572Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 4, 201 tokens] received! (session_id: None)
+
+2026-04-02T16:52:25.444691Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 4, 201 tokens) transfered to PD server.
+2026-04-02T16:52:25.484405Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 4 received
+2026-04-02T16:52:25.494305Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:25.494334Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 4 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:25.498141Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:25.498147Z  INFO vllm_rs::server::server: [Seq 4] ⏱️ Prompt: 201 tokens in 0.08s (2680.00 t/s)
+2026-04-02T16:52:25.498152Z  INFO vllm_rs::server::server: [Seq 4] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:25.502843Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 487 blocks (31168 tokens) free, used 4.9% (0.17GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.522521Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 5, 257 tokens] received! (session_id: None)
+
+2026-04-02T16:52:25.524012Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 5, 257 tokens) transfered to PD server.
+2026-04-02T16:52:25.547780Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 5 received
+2026-04-02T16:52:25.575665Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:25.575693Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 5 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:25.580274Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:25.580280Z  INFO vllm_rs::server::server: [Seq 5] ⏱️ Prompt: 257 tokens in 0.08s (3337.66 t/s)
+2026-04-02T16:52:25.580284Z  INFO vllm_rs::server::server: [Seq 5] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:25.584798Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 481 blocks (30784 tokens) free, used 6.1% (0.21GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.603939Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 6, 220 tokens] received! (session_id: None)
+
+2026-04-02T16:52:25.605987Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 6, 220 tokens) transfered to PD server.
+2026-04-02T16:52:25.658642Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 6 received
+2026-04-02T16:52:25.706184Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:25.706215Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 6 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:25.709951Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:25.709959Z  INFO vllm_rs::server::server: [Seq 6] ⏱️ Prompt: 220 tokens in 0.12s (1774.19 t/s)
+2026-04-02T16:52:25.709962Z  INFO vllm_rs::server::server: [Seq 6] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:25.714359Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 477 blocks (30528 tokens) free, used 6.8% (0.24GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.734116Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 7, 383 tokens] received! (session_id: None)
+
+2026-04-02T16:52:25.735509Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 7, 383 tokens) transfered to PD server.
+2026-04-02T16:52:25.774882Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 7 received
+2026-04-02T16:52:25.785179Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:25.785203Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 7 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:25.789683Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:25.789690Z  INFO vllm_rs::server::server: [Seq 7] ⏱️ Prompt: 383 tokens in 0.07s (5175.68 t/s)
+2026-04-02T16:52:25.789695Z  INFO vllm_rs::server::server: [Seq 7] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:25.794421Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 471 blocks (30144 tokens) free, used 8.0% (0.28GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.803767Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 8, 264 tokens] received! (session_id: None)
+
+2026-04-02T16:52:25.815570Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 8, 264 tokens) transfered to PD server.
+2026-04-02T16:52:25.836401Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 8 received
+2026-04-02T16:52:25.865126Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:25.865158Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 8 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:25.869675Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:25.869684Z  INFO vllm_rs::server::server: [Seq 8] ⏱️ Prompt: 264 tokens in 0.08s (3520.00 t/s)
+2026-04-02T16:52:25.869689Z  INFO vllm_rs::server::server: [Seq 8] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:25.874529Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 466 blocks (29824 tokens) free, used 9.0% (0.31GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.901216Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 9, 345 tokens] received! (session_id: None)
+
+2026-04-02T16:52:25.901329Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 9, 345 tokens) transfered to PD server.
+2026-04-02T16:52:25.965530Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 9 received
+2026-04-02T16:52:26.002447Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:26.002481Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 9 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:26.007105Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:26.007111Z  INFO vllm_rs::server::server: [Seq 9] ⏱️ Prompt: 345 tokens in 0.13s (2738.10 t/s)
+2026-04-02T16:52:26.007116Z  INFO vllm_rs::server::server: [Seq 9] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:26.011643Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 460 blocks (29440 tokens) free, used 10.2% (0.36GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.033697Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 10, 393 tokens] received! (session_id: None)
+
+2026-04-02T16:52:26.033783Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 10, 393 tokens) transfered to PD server.
+2026-04-02T16:52:26.094113Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 10 received
+2026-04-02T16:52:26.134926Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:26.134955Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 10 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:26.139417Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:26.139422Z  INFO vllm_rs::server::server: [Seq 10] ⏱️ Prompt: 393 tokens in 0.13s (3094.49 t/s)
+2026-04-02T16:52:26.139426Z  INFO vllm_rs::server::server: [Seq 10] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:26.143767Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 453 blocks (28992 tokens) free, used 11.5% (0.40GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.154060Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 11, 390 tokens] received! (session_id: None)
+
+2026-04-02T16:52:26.164917Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 11, 390 tokens) transfered to PD server.
+2026-04-02T16:52:26.223021Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 11 received
+2026-04-02T16:52:26.264106Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:26.264132Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 11 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:26.268579Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:26.268584Z  INFO vllm_rs::server::server: [Seq 11] ⏱️ Prompt: 390 tokens in 0.12s (3145.16 t/s)
+2026-04-02T16:52:26.268586Z  INFO vllm_rs::server::server: [Seq 11] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:26.273382Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 446 blocks (28544 tokens) free, used 12.9% (0.45GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.291735Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 12, 297 tokens] received! (session_id: None)
+
+2026-04-02T16:52:26.294530Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 12, 297 tokens) transfered to PD server.
+2026-04-02T16:52:26.347535Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 12 received
+2026-04-02T16:52:26.395812Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:26.395841Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 12 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:26.400334Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:26.400337Z  INFO vllm_rs::server::server: [Seq 12] ⏱️ Prompt: 297 tokens in 0.13s (2338.58 t/s)
+2026-04-02T16:52:26.400339Z  INFO vllm_rs::server::server: [Seq 12] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:26.405225Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 441 blocks (28224 tokens) free, used 13.9% (0.49GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.424882Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 13, 651 tokens] received! (session_id: None)
+
+2026-04-02T16:52:26.426361Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 13, 651 tokens) transfered to PD server.
+2026-04-02T16:52:26.490149Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 13 received
+2026-04-02T16:52:26.527533Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:26.527560Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 13 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:26.532108Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:26.532114Z  INFO vllm_rs::server::server: [Seq 13] ⏱️ Prompt: 651 tokens in 0.13s (5166.67 t/s)
+2026-04-02T16:52:26.532118Z  INFO vllm_rs::server::server: [Seq 13] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:26.536521Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 430 blocks (27520 tokens) free, used 16.0% (0.56GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.555062Z  WARN vllm_rs::core::engine: [Stream] New request [Seq_id 14, 417 tokens] received! (session_id: None)
+
+2026-04-02T16:52:26.557659Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 14, 417 tokens) transfered to PD server.
+2026-04-02T16:52:26.619528Z  INFO vllm_rs::transfer::comm: PD Client: KvCache for Seq 14 received
+2026-04-02T16:52:26.658911Z ERROR runner: KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))
+2026-04-02T16:52:26.658940Z ERROR vllm_rs::core::scheduler: KvCache Transfer: Seq 14 prefill finished but failed to receive. Aborting seq.
+2026-04-02T16:52:26.663384Z  WARN vllm_rs::server::server: --- Performance Metrics ---
+2026-04-02T16:52:26.663392Z  INFO vllm_rs::server::server: [Seq 14] ⏱️ Prompt: 417 tokens in 0.13s (3309.52 t/s)
+2026-04-02T16:52:26.663395Z  INFO vllm_rs::server::server: [Seq 14] ⏱️ Decoded: 1 tokens in 0.00s (1000.00 t/s)
+2026-04-02T16:52:26.668386Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 423 blocks (27072 tokens) free, used 17.4% (0.61GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.805716Z  INFO runner: Runner finished

@@ -573,6 +573,54 @@ Interpretation:
   - Myelon PD hangs as soon as a real transferred prefill enters the Myelon hot path
 - the next PD step is debugging the Myelon-plus-PD interaction after first transferred prefill, not collecting more broad PD performance data
 
+### PD/Myelon codepath finding
+
+The current TCP Myelon PD hang is now explained by the implementation, not just by runtime symptoms.
+
+Current PD server flow in process-runner mode:
+
+- scheduler receives `TransferPrefill`
+- prefill runs
+- PD server `postprocess()` calls `BlockManager::try_send_kvcache()`
+- that sends `MessageType::KvCacheSend` over the legacy local socket control path
+- the subprocess runner is expected to handle that by calling `ModelRunner::send_kvcache()`
+
+But once Myelon is enabled:
+
+- engine sends `InitMyelonTransport`
+- the subprocess runner attaches to Myelon
+- the runner then breaks out of the legacy socket command loop and enters the Myelon loop
+- the Myelon loop currently only handles:
+  - `RunPrefill`
+  - `RunDecode`
+  - `FinishDecode`
+  - `Cancel`
+  - `Shutdown`
+
+It does not handle the PD helper verbs such as:
+
+- `KvCacheSend`
+- `KvCacheReceive`
+- `TransferPrefill`
+- `ReceivePrefill`
+- release / status checks
+
+The regenerated TCP Myelon artifact now shows the exact stall point with the new debug logs:
+
+- PD server:
+  - `Runner switching execution to Myelon hot path; legacy local-socket control handling will stop after this handshake.`
+  - `PD Server: seq 0 reached postprocess under Myelon IPC; requesting KvCacheSend over the runner control path.`
+- and after that there is no `Runner received KvCacheSend ...`
+
+Interpretation:
+
+- current Myelon PD on process runners is structurally incomplete for the existing PD KV-export model
+- before PD + Myelon can work, one of these has to change:
+  - add PD helper verbs to the Myelon protocol
+  - keep the legacy control loop alive alongside Myelon
+  - avoid enabling Myelon on PD server runners
+- this is separate from TP inside prefill/decode nodes; TP-within-node can still be pursued even if current PD server KV export is not Myelon-compatible yet
+
 Interpretation:
 
 - the first bounded ShareGPT slice is realistic enough to create actual context pressure

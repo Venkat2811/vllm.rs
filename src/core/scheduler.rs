@@ -457,6 +457,12 @@ impl Scheduler {
             // Since all reqeusts in PD server are prefill request, we need to finish and transfer
             // the kvcache in the first postprocess for each request.
             if self.is_pd_server() {
+                if self.cfg.myelon_ipc.unwrap_or(false) {
+                    crate::log_warn!(
+                        "PD Server: seq {} reached postprocess under Myelon IPC; requesting KvCacheSend over the runner control path.",
+                        seq_id
+                    );
+                }
                 match self
                     .block_manager
                     .try_send_kvcache(&self.running[idx], token)
