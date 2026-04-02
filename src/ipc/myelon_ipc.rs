@@ -539,7 +539,6 @@ pub struct MyelonEngineTransport {
     response_consumers: Vec<ResponseConsumer>,
     logged_first_request: bool,
     logged_first_response: bool,
-    logged_rank_divergence_warning: bool,
 }
 
 impl MyelonEngineTransport {
@@ -595,7 +594,6 @@ impl MyelonEngineTransport {
             response_consumers,
             logged_first_request: false,
             logged_first_response: false,
-            logged_rank_divergence_warning: false,
         })
     }
 
@@ -779,41 +777,28 @@ impl MyelonEngineTransport {
     }
 
     fn collect_outputs(&mut self) -> CandleResult<Vec<u32>> {
-        let mut last_output: Option<Vec<u32>> = None;
-
-        for consumer in &mut self.response_consumers {
-            let response = consumer.recv_response_blocking()?;
-            if !self.logged_first_response {
-                log_info!(
-                    "Received first Myelon response kind={} bytes={}.",
-                    response.kind().as_u8(),
-                    response.encode()?.len()
-                );
-                self.logged_first_response = true;
+        let consumer = self
+            .response_consumers
+            .first_mut()
+            .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))?;
+        let response = consumer.recv_response_blocking()?;
+        if !self.logged_first_response {
+            log_info!(
+                "Received first Myelon response kind={} bytes={}.",
+                response.kind().as_u8(),
+                response.encode()?.len()
+            );
+            self.logged_first_response = true;
+        }
+        match response {
+            MyelonResponse::RunResponse(output_ids) => Ok(output_ids),
+            MyelonResponse::Error(error) => {
+                candle_core::bail!("runner Myelon error: {}", error);
             }
-            match response {
-                MyelonResponse::RunResponse(output_ids) => {
-                    if let Some(expected) = &last_output {
-                        if expected != &output_ids && !self.logged_rank_divergence_warning {
-                            log_info!(
-                                "Myelon runner outputs differed across ranks; keeping the last response to match legacy process-runner behavior."
-                            );
-                            self.logged_rank_divergence_warning = true;
-                        }
-                    }
-                    last_output = Some(output_ids);
-                }
-                MyelonResponse::Error(error) => {
-                    candle_core::bail!("runner Myelon error: {}", error);
-                }
-                other => {
-                    candle_core::bail!("unexpected Myelon run response: {other:?}");
-                }
+            other => {
+                candle_core::bail!("unexpected Myelon run response: {other:?}");
             }
         }
-
-        last_output
-            .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))
     }
 }
 
