@@ -1,0 +1,168 @@
+2026-04-02T16:52:16.625933Z  INFO vllm_rs::utils: CUDA compute capability: 12.0
+2026-04-02T16:52:17.362182Z  WARN vllm_rs::utils: This model has maximum context 40960 but the current config is Some(4096)!
+2026-04-02T16:52:17.362211Z  WARN vllm_rs::utils: Runner topology mode=process reason=forced_runner num_shards=1 device_ids=[0]
+2026-04-02T16:52:17.362455Z  INFO vllm_rs::core::engine: Use ROPE interleaved false
+2026-04-02T16:52:17.362457Z  INFO vllm_rs::core::engine: EngineConfig { model_id: None, weight_path: Some("/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca"), weight_file: None, enforce_parser: None, hf_token: None, hf_token_path: None, num_blocks: 128, kv_fraction: None, mamba_fraction: None, cpu_mem_fold: None, kvcache_memory_bytes: 0, mamba_memory_bytes: 0, mamba_slot_bytes: 0, mamba_cache_capacity: None, block_size: 64, max_num_seqs: 8, max_num_batched_tokens: 8192, config_model_len: Some(40960), max_model_len: Some(4096), max_tokens: Some(16384), isq: None, num_shards: Some(1), device_ids: Some([0]), force_runner: Some(true), myelon_ipc: Some(false), myelon_rpc_depth: None, myelon_response_depth: None, myelon_busy_spin: Some(false), generation_cfg: Some(GenerationConfig { temperature: Some(0.6), top_p: Some(0.95), top_k: Some(20), frequency_penalty: None, presence_penalty: None, bos_token_id: Some(151643), eos_token_id: Some(Multiple([151645, 151643])) }), seed: Some(123), prefix_cache: Some(true), prefix_cache_max_tokens: None, fp8_kvcache: Some(false), server_mode: Some(true), pd_config: Some(PdConfig { role: Server, method: LocalIpc, url: None }), mcp_command: None, mcp_config: None, mcp_args: None, tool_prompt_template: None, pd_server_prefix_cache_ratio: None, pd_client_prefix_cache_ratio: None, yarn_scaling_factor: None }
+2026-04-02T16:52:17.362479Z  INFO vllm_rs::core::engine: TokenizerConfig { model_max_length: Some(131072.0), add_bos_token: Some(false), add_eos_token: None, chat_template: Some("{%- if tools %}\n    {{- '<|im_start|>system\\n' }}\n    {%- if messages[0].role == 'system' %}\n        {{- messages[0].content + '\\n\\n' }}\n    {%- endif %}\n    {{- \"# Tools\\n\\nYou may call one or more functions to assist with the user query.\\n\\nYou are provided with function signatures within <tools></tools> XML tags:\\n<tools>\" }}\n    {%- for tool in tools %}\n        {{- \"\\n\" }}\n        {{- tool | tojson }}\n    {%- endfor %}\n    {{- \"\\n</tools>\\n\\nFor each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:\\n<tool_call>\\n{\\\"name\\\": <function-name>, \\\"arguments\\\": <args-json-object>}\\n</tool_call><|im_end|>\\n\" }}\n{%- else %}\n    {%- if messages[0].role == 'system' %}\n        {{- '<|im_start|>system\\n' + messages[0].content + '<|im_end|>\\n' }}\n    {%- endif %}\n{%- endif %}\n{%- set ns = namespace(multi_step_tool=true, last_query_index=messages|length - 1) %}\n{%- for message in messages[::-1] %}\n    {%- set index = (messages|length - 1) - loop.index0 %}\n    {%- if ns.multi_step_tool and message.role == \"user\" and message.content is string and not(message.content.startswith('<tool_response>') and message.content.endswith('</tool_response>')) %}\n        {%- set ns.multi_step_tool = false %}\n        {%- set ns.last_query_index = index %}\n    {%- endif %}\n{%- endfor %}\n{%- for message in messages %}\n    {%- if message.content is string %}\n        {%- set content = message.content %}\n    {%- else %}\n        {%- set content = '' %}\n    {%- endif %}\n    {%- if (message.role == \"user\") or (message.role == \"system\" and not loop.first) %}\n        {{- '<|im_start|>' + message.role + '\\n' + content + '<|im_end|>' + '\\n' }}\n    {%- elif message.role == \"assistant\" %}\n        {%- set reasoning_content = '' %}\n        {%- if message.reasoning_content is string %}\n            {%- set reasoning_content = message.reasoning_content %}\n        {%- else %}\n            {%- if '</think>' in content %}\n                {%- set reasoning_content = content.split('</think>')[0].rstrip('\\n').split('<think>')[-1].lstrip('\\n') %}\n                {%- set content = content.split('</think>')[-1].lstrip('\\n') %}\n            {%- endif %}\n        {%- endif %}\n        {%- if loop.index0 > ns.last_query_index %}\n            {%- if loop.last or (not loop.last and reasoning_content) %}\n                {{- '<|im_start|>' + message.role + '\\n<think>\\n' + reasoning_content.strip('\\n') + '\\n</think>\\n\\n' + content.lstrip('\\n') }}\n            {%- else %}\n                {{- '<|im_start|>' + message.role + '\\n' + content }}\n            {%- endif %}\n        {%- else %}\n            {{- '<|im_start|>' + message.role + '\\n' + content }}\n        {%- endif %}\n        {%- if message.tool_calls %}\n            {%- for tool_call in message.tool_calls %}\n                {%- if (loop.first and content) or (not loop.first) %}\n                    {{- '\\n' }}\n                {%- endif %}\n                {%- if tool_call.function %}\n                    {%- set tool_call = tool_call.function %}\n                {%- endif %}\n                {{- '<tool_call>\\n{\"name\": \"' }}\n                {{- tool_call.name }}\n                {{- '\", \"arguments\": ' }}\n                {%- if tool_call.arguments is string %}\n                    {{- tool_call.arguments }}\n                {%- else %}\n                    {{- tool_call.arguments | tojson }}\n                {%- endif %}\n                {{- '}\\n</tool_call>' }}\n            {%- endfor %}\n        {%- endif %}\n        {{- '<|im_end|>\\n' }}\n    {%- elif message.role == \"tool\" %}\n        {%- if loop.first or (messages[loop.index0 - 1].role != \"tool\") %}\n            {{- '<|im_start|>user' }}\n        {%- endif %}\n        {{- '\\n<tool_response>\\n' }}\n        {{- content }}\n        {{- '\\n</tool_response>' }}\n        {%- if loop.last or (messages[loop.index0 + 1].role != \"tool\") %}\n            {{- '<|im_end|>\\n' }}\n        {%- endif %}\n    {%- endif %}\n{%- endfor %}\n{%- if add_generation_prompt %}\n    {{- '<|im_start|>assistant\\n' }}\n    {%- if enable_thinking is defined and enable_thinking is false %}\n        {{- '<think>\\n\\n</think>\\n\\n' }}\n    {%- endif %}\n{%- endif %}"), bos_token: None, eos_token: Some("<|im_end|>") }
+
+2026-04-02T16:52:17.362508Z  INFO vllm_rs::core::engine: Config { architectures: Some(["Qwen3ForCausalLM"]), head_dim: Some(128), num_attention_heads: 16, num_key_value_heads: 8, max_position_embeddings: 40960, hidden_size: 1024, num_hidden_layers: 28, max_model_len: None, intermediate_size: 3072, rms_norm_eps: 1e-6, vocab_size: Some(151936), rope_theta: Some(1000000.0), attention_bias: Some(false), qkv_bias: None, attn_output_gate: None, attn_logit_softcapping: None, final_logit_softcapping: None, tie_word_embeddings: Some(true), bos_token_id: Some(151643), eos_token_id: Some(Multiple([151645, 151645, 151643])), use_sliding_window: Some(false), sliding_window: None, max_window_layers: Some(28), partial_rotary_factor: None, hidden_act: Silu, rope_scaling: None, quant: None, moe_cfg: None, fp8_kvcache: Some(false), quantization_config: None, is_multi_model: None, extra_config_json: Some("{\n  \"architectures\": [\n    \"Qwen3ForCausalLM\"\n  ],\n  \"attention_bias\": false,\n  \"attention_dropout\": 0.0,\n  \"bos_token_id\": 151643,\n  \"eos_token_id\": 151645,\n  \"head_dim\": 128,\n  \"hidden_act\": \"silu\",\n  \"hidden_size\": 1024,\n  \"initializer_range\": 0.02,\n  \"intermediate_size\": 3072,\n  \"max_position_embeddings\": 40960,\n  \"max_window_layers\": 28,\n  \"model_type\": \"qwen3\",\n  \"num_attention_heads\": 16,\n  \"num_hidden_layers\": 28,\n  \"num_key_value_heads\": 8,\n  \"rms_norm_eps\": 1e-06,\n  \"rope_scaling\": null,\n  \"rope_theta\": 1000000,\n  \"sliding_window\": null,\n  \"tie_word_embeddings\": true,\n  \"torch_dtype\": \"bfloat16\",\n  \"transformers_version\": \"4.51.0\",\n  \"use_cache\": true,\n  \"use_sliding_window\": false,\n  \"vocab_size\": 151936\n}") }
+
+2026-04-02T16:52:17.362518Z  INFO vllm_rs::core::engine: Using device IDs: [0]
+2026-04-02T16:52:17.362521Z  INFO vllm_rs::core::engine: Loading model with runner(s)...
+2026-04-02T16:52:17.363512Z  INFO vllm_rs::utils::command: build command channel for the main process!
+2026-04-02T16:52:17.363531Z  INFO vllm_rs::utils::progress: listener starting accepting runner 0
+2026-04-02T16:52:17.365222Z  INFO runner: Runner retry connecting to socket: 2a876d43bd1a@vllm-rs-runner-0
+2026-04-02T16:52:17.366513Z  INFO vllm_rs::core::engine: listener starting accepting runner 0
+2026-04-02T16:52:17.465318Z  INFO runner: Runner retry connecting to socket: 2a876d43bd1a@vllm-rs-runner-0
+2026-04-02T16:52:17.465352Z  INFO vllm_rs::core::engine: Accepted runner 0
+2026-04-02T16:52:17.565457Z  INFO runner: Runner connected to socket: 2a876d43bd1a@vllm-rs-runner-0
+2026-04-02T16:52:17.565562Z  INFO vllm_rs::utils::command: connect to main process' command channel!
+2026-04-02T16:52:17.565592Z  WARN vllm_rs::utils::command: connected to the main process' command channel!
+2026-04-02T16:52:17.565594Z  INFO vllm_rs::utils::heartbeat: enter heartbeat processing loop (CommandManager { daemon_streams: None, main_stream: Some(Stream(Stream(UnixStream { fd: FileDesc(OwnedFd { fd: 4 }), local: (unnamed), peer: "command_2a876d43bd1a@vllm-rs-runner-heartbeat.sock" (abstract) }))) })
+2026-04-02T16:52:17.565607Z  INFO vllm_rs::utils::command: accept one daemon process in command channel!
+2026-04-02T16:52:17.565638Z  INFO vllm_rs::runner: Waiting runner 0 initialize response...
+2026-04-02T16:52:17.565642Z  INFO vllm_rs::utils::command: one daemon process connected to the command channel!
+2026-04-02T16:52:17.565657Z  WARN vllm_rs::utils::command: command channel is built!
+2026-04-02T16:52:17.565663Z  INFO vllm_rs::utils::heartbeat: enter heartbeat processing loop (CommandManager { daemon_streams: Some([Stream(Stream(UnixStream { fd: FileDesc(OwnedFd { fd: 31 }), local: "command_2a876d43bd1a@vllm-rs-runner-heartbeat.sock" (abstract), peer: (unnamed) }))]), main_stream: None })
+2026-04-02T16:52:17.565630Z  INFO runner: Received init request: RunnerInitRequest { rank: 0, dev_id: 0, num_shards: 1, model_type: Qwen3, config: Config { architectures: Some(["Qwen3ForCausalLM"]), head_dim: Some(128), num_attention_heads: 16, num_key_value_heads: 8, max_position_embeddings: 40960, hidden_size: 1024, num_hidden_layers: 28, max_model_len: None, intermediate_size: 3072, rms_norm_eps: 1e-6, vocab_size: Some(151936), rope_theta: Some(1000000.0), attention_bias: Some(false), qkv_bias: None, attn_output_gate: None, attn_logit_softcapping: None, final_logit_softcapping: None, tie_word_embeddings: Some(true), bos_token_id: Some(151643), eos_token_id: Some(Multiple([151645, 151645, 151643])), use_sliding_window: Some(false), sliding_window: None, max_window_layers: Some(28), partial_rotary_factor: None, hidden_act: Silu, rope_scaling: None, quant: None, moe_cfg: None, fp8_kvcache: Some(false), quantization_config: None, is_multi_model: None, extra_config_json: Some("{\n  \"architectures\": [\n    \"Qwen3ForCausalLM\"\n  ],\n  \"attention_bias\": false,\n  \"attention_dropout\": 0.0,\n  \"bos_token_id\": 151643,\n  \"eos_token_id\": 151645,\n  \"head_dim\": 128,\n  \"hidden_act\": \"silu\",\n  \"hidden_size\": 1024,\n  \"initializer_range\": 0.02,\n  \"intermediate_size\": 3072,\n  \"max_position_embeddings\": 40960,\n  \"max_window_layers\": 28,\n  \"model_type\": \"qwen3\",\n  \"num_attention_heads\": 16,\n  \"num_hidden_layers\": 28,\n  \"num_key_value_heads\": 8,\n  \"rms_norm_eps\": 1e-06,\n  \"rope_scaling\": null,\n  \"rope_theta\": 1000000,\n  \"sliding_window\": null,\n  \"tie_word_embeddings\": true,\n  \"torch_dtype\": \"bfloat16\",\n  \"transformers_version\": \"4.51.0\",\n  \"use_cache\": true,\n  \"use_sliding_window\": false,\n  \"vocab_size\": 151936\n}") }, econfig: EngineConfig { model_id: None, weight_path: Some("/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca"), weight_file: None, enforce_parser: None, hf_token: None, hf_token_path: None, num_blocks: 128, kv_fraction: None, mamba_fraction: None, cpu_mem_fold: None, kvcache_memory_bytes: 0, mamba_memory_bytes: 0, mamba_slot_bytes: 0, mamba_cache_capacity: None, block_size: 64, max_num_seqs: 8, max_num_batched_tokens: 8192, config_model_len: Some(40960), max_model_len: Some(4096), max_tokens: Some(16384), isq: None, num_shards: Some(1), device_ids: Some([0]), force_runner: Some(true), myelon_ipc: Some(false), myelon_rpc_depth: None, myelon_response_depth: None, myelon_busy_spin: Some(false), generation_cfg: Some(GenerationConfig { temperature: Some(0.6), top_p: Some(0.95), top_k: Some(20), frequency_penalty: None, presence_penalty: None, bos_token_id: Some(151643), eos_token_id: Some(Multiple([151645, 151643])) }), seed: Some(123), prefix_cache: Some(true), prefix_cache_max_tokens: None, fp8_kvcache: Some(false), server_mode: Some(true), pd_config: Some(PdConfig { role: Server, method: LocalIpc, url: None }), mcp_command: None, mcp_config: None, mcp_args: None, tool_prompt_template: None, pd_server_prefix_cache_ratio: None, pd_client_prefix_cache_ratio: None, yarn_scaling_factor: None }, model_pathes: ModelPaths { tokenizer_filename: "/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca/tokenizer.json", tokenizer_config_filename: "/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca/tokenizer_config.json", config_filename: "/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca/config.json", generation_config_filename: "/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca/generation_config.json", filenames: ["/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca/model.safetensors"], auxiliary_filenames: [], chat_template_filename: None }, is_gguf: false, dtype: BF16, is_rope_i: false, nccl_id: NcclId(Id { id: ncclUniqueId { internal: [-50, -14, 85, 10, -48, -100, -120, 71, 2, 0, -53, 127, 31, 22, 104, 68, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } }) }
+2026-04-02T16:52:18.034855Z  INFO runner: Loading model at rank 0
+2026-04-02T16:52:18.034882Z  INFO vllm_rs::utils::progress: Remote progress reporter initialized for rank 0
+2026-04-02T16:52:19.298220Z  WARN vllm_rs::utils::kvcache_allocator: GPU 0: total 94.97 GB, free 85.24 GB, kv_fraction 95%, Max usable cache budget 80.98 GB
+2026-04-02T16:52:19.298243Z  WARN vllm_rs::utils::kvcache_allocator: KVCache Allocation: 512 GPU blocks (3.50 GB x 1), max usable kvcache tokens 32768 (112k bytes per token), scheduling limits [8 seqs x 4096 tokens]
+2026-04-02T16:52:19.298246Z  INFO vllm_rs::core::engine: KVCache allocation successfully planned!
+2026-04-02T16:52:19.298342Z  INFO vllm_rs::runner: Waiting runner 0 init kvcache response...
+2026-04-02T16:52:19.298337Z  WARN vllm_rs::utils::kvcache_allocator: Using FP8 KV Cache? false, cache dtype BF16
+2026-04-02T16:52:20.045630Z  INFO runner: Runner at rank 0 created (PD config: Some(PdConfig { role: Server, method: LocalIpc, url: None }))!
+2026-04-02T16:52:20.045691Z  INFO vllm_rs::core::engine: Runner 0 started!
+2026-04-02T16:52:20.045722Z  WARN vllm_rs::core::scheduler: Prefix cache enabled: 384 blocks (24576 tokens).
+2026-04-02T16:52:20.045917Z  INFO vllm_rs::core::engine: Tool call start token IDs set to: [151657]
+2026-04-02T16:52:20.045920Z  INFO vllm_rs::core::engine: Tool call end token IDs set to: [151658]
+2026-04-02T16:52:20.069437Z  INFO vllm_rs::core::scheduler: JSON end token ID (}) set to: 92
+2026-04-02T16:52:20.069455Z  WARN vllm_rs::core::engine: Maximum batched tokens 32768 (512 blocks x Block_Size 64 for KV cache). Additional CPU KV Cache blocks 102.
+2026-04-02T16:52:20.069945Z  INFO vllm_rs::core::engine: Missing suffix detected <think>
+
+</think>
+
+ -> [151667, 271, 151668, 271]
+2026-04-02T16:52:20.069959Z  WARN vllm_rs::core::engine: Model loaded.
+
+2026-04-02T16:52:20.081383Z  WARN vllm_rs::server: 🚀 PD server started, waiting for prefill request(s)...
+2026-04-02T16:52:21.565690Z  INFO vllm_rs::transfer::comm: PD Server: Accepted LocalIPC connection at @vllm-rs-transfer-0
+2026-04-02T16:52:21.566212Z  INFO vllm_rs::transfer::comm: [Server] PD Connection established.
+2026-04-02T16:52:25.123426Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 1 (586 tokens)
+2026-04-02T16:52:25.135871Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 1, 586 tokens) received from PD client.
+2026-04-02T16:52:25.135907Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 1 (586 tokens, 0 cached blocks, raw_match=0 blocks)
+2026-04-02T16:52:25.250238Z  INFO vllm_rs::core::runner: User's thinking preference for reasoning models: None
+2026-04-02T16:52:25.250259Z  WARN vllm_rs::core::runner: Using sampling from generation_config: temp=Some(0.6), top_k=Some(20), top_p=Some(0.95), freq_penalty=None, pres_penalty=None
+2026-04-02T16:52:25.251237Z  INFO runner: Runner received KvCacheSend for seq 1 (first_token=151667).
+2026-04-02T16:52:25.251403Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 1 (success)
+2026-04-02T16:52:25.251407Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 1 (586 tokens, 9 blocks)
+2026-04-02T16:52:25.251415Z  INFO vllm_rs::core::scheduler: PD Prefilling [seq_id 1]: 586 tokens in 0.15s (3906.67 tokens/s)
+2026-04-02T16:52:25.251440Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 502 blocks (32128 tokens) free, used 2.0% (0.07GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.280415Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 2 (203 tokens)
+2026-04-02T16:52:25.302690Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 2, 203 tokens) received from PD client.
+2026-04-02T16:52:25.302697Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 2 (203 tokens, 9 cached blocks, raw_match=0 blocks)
+2026-04-02T16:52:25.310596Z  INFO vllm_rs::core::runner: User's thinking preference for reasoning models: None
+2026-04-02T16:52:25.310605Z  WARN vllm_rs::core::runner: Using sampling from generation_config: temp=Some(0.6), top_k=Some(20), top_p=Some(0.95), freq_penalty=None, pres_penalty=None
+2026-04-02T16:52:25.311130Z  INFO runner: Runner received KvCacheSend for seq 2 (first_token=151667).
+2026-04-02T16:52:25.311195Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 2 (success)
+2026-04-02T16:52:25.311197Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 2 (203 tokens, 3 blocks)
+2026-04-02T16:52:25.311217Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 498 blocks (31872 tokens) free, used 2.7% (0.10GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.362041Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 3 (313 tokens)
+2026-04-02T16:52:25.362468Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 3, 313 tokens) received from PD client.
+2026-04-02T16:52:25.362470Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 3 (313 tokens, 12 cached blocks, raw_match=0 blocks)
+2026-04-02T16:52:25.372715Z  INFO vllm_rs::core::runner: User's thinking preference for reasoning models: None
+2026-04-02T16:52:25.372723Z  WARN vllm_rs::core::runner: Using sampling from generation_config: temp=Some(0.6), top_k=Some(20), top_p=Some(0.95), freq_penalty=None, pres_penalty=None
+2026-04-02T16:52:25.373287Z  INFO runner: Runner received KvCacheSend for seq 3 (first_token=151667).
+2026-04-02T16:52:25.373337Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 3 (success)
+2026-04-02T16:52:25.373339Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 3 (313 tokens, 4 blocks)
+2026-04-02T16:52:25.373358Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 493 blocks (31552 tokens) free, used 3.7% (0.13GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.444694Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 4 (201 tokens)
+2026-04-02T16:52:25.475880Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 4, 201 tokens) received from PD client.
+2026-04-02T16:52:25.475902Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 4 (201 tokens, 16 cached blocks, raw_match=0 blocks)
+2026-04-02T16:52:25.483837Z  INFO vllm_rs::core::runner: User's thinking preference for reasoning models: None
+2026-04-02T16:52:25.483854Z  WARN vllm_rs::core::runner: Using sampling from generation_config: temp=Some(0.6), top_k=Some(20), top_p=Some(0.95), freq_penalty=None, pres_penalty=None
+2026-04-02T16:52:25.484319Z  INFO runner: Runner received KvCacheSend for seq 4 (first_token=151667).
+2026-04-02T16:52:25.484395Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 4 (success)
+2026-04-02T16:52:25.484398Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 4 (201 tokens, 3 blocks)
+2026-04-02T16:52:25.484421Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 489 blocks (31296 tokens) free, used 4.5% (0.16GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.524011Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 5 (257 tokens)
+2026-04-02T16:52:25.535729Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 5, 257 tokens) received from PD client.
+2026-04-02T16:52:25.535735Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 5 (257 tokens, 19 cached blocks, raw_match=0 blocks)
+2026-04-02T16:52:25.547134Z  INFO vllm_rs::core::runner: User's thinking preference for reasoning models: None
+2026-04-02T16:52:25.547144Z  WARN vllm_rs::core::runner: Using sampling from generation_config: temp=Some(0.6), top_k=Some(20), top_p=Some(0.95), freq_penalty=None, pres_penalty=None
+2026-04-02T16:52:25.547703Z  INFO runner: Runner received KvCacheSend for seq 5 (first_token=151667).
+2026-04-02T16:52:25.547770Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 5 (success)
+2026-04-02T16:52:25.547772Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 5 (257 tokens, 4 blocks)
+2026-04-02T16:52:25.547790Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 484 blocks (30976 tokens) free, used 5.5% (0.19GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.605979Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 6 (220 tokens)
+2026-04-02T16:52:25.650303Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 6, 220 tokens) received from PD client.
+2026-04-02T16:52:25.650317Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 6 (220 tokens, 23 cached blocks, raw_match=0 blocks)
+2026-04-02T16:52:25.658058Z  INFO vllm_rs::core::runner: User's thinking preference for reasoning models: None
+2026-04-02T16:52:25.658067Z  WARN vllm_rs::core::runner: Using sampling from generation_config: temp=Some(0.6), top_k=Some(20), top_p=Some(0.95), freq_penalty=None, pres_penalty=None
+2026-04-02T16:52:25.658582Z  INFO runner: Runner received KvCacheSend for seq 6 (first_token=151667).
+2026-04-02T16:52:25.658634Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 6 (success)
+2026-04-02T16:52:25.658638Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 6 (220 tokens, 3 blocks)
+2026-04-02T16:52:25.658657Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 480 blocks (30720 tokens) free, used 6.2% (0.22GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.735529Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 7 (383 tokens)
+2026-04-02T16:52:25.761224Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 7, 383 tokens) received from PD client.
+2026-04-02T16:52:25.761228Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 7 (383 tokens, 26 cached blocks, raw_match=0 blocks)
+2026-04-02T16:52:25.774180Z  INFO vllm_rs::core::runner: User's thinking preference for reasoning models: None
+2026-04-02T16:52:25.774190Z  WARN vllm_rs::core::runner: Using sampling from generation_config: temp=Some(0.6), top_k=Some(20), top_p=Some(0.95), freq_penalty=None, pres_penalty=None
+2026-04-02T16:52:25.774816Z  INFO runner: Runner received KvCacheSend for seq 7 (first_token=151667).
+2026-04-02T16:52:25.774880Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 7 (success)
+2026-04-02T16:52:25.774882Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 7 (383 tokens, 5 blocks)
+2026-04-02T16:52:25.774910Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 474 blocks (30336 tokens) free, used 7.4% (0.26GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.815571Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 8 (264 tokens)
+2026-04-02T16:52:25.826175Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 8, 264 tokens) received from PD client.
+2026-04-02T16:52:25.826179Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 8 (264 tokens, 31 cached blocks, raw_match=0 blocks)
+2026-04-02T16:52:25.835793Z  INFO vllm_rs::core::runner: User's thinking preference for reasoning models: None
+2026-04-02T16:52:25.835801Z  WARN vllm_rs::core::runner: Using sampling from generation_config: temp=Some(0.6), top_k=Some(20), top_p=Some(0.95), freq_penalty=None, pres_penalty=None
+2026-04-02T16:52:25.836353Z  INFO runner: Runner received KvCacheSend for seq 8 (first_token=151667).
+2026-04-02T16:52:25.836397Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 8 (success)
+2026-04-02T16:52:25.836398Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 8 (264 tokens, 4 blocks)
+2026-04-02T16:52:25.836418Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 469 blocks (30016 tokens) free, used 8.4% (0.29GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:25.901330Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 9 (345 tokens)
+2026-04-02T16:52:25.939022Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 9, 345 tokens) received from PD client.
+2026-04-02T16:52:25.939029Z  INFO vllm_rs::core::block_manager: Prefix cache hit seq 9 (256 cached tokens, 4 blocks)
+2026-04-02T16:52:25.965469Z  INFO runner: Runner received KvCacheSend for seq 9 (first_token=151667).
+2026-04-02T16:52:25.965525Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 9 (success)
+2026-04-02T16:52:25.965527Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 9 (345 tokens, 5 blocks)
+2026-04-02T16:52:25.965549Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 467 blocks (29888 tokens) free, used 8.8% (0.31GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.033786Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 10 (393 tokens)
+2026-04-02T16:52:26.067153Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 10, 393 tokens) received from PD client.
+2026-04-02T16:52:26.067161Z  INFO vllm_rs::core::block_manager: Prefix cache hit seq 10 (192 cached tokens, 3 blocks)
+2026-04-02T16:52:26.094026Z  INFO runner: Runner received KvCacheSend for seq 10 (first_token=151667).
+2026-04-02T16:52:26.094109Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 10 (success)
+2026-04-02T16:52:26.094122Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 10 (393 tokens, 6 blocks)
+2026-04-02T16:52:26.094160Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 463 blocks (29632 tokens) free, used 9.6% (0.33GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.164917Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 11 (390 tokens)
+2026-04-02T16:52:26.196802Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 11, 390 tokens) received from PD client.
+2026-04-02T16:52:26.196824Z  INFO vllm_rs::core::block_manager: Prefix cache hit seq 11 (256 cached tokens, 4 blocks)
+2026-04-02T16:52:26.222963Z  INFO runner: Runner received KvCacheSend for seq 11 (first_token=151667).
+2026-04-02T16:52:26.223014Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 11 (success)
+2026-04-02T16:52:26.223019Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 11 (390 tokens, 6 blocks)
+2026-04-02T16:52:26.223052Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 460 blocks (29440 tokens) free, used 10.2% (0.36GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.294536Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 12 (297 tokens)
+2026-04-02T16:52:26.325659Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 12, 297 tokens) received from PD client.
+2026-04-02T16:52:26.325670Z  INFO vllm_rs::core::block_manager: Prefix cache hit seq 12 (192 cached tokens, 3 blocks)
+2026-04-02T16:52:26.347470Z  INFO runner: Runner received KvCacheSend for seq 12 (first_token=151667).
+2026-04-02T16:52:26.347518Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 12 (success)
+2026-04-02T16:52:26.347528Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 12 (297 tokens, 4 blocks)
+2026-04-02T16:52:26.347558Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 458 blocks (29312 tokens) free, used 10.5% (0.37GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.426362Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 13 (651 tokens)
+2026-04-02T16:52:26.450371Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 13, 651 tokens) received from PD client.
+2026-04-02T16:52:26.450379Z  INFO vllm_rs::core::block_manager: Prefix cache hit seq 13 (320 cached tokens, 5 blocks)
+2026-04-02T16:52:26.490089Z  INFO runner: Runner received KvCacheSend for seq 13 (first_token=151667).
+2026-04-02T16:52:26.490135Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 13 (success)
+2026-04-02T16:52:26.490136Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 13 (651 tokens, 10 blocks)
+2026-04-02T16:52:26.490155Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 452 blocks (28928 tokens) free, used 11.7% (0.41GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.557663Z  INFO vllm_rs::transfer::comm: PD Server: received TransferPrefill for Seq 14 (417 tokens)
+2026-04-02T16:52:26.592935Z  WARN vllm_rs::core::scheduler: Prefill request (Seq 14, 417 tokens) received from PD client.
+2026-04-02T16:52:26.592942Z  INFO vllm_rs::core::block_manager: Prefix cache hit seq 14 (256 cached tokens, 4 blocks)
+2026-04-02T16:52:26.619470Z  INFO runner: Runner received KvCacheSend for seq 14 (first_token=151667).
+2026-04-02T16:52:26.619512Z  WARN vllm_rs::core::scheduler: PD Server: transferred KV cache for seq 14 (success)
+2026-04-02T16:52:26.619513Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 14 (417 tokens, 6 blocks)
+2026-04-02T16:52:26.619564Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 449 blocks (28736 tokens) free, used 12.3% (0.43GB/3.50GB); CPU swap used 0.0% (0.00GB/0.70GB)
+2026-04-02T16:52:26.856686Z ERROR vllm_rs::transfer::comm: [Server Rank 0] Connection error: failed to fill whole buffer. Re-establishing...
+2026-04-02T16:52:26.919556Z  INFO runner: Runner finished

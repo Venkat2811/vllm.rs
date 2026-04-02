@@ -85,10 +85,23 @@ def validate_device_roles(
 
 
 def prepare_cases() -> list[tuple[str, list[str], list[str]]]:
-    return [
-        ("runner_pd", ["--force-runner"], ["--force-runner"]),
-        ("myelon_pd", ["--myelon-ipc"], ["--myelon-ipc"]),
-    ]
+    all_cases = {
+        "runner_pd": ("runner_pd", ["--force-runner"], ["--force-runner"]),
+        "myelon_pd": ("myelon_pd", ["--myelon-ipc"], ["--myelon-ipc"]),
+    }
+    selected = env_str("VLLM_PD_CASES", "").strip()
+    if not selected:
+        return [all_cases["runner_pd"], all_cases["myelon_pd"]]
+
+    cases = []
+    for label in [part.strip() for part in selected.split(",") if part.strip()]:
+        if label not in all_cases:
+            raise ValueError(
+                f"unsupported VLLM_PD_CASES entry {label!r}; "
+                f"expected one or more of {', '.join(all_cases)}"
+            )
+        cases.append(all_cases[label])
+    return cases
 
 
 def main() -> int:
@@ -224,7 +237,13 @@ def main() -> int:
         base_env.setdefault("CUDA_COMPUTE_CAP", compute_cap_override)
     base_env.setdefault("KEEP_ALIVE_INTERVAL", env_str("VLLM_SERVER_KEEP_ALIVE_INTERVAL", "0"))
 
-    for label, server_extra_args, client_extra_args in prepare_cases():
+    try:
+        cases = prepare_cases()
+    except ValueError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+
+    for label, server_extra_args, client_extra_args in cases:
         case_dir = output_root / label
         case_dir.mkdir(parents=True, exist_ok=True)
 

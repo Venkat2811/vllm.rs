@@ -262,6 +262,9 @@ fn main() -> anyhow::Result<()> {
                     config.rpc_ring_name,
                     config.response_ring_name
                 );
+                vllm_rs::log_warn!(
+                    "Runner switching execution to Myelon hot path; legacy local-socket control handling will stop after this handshake."
+                );
                 let rpc_consumer = RpcBroadcastConsumer::attach(
                     &config.rpc_ring_name,
                     config.rpc_depth,
@@ -400,6 +403,11 @@ fn main() -> anyhow::Result<()> {
                 )?;
             }
             Ok(MessageType::KvCacheSend((sequence, token))) => {
+                vllm_rs::log_info!(
+                    "Runner received KvCacheSend for seq {} (first_token={}).",
+                    sequence.id,
+                    token
+                );
                 let ret = runner.send_kvcache(&sequence, token);
                 if ret.is_err() {
                     vllm_rs::log_error!("KvCacheSend failed: {:?}", ret);

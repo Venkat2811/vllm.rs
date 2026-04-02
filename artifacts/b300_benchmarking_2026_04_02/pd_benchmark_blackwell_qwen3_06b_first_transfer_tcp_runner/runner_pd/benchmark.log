@@ -1,0 +1,83 @@
+
+Collecting statistics...
+----------------------------------------------------------------------------------------------------
+[93mConversations statistics:[0m
+----------------------------------------------------------------------------------------------------
+                    count   mean  std    min  ...    75%    90%    99%    max
+conversation_turns    1.0    2.0  NaN    2.0  ...    2.0    2.0    2.0    2.0
+user_tokens           1.0  578.0  NaN  578.0  ...  578.0  578.0  578.0  578.0
+assistant_tokens      1.0   32.0  NaN   32.0  ...   32.0   32.0   32.0   32.0
+
+[3 rows x 10 columns]
+----------------------------------------------------------------------------------------------------
+[93mRequest statistics:[0m
+----------------------------------------------------------------------------------------------------
+                count   mean  std    min  ...    75%    90%    99%    max
+request_tokens    1.0  578.0  NaN  578.0  ...  578.0  578.0  578.0  578.0
+
+[1 rows x 10 columns]
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+[93mParameters:[0m
+model=/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca
+num_clients=1
+num_conversations=1
+active_conversations=1
+seed=0
+[93mConversations Generation Parameters:[0m
+text_files=/root/Documents/myelon-launch/vllm/benchmarks/sonnet.txt
+input_num_turns=Constant[2]
+input_common_prefix_num_tokens=Constant[0]
+input_prefix_num_tokens=Constant[256]
+input_num_tokens=Constant[320]
+output_num_tokens=Constant[32]
+----------------------------------------------------------------------------------------------------
+[93mStatistics summary:[0m
+runtime_sec = 0.294
+requests_per_sec = 3.406
+----------------------------------------------------------------------------------------------------
+                   count    mean  std     min  ...     50%     75%     90%     max
+ttft_ms              1.0  293.64  NaN  293.64  ...  293.64  293.64  293.64  293.64
+tpot_ms              1.0    0.00  NaN    0.00  ...    0.00    0.00    0.00    0.00
+latency_ms           1.0  293.64  NaN  293.64  ...  293.64  293.64  293.64  293.64
+input_num_turns      1.0    1.00  NaN    1.00  ...    1.00    1.00    1.00    1.00
+input_num_tokens     1.0  578.00  NaN  578.00  ...  578.00  578.00  578.00  578.00
+output_num_tokens    1.0    0.00  NaN    0.00  ...    0.00    0.00    0.00    0.00
+output_num_chunks    1.0    0.00  NaN    0.00  ...    0.00    0.00    0.00    0.00
+
+[7 rows x 9 columns]
+----------------------------------------------------------------------------------------------------
+
+PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+02-04-2026 16:52:24 [INFO] - Namespace(input_file='/root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/pd_inputs/pd_transfer_first_request.json', output_file='/root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/pd_benchmark_blackwell_qwen3_06b_first_transfer_tcp_runner/runner_pd/conversations.json', seed=0, model='/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca', served_model_name='c1899de289a04d12100db370d81485cdf75e47ca', url='http://127.0.0.1:18080', num_clients=1, max_active_conversations=1, max_num_requests=1, warmup_step=False, max_turns=2, no_early_stop=False, limit_max_tokens=0, limit_min_tokens=0, request_rate=0.0, max_retries=1, conversation_sampling=<ConversationSampling.ROUND_ROBIN: 'round_robin'>, verify_output=False, request_timeout_sec=120, no_stream=False, excel_output=False, verbose=False, print_content=False, warmup_percentages='0%')
+02-04-2026 16:52:24 [INFO] - [92mInput parameters:[0m
+02-04-2026 16:52:24 [INFO] - url=http://127.0.0.1:18080
+02-04-2026 16:52:24 [INFO] - model=/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca
+02-04-2026 16:52:24 [INFO] - num_clients=1
+02-04-2026 16:52:24 [INFO] - Warmup percentages (percentage of samples): [0.0]
+02-04-2026 16:52:24 [INFO] - Loading tokenizer
+02-04-2026 16:52:24 [INFO] - [94mCollecting information from server: http://127.0.0.1:18080[0m
+02-04-2026 16:52:24 [INFO] - [94mModels:[0m
+02-04-2026 16:52:24 [INFO] - [94m	model_id='c1899de289a04d12100db370d81485cdf75e47ca', max_model_len=4096[0m
+02-04-2026 16:52:24 [INFO] - Reading input file: /root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/pd_inputs/pd_transfer_first_request.json
+02-04-2026 16:52:24 [INFO] - Using input file with filetype: generate_conversations
+02-04-2026 16:52:24 [INFO] - [95mGenerating conversations...[0m
+02-04-2026 16:52:24 [INFO] - GenConvArgs(num_conversations=1, text_files=['/root/Documents/myelon-launch/vllm/benchmarks/sonnet.txt'], input_num_turns=Constant[2], input_common_prefix_num_tokens=Constant[0], input_prefix_num_tokens=Constant[256], input_num_tokens=Constant[320], output_num_tokens=Constant[32], print_stats=True)
+02-04-2026 16:52:24 [INFO] - Loaded 5569 tokens from file /root/Documents/myelon-launch/vllm/benchmarks/sonnet.txt, total tokens so far: 5569
+
+Generating conversations:   0%|          | 0/1 [00:00<?, ?conv/s]
+Generating conversations: 100%|██████████| 1/1 [00:00<00:00, 2380.42conv/s]
+02-04-2026 16:52:24 [INFO] - [95mMax turns per conversation is limited to 2[0m
+02-04-2026 16:52:24 [INFO] - [92mStarting 1 clients[0m
+02-04-2026 16:52:24 [INFO] - [96mStarted client 0: max_num_requests=1, max_active_conversations=1[0m
+02-04-2026 16:52:25 [INFO] - [93mClient 0 reached request limit[0m
+02-04-2026 16:52:25 [INFO] - [96mClient 0 is done (num_successes=1, num_failures=0)[0m
+02-04-2026 16:52:25 [INFO] - [96m1 out of 1 clients finished[0m
+02-04-2026 16:52:25 [INFO] - [93mSending termination signal to clients[0m
+02-04-2026 16:52:25 [INFO] - [96mAll 1 clients finished[0m
+02-04-2026 16:52:25 [INFO] - Collected 1 samples from all the clients
+02-04-2026 16:52:25 [INFO] - [96mWaiting for client client_0 (is alive: True)[0m
+02-04-2026 16:52:25 [INFO] - All 1 clients exited (successfully finished 1 out of 1 conversations)
+02-04-2026 16:52:25 [INFO] - [92mAll clients finished, benchmark runtime: 0.308 sec (308.499 ms), requests per second: 3.241[0m
+02-04-2026 16:52:25 [INFO] - Processing 1 samples...
+02-04-2026 16:52:25 [INFO] - [92mWriting conversations file: /root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/pd_benchmark_blackwell_qwen3_06b_first_transfer_tcp_runner/runner_pd/conversations.json[0m
