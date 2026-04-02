@@ -101,6 +101,20 @@ fn strip_reasoning_markers(text: &str) -> String {
 
 const EMPTY_TOOL_RESULT_ACK: &str = "Tool executed successfully with no textual output.";
 
+fn resolve_keep_alive_interval_ms_from_env(raw: Option<&str>) -> Option<u64> {
+    match raw {
+        Some(value) => {
+            let parsed = value.parse::<u64>().unwrap_or(100);
+            if parsed == 0 { None } else { Some(parsed) }
+        }
+        None => Some(100),
+    }
+}
+
+fn resolve_keep_alive_interval_ms() -> Option<u64> {
+    resolve_keep_alive_interval_ms_from_env(env::var("KEEP_ALIVE_INTERVAL").ok().as_deref())
+}
+
 fn extract_text_from_content(content: Option<&super::MessageContentType>) -> String {
     match content {
         Some(super::MessageContentType::PureText(text)) => text.clone(),
@@ -1094,22 +1108,22 @@ pub async fn chat_completion(
             let _ = response_tx.try_send(ChatResponse::Done);
         });
 
-        ChatResponder::Streamer(
-            Sse::new(Streamer {
+        let sse = Sse::new(Streamer {
                 rx: client_rx,
                 status: StreamingStatus::Uninitialized,
                 disconnect_tx: Some(disconnect_tx),
-            })
-            .keep_alive(
+                pending_recv: None,
+            });
+        let sse = if let Some(interval_ms) = resolve_keep_alive_interval_ms() {
+            sse.keep_alive(
                 KeepAlive::new()
-                    .interval(Duration::from_millis(
-                        env::var("KEEP_ALIVE_INTERVAL")
-                            .map(|val| val.parse::<u64>().unwrap_or(100))
-                            .unwrap_or(100),
-                    ))
+                    .interval(Duration::from_millis(interval_ms))
                     .text("keep-alive-text"),
-            ),
-        )
+            )
+        } else {
+            sse
+        };
+        ChatResponder::Streamer(sse)
     } else {
         // Non-streaming
         let current_params = params.clone();
@@ -1706,6 +1720,21 @@ mod tests {
         assert_eq!(strip_reasoning_markers("no markers"), "no markers");
         assert_eq!(strip_reasoning_markers("<think>"), "");
         assert_eq!(strip_reasoning_markers("</think>world"), "world");
+    }
+
+    #[test]
+    fn keep_alive_interval_defaults_to_100ms() {
+        assert_eq!(resolve_keep_alive_interval_ms_from_env(None), Some(100));
+    }
+
+    #[test]
+    fn keep_alive_interval_zero_disables_keepalive() {
+        assert_eq!(resolve_keep_alive_interval_ms_from_env(Some("0")), None);
+    }
+
+    #[test]
+    fn keep_alive_interval_invalid_falls_back_to_default() {
+        assert_eq!(resolve_keep_alive_interval_ms_from_env(Some("not-a-number")), Some(100));
     }
 
     #[test]

@@ -125,6 +125,7 @@ impl Scheduler {
                 (econfig.cpu_mem_fold.unwrap_or(0.2f32) * econfig.num_blocks as f32) as usize,
                 econfig.block_size,
                 prefix_cache_cfg,
+                econfig.myelon_ipc.unwrap_or(false),
                 config
                     .architectures
                     .as_ref()
