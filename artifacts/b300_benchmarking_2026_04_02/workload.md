@@ -686,6 +686,39 @@ Important interpretation:
 - LocalIPC PD is still blocked separately by `CUDA_ERROR_PEER_ACCESS_UNSUPPORTED` on this KVM VM, so current PD A/B conclusions must remain TCP-only
 - the next real question is broader PD coverage and tuning, not whether the basic Myelon PD process path can complete at all
 
+### LocalIPC Myelon control-path confirmation
+
+The same helper-verb fix also applies to LocalIPC PD.
+
+Validated LocalIPC `myelon_pd` first-transfer fallback on `Qwen/Qwen3-0.6B`:
+
+- workload: `pd_inputs/pd_transfer_first_request.json`
+- `num_clients=1`
+- `max_active_conversations=1`
+- `max_num_requests=1`
+- no warmup
+- report summary:
+  - runtime `0.336s`
+  - requests/sec `2.977`
+  - TTFT `335.93 ms`
+  - output tokens `0`
+
+Important log evidence:
+
+- PD server now reaches and completes the formerly broken step:
+  - `PD Server: seq 0 reached postprocess under Myelon IPC; requesting KvCacheSend over the runner control path.`
+  - `Runner received Myelon KvCacheSend for seq 0 (first_token=151667).`
+  - `PD Server: transferred KV cache for seq 0 (success)`
+- client then fails later while importing the LocalIPC KV payload:
+  - `PD Client: KvCache for Seq 0 received`
+  - `KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))`
+
+Interpretation:
+
+- the Myelon PD control-path fix is confirmed for both TCP and LocalIPC
+- the remaining LocalIPC blocker on this VM is strictly the CUDA IPC data-plane import between GPU `0` and GPU `1`
+- the current one-request LocalIPC benchmark "succeeds" only in the sense that the HTTP request returns after the aborted sequence; it is not a valid generation result because KV import failed and output tokens stayed at `0`
+
 Interpretation:
 
 - the first bounded ShareGPT slice is realistic enough to create actual context pressure
