@@ -217,6 +217,57 @@ Additional harness finding:
 - the first higher-concurrency attempt on this same ShareGPT slice (`num_clients=2`, `max_active_conversations=4`) stalled after the request-capped runner phase and never advanced cleanly into the rest of the matrix
 - the simpler `num_clients=1`, `max_active_conversations=2` configuration completed on both runner and Myelon, so this currently looks like an upstream multi-turn harness/control issue tied to the chosen concurrency shape rather than a basic `vllm.rs` serving correctness failure
 
+### ShareGPT request-cap route-around and higher-concurrency rerun
+
+Follow-up harness finding:
+
+- the earlier higher-concurrency ShareGPT stall was caused by the wrapper always passing `--max-num-requests`
+- on upstream multi-turn replay, that hard request cap can stop clients mid-conversation and strand the run
+- `scripts/run_myelon_server_benchmark_matrix.py` now omits `--max-num-requests` when the configured value is `0` or lower, so bounded multi-turn replay can run without the bad cap
+
+Smaller higher-concurrency ShareGPT slice used for rerun:
+
+- output: `artifacts/b300_benchmarking_2026_04_02/sharegpt_conv_16_mt4_8.json`
+- size: `88 KB`
+- workload: `num_clients=2`, `max_active_conversations=4`, `max_turns=4`, `max_model_len=4096`
+
+Single-GPU `Qwen/Qwen3-4B` rerun on that bounded higher-concurrency slice:
+
+- runner: runtime `22.342s`, requests/sec `0.627`, warmup `15.021s`, TTFT `111.84 ms`, TPOT `8.91 ms`, latency `3083.31 ms`
+- myelon: runtime `22.699s`, requests/sec `0.617`, warmup `15.236s`, TTFT `85.10 ms`, TPOT `8.90 ms`, latency `3052.62 ms`
+
+Important interpretation:
+
+- the hard stall is gone; the no-cap route-around is the correct fix for this harness shape
+- throughput still slightly favors the runner on this slice
+- TTFT and end-to-end latency slightly favor Myelon on this slice
+- upstream multi-turn replay still terminates a bit awkwardly here: the measured phase ended at `14/16` completed conversations on both runner and Myelon after one client exhausted work and the other received termination, so this is better than the original stall but still not a perfectly clean final serving harness
+
+### First TP=2 serving wrapper runs on the B300 host
+
+TP=2 wrapper bring-up finding:
+
+- the serving wrapper initially launched `num_shards=2` without explicit `--device-ids`, and the server fell back to `[0]`
+- `scripts/run_myelon_server_benchmark_matrix.py` now derives `effective_device_ids=[0, 1]` automatically for the 2-shard case when no explicit device list is supplied
+
+First TP=2 synthetic serving run on `Qwen/Qwen3-4B`:
+
+- workload: `synthetic_multi_turn_smoke.json`, `num_clients=1`, `max_active_conversations=2`, `max_num_requests=8`, `max_turns=2`
+- runner: runtime `0.315s`, requests/sec `19.031`, TTFT `50.73 ms`, output tokens `0.00`
+- myelon: runtime `0.313s`, requests/sec `19.159`, TTFT `50.38 ms`, output tokens `0.00`
+
+First TP=2 ShareGPT-backed serving run on `Qwen/Qwen3-4B`:
+
+- workload: `sharegpt_conv_16_mt4_8.json`, `num_clients=1`, `max_active_conversations=2`, `max_turns=4`, `max_model_len=4096`
+- runner: runtime `0.861s`, requests/sec `17.425`, TTFT `55.46 ms`, output tokens `0.00`
+- myelon: runtime `0.863s`, requests/sec `17.388`, TTFT `55.59 ms`, output tokens `0.00`
+
+Important interpretation:
+
+- TP=2 serving launch is now functionally green on the wrapper
+- but both current TP=2 serving slices are effectively TTFT-only artifacts with no generated output, so they are not yet valid decode or end-to-end serving benchmarks
+- the next TP=2 benchmark step should focus on why the current serving path returns `output_num_tokens=0` on these wrapper runs before using this lane for performance conclusions
+
 ## Next Updates
 
 Add results here when one of these completes:
