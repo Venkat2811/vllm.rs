@@ -5,6 +5,7 @@ use interprocess::TryClone;
 use myelon_playground::transport::{
     FixedFrame, FramedTransportConsumer, FramedTransportProducer,
 };
+use std::collections::HashMap;
 pub use myelon_playground::{
     MyelonTransportConfig, MyelonTransportLayout, MyelonWaitStrategy, RunnerMyelonTransportConfig,
 };
@@ -36,6 +37,7 @@ pub enum MsgKind {
     KvCacheReceive = 10,
     KvCacheRelease = 11,
     CheckKvCacheRelease = 12,
+    KvCacheSwap = 13,
     RunResponse = 100,
     Error = 101,
     TransferPrefillResponse = 102,
@@ -45,6 +47,7 @@ pub enum MsgKind {
     KvCacheReceiveResponse = 106,
     KvCacheReleaseResponse = 107,
     CheckKvCacheReleaseResponse = 108,
+    KvCacheSwapResponse = 109,
 }
 
 impl MsgKind {
@@ -66,6 +69,7 @@ impl MsgKind {
             x if x == Self::KvCacheReceive as u8 => Ok(Self::KvCacheReceive),
             x if x == Self::KvCacheRelease as u8 => Ok(Self::KvCacheRelease),
             x if x == Self::CheckKvCacheRelease as u8 => Ok(Self::CheckKvCacheRelease),
+            x if x == Self::KvCacheSwap as u8 => Ok(Self::KvCacheSwap),
             x if x == Self::RunResponse as u8 => Ok(Self::RunResponse),
             x if x == Self::Error as u8 => Ok(Self::Error),
             x if x == Self::TransferPrefillResponse as u8 => Ok(Self::TransferPrefillResponse),
@@ -77,6 +81,7 @@ impl MsgKind {
             x if x == Self::CheckKvCacheReleaseResponse as u8 => {
                 Ok(Self::CheckKvCacheReleaseResponse)
             }
+            x if x == Self::KvCacheSwapResponse as u8 => Ok(Self::KvCacheSwapResponse),
             _ => candle_core::bail!("unexpected Myelon message kind {}", kind),
         }
     }
@@ -209,6 +214,10 @@ pub enum MyelonRequest {
     KvCacheReceive { sequence: Sequence },
     KvCacheRelease { sequence_id: usize },
     CheckKvCacheRelease { sequence_id: usize },
+    KvCacheSwap {
+        mappings: HashMap<usize, usize>,
+        swap_in: bool,
+    },
     Shutdown,
 }
 
@@ -226,6 +235,7 @@ impl MyelonRequest {
             Self::KvCacheReceive { .. } => MsgKind::KvCacheReceive,
             Self::KvCacheRelease { .. } => MsgKind::KvCacheRelease,
             Self::CheckKvCacheRelease { .. } => MsgKind::CheckKvCacheRelease,
+            Self::KvCacheSwap { .. } => MsgKind::KvCacheSwap,
             Self::Shutdown => MsgKind::Shutdown,
         }
     }
@@ -256,6 +266,9 @@ impl MyelonRequest {
                 sequence,
                 first_token,
             } => bincode::serialize(&(sequence, first_token)).map_err(myelon_to_candle),
+            Self::KvCacheSwap { mappings, swap_in } => {
+                bincode::serialize(&(mappings, swap_in)).map_err(myelon_to_candle)
+            }
             Self::Shutdown => Ok(Vec::new()),
         }
     }
@@ -319,6 +332,11 @@ impl MyelonRequest {
                 let sequence_id = bincode::deserialize(payload).map_err(myelon_to_candle)?;
                 Ok(Self::CheckKvCacheRelease { sequence_id })
             }
+            MsgKind::KvCacheSwap => {
+                let (mappings, swap_in): (HashMap<usize, usize>, bool) =
+                    bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::KvCacheSwap { mappings, swap_in })
+            }
             MsgKind::Shutdown => {
                 if !payload.is_empty() {
                     candle_core::bail!("Shutdown request must not carry a payload");
@@ -333,7 +351,8 @@ impl MyelonRequest {
             | MsgKind::KvCacheSendResponse
             | MsgKind::KvCacheReceiveResponse
             | MsgKind::KvCacheReleaseResponse
-            | MsgKind::CheckKvCacheReleaseResponse => {
+            | MsgKind::CheckKvCacheReleaseResponse
+            | MsgKind::KvCacheSwapResponse => {
                 candle_core::bail!("response kind {} is not a request", kind);
             }
         }
@@ -350,6 +369,7 @@ pub enum MyelonResponse {
     KvCacheReceiveResponse((bool, u32, usize)),
     KvCacheReleaseResponse(bool),
     CheckKvCacheReleaseResponse(bool),
+    KvCacheSwapResponse(bool),
     Error(String),
 }
 
@@ -364,6 +384,7 @@ impl MyelonResponse {
             Self::KvCacheReceiveResponse(_) => MsgKind::KvCacheReceiveResponse,
             Self::KvCacheReleaseResponse(_) => MsgKind::KvCacheReleaseResponse,
             Self::CheckKvCacheReleaseResponse(_) => MsgKind::CheckKvCacheReleaseResponse,
+            Self::KvCacheSwapResponse(_) => MsgKind::KvCacheSwapResponse,
             Self::Error(_) => MsgKind::Error,
         }
     }
@@ -377,7 +398,8 @@ impl MyelonResponse {
             | Self::CheckPrefillStatusResponse(value)
             | Self::KvCacheSendResponse(value)
             | Self::KvCacheReleaseResponse(value)
-            | Self::CheckKvCacheReleaseResponse(value) => {
+            | Self::CheckKvCacheReleaseResponse(value)
+            | Self::KvCacheSwapResponse(value) => {
                 bincode::serialize(value).map_err(myelon_to_candle)
             }
             Self::ReceivePrefillResponse(value) => {
@@ -424,6 +446,10 @@ impl MyelonResponse {
                 let value = bincode::deserialize(payload).map_err(myelon_to_candle)?;
                 Ok(Self::CheckKvCacheReleaseResponse(value))
             }
+            MsgKind::KvCacheSwapResponse => {
+                let value = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::KvCacheSwapResponse(value))
+            }
             MsgKind::Error => Ok(Self::Error(String::from_utf8_lossy(payload).into_owned())),
             MsgKind::RunPrefill
             | MsgKind::RunDecode
@@ -436,7 +462,8 @@ impl MyelonResponse {
             | MsgKind::KvCacheSend
             | MsgKind::KvCacheReceive
             | MsgKind::KvCacheRelease
-            | MsgKind::CheckKvCacheRelease => {
+            | MsgKind::CheckKvCacheRelease
+            | MsgKind::KvCacheSwap => {
                 candle_core::bail!("request kind {} is not a response", kind);
             }
         }
@@ -448,6 +475,7 @@ pub struct MyelonEngineTransport {
     response_consumers: Vec<ResponseConsumer>,
     logged_first_request: bool,
     logged_first_response: bool,
+    logged_rank_divergence_warning: bool,
 }
 
 impl MyelonEngineTransport {
@@ -503,6 +531,7 @@ impl MyelonEngineTransport {
             response_consumers,
             logged_first_request: false,
             logged_first_response: false,
+            logged_rank_divergence_warning: false,
         })
     }
 
@@ -599,6 +628,20 @@ impl MyelonEngineTransport {
         )
     }
 
+    pub fn swap_kvcache(
+        &mut self,
+        mappings: HashMap<usize, usize>,
+        swap_in: bool,
+    ) -> CandleResult<bool> {
+        self.publish_and_collect_bool(
+            &MyelonRequest::KvCacheSwap { mappings, swap_in },
+            |response| match response {
+                MyelonResponse::KvCacheSwapResponse(value) => Ok(value),
+                other => candle_core::bail!("unexpected Myelon swap_kvcache response: {other:?}"),
+            },
+        )
+    }
+
     pub fn shutdown(&mut self) {
         self.rpc_producer.publish(&[], MsgKind::Shutdown);
     }
@@ -628,7 +671,7 @@ impl MyelonEngineTransport {
         mut parse: impl FnMut(MyelonResponse) -> CandleResult<T>,
     ) -> CandleResult<T> {
         self.publish_only(request)?;
-        let mut first_value: Option<T> = None;
+        let mut last_value: Option<T> = None;
 
         for consumer in &mut self.response_consumers {
             let response = consumer.recv_response_blocking()?;
@@ -646,12 +689,10 @@ impl MyelonEngineTransport {
                 }
                 other => parse(other)?,
             };
-            if first_value.is_none() {
-                first_value = Some(value);
-            }
+            last_value = Some(value);
         }
 
-        first_value.ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))
+        last_value.ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))
     }
 
     fn publish_and_collect_bool(
@@ -663,7 +704,7 @@ impl MyelonEngineTransport {
     }
 
     fn collect_outputs(&mut self) -> CandleResult<Vec<u32>> {
-        let mut first_output: Option<Vec<u32>> = None;
+        let mut last_output: Option<Vec<u32>> = None;
 
         for consumer in &mut self.response_consumers {
             let response = consumer.recv_response_blocking()?;
@@ -677,13 +718,15 @@ impl MyelonEngineTransport {
             }
             match response {
                 MyelonResponse::RunResponse(output_ids) => {
-                    if let Some(expected) = &first_output {
-                        if expected != &output_ids {
-                            candle_core::bail!("Myelon runner outputs diverged across ranks");
+                    if let Some(expected) = &last_output {
+                        if expected != &output_ids && !self.logged_rank_divergence_warning {
+                            log_info!(
+                                "Myelon runner outputs differed across ranks; keeping the last response to match legacy process-runner behavior."
+                            );
+                            self.logged_rank_divergence_warning = true;
                         }
-                    } else {
-                        first_output = Some(output_ids);
                     }
+                    last_output = Some(output_ids);
                 }
                 MyelonResponse::Error(error) => {
                     candle_core::bail!("runner Myelon error: {}", error);
@@ -694,7 +737,7 @@ impl MyelonEngineTransport {
             }
         }
 
-        first_output
+        last_output
             .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))
     }
 }
