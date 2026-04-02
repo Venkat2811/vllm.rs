@@ -88,6 +88,23 @@ Current evidence is not strong enough to lock the three-model TP=2 ladder yet.
 - the old repeated prompt used by the first harness iteration still clearly trips runner-path failures and remains an explicit stress case, not a default benchmark workload
 - keep the synthetic short profile as the control workload shape in the harness, but do not mark TP=2 model selection complete until repeatable reruns are archived
 
+### Fresh rerun checkpoint on the rebuilt B300 binary
+
+Current verified TP=2 reruns on the fresh `release` binary:
+
+- `Qwen/Qwen3-4B` passes on forced runner and on `--myelon-ipc`
+- `Qwen/Qwen3.5-27B-FP8` passes on forced runner and on `--myelon-ipc`
+- both medium and large cached models now show matching local KV-cache geometry per shard during successful runs
+
+Important interpretation:
+
+- the current blocker is no longer "medium and large TP=2 are fundamentally broken on this host"
+- the medium and large cached models are usable for the next benchmark-harness iteration
+- the small-model slot is still not locked:
+  - `Qwen/Qwen3-1.7B` is not fully present in the local cache
+  - GPTQ small-model candidates should not be promoted into the benchmark ladder until they pass the same fresh rerun standard
+- performance conclusions should still wait for proper warmup plus repeated measured runs; these fresh reruns are functional validation, not the final benchmark artifact
+
 ## Next Updates
 
 Add results here when one of these completes:
