@@ -29,8 +29,22 @@ pub enum MsgKind {
     FinishDecode = 3,
     Cancel = 4,
     Shutdown = 5,
+    TransferPrefill = 6,
+    ReceivePrefill = 7,
+    CheckPrefillStatus = 8,
+    KvCacheSend = 9,
+    KvCacheReceive = 10,
+    KvCacheRelease = 11,
+    CheckKvCacheRelease = 12,
     RunResponse = 100,
     Error = 101,
+    TransferPrefillResponse = 102,
+    ReceivePrefillResponse = 103,
+    CheckPrefillStatusResponse = 104,
+    KvCacheSendResponse = 105,
+    KvCacheReceiveResponse = 106,
+    KvCacheReleaseResponse = 107,
+    CheckKvCacheReleaseResponse = 108,
 }
 
 impl MsgKind {
@@ -45,8 +59,24 @@ impl MsgKind {
             x if x == Self::FinishDecode as u8 => Ok(Self::FinishDecode),
             x if x == Self::Cancel as u8 => Ok(Self::Cancel),
             x if x == Self::Shutdown as u8 => Ok(Self::Shutdown),
+            x if x == Self::TransferPrefill as u8 => Ok(Self::TransferPrefill),
+            x if x == Self::ReceivePrefill as u8 => Ok(Self::ReceivePrefill),
+            x if x == Self::CheckPrefillStatus as u8 => Ok(Self::CheckPrefillStatus),
+            x if x == Self::KvCacheSend as u8 => Ok(Self::KvCacheSend),
+            x if x == Self::KvCacheReceive as u8 => Ok(Self::KvCacheReceive),
+            x if x == Self::KvCacheRelease as u8 => Ok(Self::KvCacheRelease),
+            x if x == Self::CheckKvCacheRelease as u8 => Ok(Self::CheckKvCacheRelease),
             x if x == Self::RunResponse as u8 => Ok(Self::RunResponse),
             x if x == Self::Error as u8 => Ok(Self::Error),
+            x if x == Self::TransferPrefillResponse as u8 => Ok(Self::TransferPrefillResponse),
+            x if x == Self::ReceivePrefillResponse as u8 => Ok(Self::ReceivePrefillResponse),
+            x if x == Self::CheckPrefillStatusResponse as u8 => Ok(Self::CheckPrefillStatusResponse),
+            x if x == Self::KvCacheSendResponse as u8 => Ok(Self::KvCacheSendResponse),
+            x if x == Self::KvCacheReceiveResponse as u8 => Ok(Self::KvCacheReceiveResponse),
+            x if x == Self::KvCacheReleaseResponse as u8 => Ok(Self::KvCacheReleaseResponse),
+            x if x == Self::CheckKvCacheReleaseResponse as u8 => {
+                Ok(Self::CheckKvCacheReleaseResponse)
+            }
             _ => candle_core::bail!("unexpected Myelon message kind {}", kind),
         }
     }
@@ -172,6 +202,13 @@ pub enum MyelonRequest {
     RunDecode { sequences: Vec<DecodeSequence> },
     FinishDecode { sequence_id: usize },
     Cancel { sequence_id: usize },
+    TransferPrefill { sequence: Sequence },
+    ReceivePrefill { available_tokens: usize },
+    CheckPrefillStatus { sequence_id: usize },
+    KvCacheSend { sequence: Sequence, first_token: u32 },
+    KvCacheReceive { sequence: Sequence },
+    KvCacheRelease { sequence_id: usize },
+    CheckKvCacheRelease { sequence_id: usize },
     Shutdown,
 }
 
@@ -182,6 +219,13 @@ impl MyelonRequest {
             Self::RunDecode { .. } => MsgKind::RunDecode,
             Self::FinishDecode { .. } => MsgKind::FinishDecode,
             Self::Cancel { .. } => MsgKind::Cancel,
+            Self::TransferPrefill { .. } => MsgKind::TransferPrefill,
+            Self::ReceivePrefill { .. } => MsgKind::ReceivePrefill,
+            Self::CheckPrefillStatus { .. } => MsgKind::CheckPrefillStatus,
+            Self::KvCacheSend { .. } => MsgKind::KvCacheSend,
+            Self::KvCacheReceive { .. } => MsgKind::KvCacheReceive,
+            Self::KvCacheRelease { .. } => MsgKind::KvCacheRelease,
+            Self::CheckKvCacheRelease { .. } => MsgKind::CheckKvCacheRelease,
             Self::Shutdown => MsgKind::Shutdown,
         }
     }
@@ -197,6 +241,21 @@ impl MyelonRequest {
             Self::FinishDecode { sequence_id } | Self::Cancel { sequence_id } => {
                 bincode::serialize(sequence_id).map_err(myelon_to_candle)
             }
+            Self::TransferPrefill { sequence } | Self::KvCacheReceive { sequence } => {
+                bincode::serialize(sequence).map_err(myelon_to_candle)
+            }
+            Self::ReceivePrefill { available_tokens } => {
+                bincode::serialize(available_tokens).map_err(myelon_to_candle)
+            }
+            Self::CheckPrefillStatus { sequence_id }
+            | Self::KvCacheRelease { sequence_id }
+            | Self::CheckKvCacheRelease { sequence_id } => {
+                bincode::serialize(sequence_id).map_err(myelon_to_candle)
+            }
+            Self::KvCacheSend {
+                sequence,
+                first_token,
+            } => bincode::serialize(&(sequence, first_token)).map_err(myelon_to_candle),
             Self::Shutdown => Ok(Vec::new()),
         }
     }
@@ -227,22 +286,70 @@ impl MyelonRequest {
                 let sequence_id = bincode::deserialize(payload).map_err(myelon_to_candle)?;
                 Ok(Self::Cancel { sequence_id })
             }
+            MsgKind::TransferPrefill => {
+                let sequence = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::TransferPrefill { sequence })
+            }
+            MsgKind::ReceivePrefill => {
+                let available_tokens =
+                    bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::ReceivePrefill { available_tokens })
+            }
+            MsgKind::CheckPrefillStatus => {
+                let sequence_id = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::CheckPrefillStatus { sequence_id })
+            }
+            MsgKind::KvCacheSend => {
+                let (sequence, first_token): (Sequence, u32) =
+                    bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::KvCacheSend {
+                    sequence,
+                    first_token,
+                })
+            }
+            MsgKind::KvCacheReceive => {
+                let sequence = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::KvCacheReceive { sequence })
+            }
+            MsgKind::KvCacheRelease => {
+                let sequence_id = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::KvCacheRelease { sequence_id })
+            }
+            MsgKind::CheckKvCacheRelease => {
+                let sequence_id = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::CheckKvCacheRelease { sequence_id })
+            }
             MsgKind::Shutdown => {
                 if !payload.is_empty() {
                     candle_core::bail!("Shutdown request must not carry a payload");
                 }
                 Ok(Self::Shutdown)
             }
-            MsgKind::RunResponse | MsgKind::Error => {
+            MsgKind::RunResponse
+            | MsgKind::Error
+            | MsgKind::TransferPrefillResponse
+            | MsgKind::ReceivePrefillResponse
+            | MsgKind::CheckPrefillStatusResponse
+            | MsgKind::KvCacheSendResponse
+            | MsgKind::KvCacheReceiveResponse
+            | MsgKind::KvCacheReleaseResponse
+            | MsgKind::CheckKvCacheReleaseResponse => {
                 candle_core::bail!("response kind {} is not a request", kind);
             }
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum MyelonResponse {
     RunResponse(Vec<u32>),
+    TransferPrefillResponse(bool),
+    ReceivePrefillResponse((bool, Option<Sequence>)),
+    CheckPrefillStatusResponse(bool),
+    KvCacheSendResponse(bool),
+    KvCacheReceiveResponse((bool, u32, usize)),
+    KvCacheReleaseResponse(bool),
+    CheckKvCacheReleaseResponse(bool),
     Error(String),
 }
 
@@ -250,6 +357,13 @@ impl MyelonResponse {
     pub const fn kind(&self) -> MsgKind {
         match self {
             Self::RunResponse(_) => MsgKind::RunResponse,
+            Self::TransferPrefillResponse(_) => MsgKind::TransferPrefillResponse,
+            Self::ReceivePrefillResponse(_) => MsgKind::ReceivePrefillResponse,
+            Self::CheckPrefillStatusResponse(_) => MsgKind::CheckPrefillStatusResponse,
+            Self::KvCacheSendResponse(_) => MsgKind::KvCacheSendResponse,
+            Self::KvCacheReceiveResponse(_) => MsgKind::KvCacheReceiveResponse,
+            Self::KvCacheReleaseResponse(_) => MsgKind::KvCacheReleaseResponse,
+            Self::CheckKvCacheReleaseResponse(_) => MsgKind::CheckKvCacheReleaseResponse,
             Self::Error(_) => MsgKind::Error,
         }
     }
@@ -258,6 +372,19 @@ impl MyelonResponse {
         match self {
             Self::RunResponse(output_ids) => {
                 bincode::serialize(output_ids).map_err(myelon_to_candle)
+            }
+            Self::TransferPrefillResponse(value)
+            | Self::CheckPrefillStatusResponse(value)
+            | Self::KvCacheSendResponse(value)
+            | Self::KvCacheReleaseResponse(value)
+            | Self::CheckKvCacheReleaseResponse(value) => {
+                bincode::serialize(value).map_err(myelon_to_candle)
+            }
+            Self::ReceivePrefillResponse(value) => {
+                bincode::serialize(value).map_err(myelon_to_candle)
+            }
+            Self::KvCacheReceiveResponse(value) => {
+                bincode::serialize(value).map_err(myelon_to_candle)
             }
             Self::Error(error) => Ok(error.as_bytes().to_vec()),
         }
@@ -269,12 +396,47 @@ impl MyelonResponse {
                 let output_ids = bincode::deserialize(payload).map_err(myelon_to_candle)?;
                 Ok(Self::RunResponse(output_ids))
             }
+            MsgKind::TransferPrefillResponse => {
+                let value = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::TransferPrefillResponse(value))
+            }
+            MsgKind::ReceivePrefillResponse => {
+                let value = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::ReceivePrefillResponse(value))
+            }
+            MsgKind::CheckPrefillStatusResponse => {
+                let value = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::CheckPrefillStatusResponse(value))
+            }
+            MsgKind::KvCacheSendResponse => {
+                let value = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::KvCacheSendResponse(value))
+            }
+            MsgKind::KvCacheReceiveResponse => {
+                let value = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::KvCacheReceiveResponse(value))
+            }
+            MsgKind::KvCacheReleaseResponse => {
+                let value = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::KvCacheReleaseResponse(value))
+            }
+            MsgKind::CheckKvCacheReleaseResponse => {
+                let value = bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                Ok(Self::CheckKvCacheReleaseResponse(value))
+            }
             MsgKind::Error => Ok(Self::Error(String::from_utf8_lossy(payload).into_owned())),
             MsgKind::RunPrefill
             | MsgKind::RunDecode
             | MsgKind::FinishDecode
             | MsgKind::Cancel
-            | MsgKind::Shutdown => {
+            | MsgKind::Shutdown
+            | MsgKind::TransferPrefill
+            | MsgKind::ReceivePrefill
+            | MsgKind::CheckPrefillStatus
+            | MsgKind::KvCacheSend
+            | MsgKind::KvCacheReceive
+            | MsgKind::KvCacheRelease
+            | MsgKind::CheckKvCacheRelease => {
                 candle_core::bail!("request kind {} is not a response", kind);
             }
         }
@@ -356,6 +518,87 @@ impl MyelonEngineTransport {
         self.publish_only(&MyelonRequest::FinishDecode { sequence_id })
     }
 
+    pub fn transfer_prefill(&mut self, sequence: &Sequence) -> CandleResult<bool> {
+        self.publish_and_collect_bool(
+            &MyelonRequest::TransferPrefill {
+                sequence: sequence.clone(),
+            },
+            |response| match response {
+                MyelonResponse::TransferPrefillResponse(value) => Ok(value),
+                other => candle_core::bail!("unexpected Myelon transfer_prefill response: {other:?}"),
+            },
+        )
+    }
+
+    pub fn receive_prefill(
+        &mut self,
+        available_tokens: usize,
+    ) -> CandleResult<(bool, Option<Sequence>)> {
+        self.publish_and_collect_value(
+            &MyelonRequest::ReceivePrefill { available_tokens },
+            |response| match response {
+                MyelonResponse::ReceivePrefillResponse(value) => Ok(value),
+                other => candle_core::bail!("unexpected Myelon receive_prefill response: {other:?}"),
+            },
+        )
+    }
+
+    pub fn check_prefill_status(&mut self, sequence_id: usize) -> CandleResult<bool> {
+        self.publish_and_collect_bool(&MyelonRequest::CheckPrefillStatus { sequence_id }, |response| {
+            match response {
+                MyelonResponse::CheckPrefillStatusResponse(value) => Ok(value),
+                other => candle_core::bail!("unexpected Myelon check_prefill_status response: {other:?}"),
+            }
+        })
+    }
+
+    pub fn send_kvcache(&mut self, sequence: &Sequence, first_token: u32) -> CandleResult<bool> {
+        self.publish_and_collect_bool(
+            &MyelonRequest::KvCacheSend {
+                sequence: sequence.clone(),
+                first_token,
+            },
+            |response| match response {
+                MyelonResponse::KvCacheSendResponse(value) => Ok(value),
+                other => candle_core::bail!("unexpected Myelon send_kvcache response: {other:?}"),
+            },
+        )
+    }
+
+    pub fn receive_kvcache(
+        &mut self,
+        sequence: &Sequence,
+    ) -> CandleResult<(bool, u32, usize)> {
+        self.publish_and_collect_value(
+            &MyelonRequest::KvCacheReceive {
+                sequence: sequence.clone(),
+            },
+            |response| match response {
+                MyelonResponse::KvCacheReceiveResponse(value) => Ok(value),
+                other => candle_core::bail!("unexpected Myelon receive_kvcache response: {other:?}"),
+            },
+        )
+    }
+
+    pub fn release_remote_kvcache(&mut self, sequence_id: usize) -> CandleResult<bool> {
+        self.publish_and_collect_bool(&MyelonRequest::KvCacheRelease { sequence_id }, |response| {
+            match response {
+                MyelonResponse::KvCacheReleaseResponse(value) => Ok(value),
+                other => candle_core::bail!("unexpected Myelon release_remote_kvcache response: {other:?}"),
+            }
+        })
+    }
+
+    pub fn check_kvcache_release(&mut self, sequence_id: usize) -> CandleResult<bool> {
+        self.publish_and_collect_bool(
+            &MyelonRequest::CheckKvCacheRelease { sequence_id },
+            |response| match response {
+                MyelonResponse::CheckKvCacheReleaseResponse(value) => Ok(value),
+                other => candle_core::bail!("unexpected Myelon check_kvcache_release response: {other:?}"),
+            },
+        )
+    }
+
     pub fn shutdown(&mut self) {
         self.rpc_producer.publish(&[], MsgKind::Shutdown);
     }
@@ -377,6 +620,46 @@ impl MyelonEngineTransport {
     fn publish_and_collect(&mut self, request: &MyelonRequest) -> CandleResult<Vec<u32>> {
         self.publish_only(request)?;
         self.collect_outputs()
+    }
+
+    fn publish_and_collect_value<T>(
+        &mut self,
+        request: &MyelonRequest,
+        mut parse: impl FnMut(MyelonResponse) -> CandleResult<T>,
+    ) -> CandleResult<T> {
+        self.publish_only(request)?;
+        let mut first_value: Option<T> = None;
+
+        for consumer in &mut self.response_consumers {
+            let response = consumer.recv_response_blocking()?;
+            if !self.logged_first_response {
+                log_info!(
+                    "Received first Myelon response kind={} bytes={}.",
+                    response.kind().as_u8(),
+                    response.encode()?.len()
+                );
+                self.logged_first_response = true;
+            }
+            let value = match response {
+                MyelonResponse::Error(error) => {
+                    candle_core::bail!("runner Myelon error: {}", error);
+                }
+                other => parse(other)?,
+            };
+            if first_value.is_none() {
+                first_value = Some(value);
+            }
+        }
+
+        first_value.ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))
+    }
+
+    fn publish_and_collect_bool(
+        &mut self,
+        request: &MyelonRequest,
+        parse: impl FnMut(MyelonResponse) -> CandleResult<bool>,
+    ) -> CandleResult<bool> {
+        self.publish_and_collect_value(request, parse)
     }
 
     fn collect_outputs(&mut self) -> CandleResult<Vec<u32>> {
@@ -404,6 +687,9 @@ impl MyelonEngineTransport {
                 }
                 MyelonResponse::Error(error) => {
                     candle_core::bail!("runner Myelon error: {}", error);
+                }
+                other => {
+                    candle_core::bail!("unexpected Myelon run response: {other:?}");
                 }
             }
         }
