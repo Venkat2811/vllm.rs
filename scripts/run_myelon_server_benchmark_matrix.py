@@ -322,7 +322,9 @@ def main() -> int:
     }
 
     base_env = os.environ.copy()
-    base_env.setdefault("CUDA_COMPUTE_CAP", env_str("CUDA_COMPUTE_CAP", "100f"))
+    compute_cap_override = os.environ.get("CUDA_COMPUTE_CAP")
+    if compute_cap_override:
+        base_env.setdefault("CUDA_COMPUTE_CAP", compute_cap_override)
     base_env.setdefault(
         "KEEP_ALIVE_INTERVAL",
         env_str("VLLM_SERVER_KEEP_ALIVE_INTERVAL", "0"),
