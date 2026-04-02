@@ -113,7 +113,6 @@ impl EngineBuilder {
         self
     }
 
-    pub fn with_yarn_scaling_factor(mut self, factor: f64) -> Self {
     pub fn with_num_shards(mut self, num_shards: usize) -> Self {
         self.num_shards = Some(num_shards);
         self
