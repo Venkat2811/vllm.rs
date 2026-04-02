@@ -100,6 +100,29 @@ Interpretation:
 - the earlier TP=2 serving `value_cache` blocker from the B300 notes does not reproduce on this host after a full clean rebuild for `sm_120f`
 - on this machine, the next benchmark work should resume from actual warmup-plus-measured A/B runs rather than more TP=2 serving bug hunting
 
+### Blackwell TP=2 root cause correction
+
+The earlier Blackwell TP=2 `value_cache` mismatch was not a new `vllm.rs` model/runtime bug.
+
+- the local Linux helper defaults were still building with `cuda,myelon` instead of `cuda,myelon,nccl`
+- without `nccl`, TP greater than 1 launches fell back to the non-NCCL runner path with an effective communicator world size of `1`
+- KV cache allocation still used `num_shards=2`, so model attention and cache geometry drifted apart and produced the observed mismatch
+
+Fix applied in the helper layer:
+
+- `scripts/myelon_validation_common.py` now defaults Linux builds to `cuda,myelon,nccl`
+- that same helper now fails fast if `num_shards > 1` is requested without `nccl`
+
+Operational requirement on this host:
+
+- multiprocess TP benchmark binaries must be rebuilt with `CUDA_COMPUTE_CAP=120f` and `--features cuda,myelon,nccl`
+- after that rebuild, medium-model TP=2 CLI and serving validation are green again for both runner and Myelon
+
+Interpretation:
+
+- the corrected next question is no longer "is medium-model TP=2 broken on Blackwell?"
+- the corrected next question is "how do measured TP=2 runner and Myelon compare once the build and topology are valid?"
+
 ### Preliminary TP=2 directional results
 
 `Qwen/Qwen3-4B`
@@ -238,6 +261,77 @@ Token/turn profile of the bounded ShareGPT slice using the local `Qwen/Qwen3-4B`
 - turns: min `4`, p50 `7`, p90 `8`, max `8`, mean `6.61`
 - total conversation tokens: min `184`, p50 `961`, p90 `1876`, p99 `2797`, max `3530`, mean `1061.34`
 - first-user tokens: min `1`, p50 `21`, p90 `99`, p99 `353`, max `399`, mean `43.27`
+
+### TP=2 measured serving slices on the Blackwell host
+
+All results below use the corrected Linux build path with `cuda,myelon,nccl`.
+
+Synthetic medium-model TP=2 slice:
+
+- workload: synthetic serving wrapper, warmup separated from measured phase
+- model: `Qwen/Qwen3-4B`
+- topology: `num_shards=2`
+- runner:
+  - runtime `2.086s`
+  - requests/sec `2.876`
+  - warmup runtime `2.700s`
+  - TTFT `62.563 ms`
+  - TPOT `8.650 ms`
+  - latency `346.620 ms`
+- myelon:
+  - runtime `2.093s`
+  - requests/sec `2.866`
+  - warmup runtime `2.722s`
+  - TTFT `62.911 ms`
+  - TPOT `8.671 ms`
+  - latency `347.707 ms`
+
+Interpretation:
+
+- medium-model TP=2 synthetic serving is effectively parity between runner and Myelon on this host
+
+ShareGPT-backed medium-model TP=2 slice:
+
+- workload: `sharegpt_conv_16_mt4_8.json`
+- topology: `num_shards=2`
+- `num_clients=1`
+- `max_active_conversations=2`
+- `max_num_requests=16`
+- `max_turns=2`
+- `max_model_len=4096`
+- runner:
+  - runtime `46.781s`
+  - requests/sec `0.321`
+  - warmup runtime `26.214s`
+  - TTFT `63.418 ms`
+  - TPOT `8.531 ms`
+  - latency `3116.540 ms`
+  - finished `15/16` conversations
+- myelon:
+  - runtime `46.581s`
+  - requests/sec `0.322`
+  - warmup runtime `26.244s`
+  - TTFT `63.221 ms`
+  - TPOT `8.500 ms`
+  - latency `3103.271 ms`
+  - finished `15/16` conversations
+
+Interpretation:
+
+- medium-model TP=2 ShareGPT-backed serving is also effectively parity, with Myelon only trivially ahead
+- the remaining awkwardness in this lane is the upstream multi-turn termination quirk, not a TP=2 cache-shape blocker on the corrected build
+
+### Small-model TP=2 ladder rejection on Blackwell
+
+`Qwen/Qwen1.5-0.5B-Chat-GPTQ-Int4` should not be used as the TP=2 Myelon small-model ladder slot on this host.
+
+- the synthetic TP=2 runner leg completed but did not produce a useful output-token artifact
+- the TP=2 Myelon leg crashed with `CUDA_ERROR_ILLEGAL_ADDRESS`
+
+Interpretation:
+
+- this is not a good model candidate for the TP=2 Myelon benchmark ladder on the current host
+- do not spend time forcing this GPTQ model into the benchmark matrix just to preserve a nominal small / medium / large label
 
 Interpretation:
 
