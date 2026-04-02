@@ -1,8 +1,32 @@
 #!/usr/bin/env python3
 import argparse
-import subprocess
+import importlib.util
 import sys
 from pathlib import Path
+
+
+def load_upstream_module(module_path: Path):
+    spec = importlib.util.spec_from_file_location(
+        "myelon_upstream_convert_sharegpt_to_openai", module_path
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"failed to load module spec for {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def make_ascii_only_validator():
+    def content_is_valid(
+        content: str, min_content_len: int | None, max_content_len: int | None
+    ) -> bool:
+        if min_content_len and len(content) < min_content_len:
+            return False
+        if max_content_len and len(content) > max_content_len:
+            return False
+        return content.isascii()
+
+    return content_is_valid
 
 
 def main() -> int:
@@ -40,6 +64,11 @@ def main() -> int:
         default=None,
         help="Optional tokenizer model/path for statistics in the upstream converter",
     )
+    parser.add_argument(
+        "--allow-non-ascii",
+        action="store_true",
+        help="Keep the upstream converter's non-ASCII behavior instead of the local ASCII-only patch.",
+    )
     args = parser.parse_args()
 
     sharegpt_input = Path(args.sharegpt_input)
@@ -54,34 +83,39 @@ def main() -> int:
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
-    command = [
-        "uv",
-        "run",
-        "--with",
-        "pandas",
-        "--with",
-        "tqdm",
-        "--with",
-        "transformers",
-        "python3",
-        str(upstream_script),
-        str(sharegpt_input),
-        str(output_file),
-        f"--seed={args.seed}",
-        f"--max-items={args.max_items}",
-    ]
-    if args.min_content_len is not None:
-        command.append(f"--min-content-len={args.min_content_len}")
-    if args.max_content_len is not None:
-        command.append(f"--max-content-len={args.max_content_len}")
-    if args.min_turns is not None:
-        command.append(f"--min-turns={args.min_turns}")
-    if args.max_turns is not None:
-        command.append(f"--max-turns={args.max_turns}")
-    if args.tokenizer_model is not None:
-        command.append(f"--model={args.tokenizer_model}")
+    try:
+        upstream_module = load_upstream_module(upstream_script)
+    except Exception as error:
+        print(f"failed to import upstream converter: {error}", file=sys.stderr)
+        return 1
 
-    subprocess.run(command, cwd=repo_root, check=True)
+    if not args.allow_non_ascii:
+        upstream_module.content_is_valid = make_ascii_only_validator()
+        print(
+            "Patched upstream ShareGPT content filter to keep ASCII-only messages."
+        )
+
+    try:
+        upstream_module.convert_sharegpt_to_openai(
+            args.seed,
+            str(sharegpt_input),
+            str(output_file),
+            args.max_items,
+            args.min_content_len,
+            args.max_content_len,
+            args.min_turns,
+            args.max_turns,
+            args.tokenizer_model,
+        )
+    except ImportError as error:
+        print(
+            "missing dependency while loading the upstream converter; run this script "
+            "with pandas, tqdm, and transformers available",
+            file=sys.stderr,
+        )
+        print(error, file=sys.stderr)
+        return 1
+
     print(output_file)
     return 0
 
