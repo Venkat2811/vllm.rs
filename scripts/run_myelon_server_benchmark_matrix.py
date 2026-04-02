@@ -81,6 +81,22 @@ def prepare_cases(mode: str) -> list[tuple[str, list[str]]]:
     raise ValueError(f"unsupported VLLM_SERVER_BENCHMARK_MODE '{mode}'")
 
 
+def derive_device_ids(
+    parsed_device_ids: list[int] | None,
+    expected_num_shards: int,
+    detected_cuda_device_count: int,
+) -> list[int] | None:
+    if parsed_device_ids is not None:
+        return parsed_device_ids
+    if expected_num_shards <= 1:
+        return None
+    if detected_cuda_device_count < expected_num_shards:
+        raise ValueError(
+            f"requested {expected_num_shards} shards but only {detected_cuda_device_count} CUDA device(s) are visible"
+        )
+    return list(range(expected_num_shards))
+
+
 def strip_ansi(text: str) -> str:
     return ANSI_RE.sub("", text)
 
@@ -293,7 +309,7 @@ def main() -> int:
         "seed": int(seed),
         "num_clients": num_clients,
         "max_active_conversations": max_active_conversations,
-        "max_num_requests": max_num_requests,
+        "max_num_requests": max_num_requests if max_num_requests > 0 else None,
         "max_turns": max_turns,
         "max_retries": max_retries,
         "request_rate": float(request_rate),
@@ -317,6 +333,23 @@ def main() -> int:
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 1
+
+    try:
+        effective_device_ids = derive_device_ids(
+            parsed_device_ids,
+            expected_num_shards,
+            detected_cuda_device_count,
+        )
+    except ValueError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+
+    effective_device_ids_str = (
+        ",".join(str(device_id) for device_id in effective_device_ids)
+        if effective_device_ids is not None
+        else None
+    )
+    report["effective_device_ids"] = effective_device_ids
 
     for index, (label, topology_args) in enumerate(cases):
         port = port_base + index
@@ -344,8 +377,8 @@ def main() -> int:
             seed,
             *topology_args,
         ]
-        if device_ids:
-            server_command.extend(["--device-ids", device_ids])
+        if effective_device_ids_str:
+            server_command.extend(["--device-ids", effective_device_ids_str])
 
         benchmark_command = [
             "uv",
@@ -374,8 +407,6 @@ def main() -> int:
             str(num_clients),
             "--max-active-conversations",
             str(max_active_conversations),
-            "--max-num-requests",
-            str(max_num_requests),
             "--max-turns",
             str(max_turns),
             "--max-retries",
@@ -385,6 +416,13 @@ def main() -> int:
             "--request-rate",
             request_rate,
         ]
+        if max_num_requests > 0:
+            benchmark_command.extend(
+                [
+                    "--max-num-requests",
+                    str(max_num_requests),
+                ]
+            )
         if warmup_step:
             benchmark_command.append("--warmup-step")
         if no_stream:
