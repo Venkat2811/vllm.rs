@@ -75,9 +75,11 @@ fn main() -> anyhow::Result<()> {
     let _ = heartbeat_worker(None, true, stop_flag.clone(), &uuid_str);
 
     let msg = receive_local(&mut stream, true)?;
+    let runner_rank: usize;
     let runner = match msg {
         MessageType::Init(init_req) => {
             vllm_rs::log_info!("Received init request: {:?}", init_req);
+            runner_rank = init_req.rank;
             // Use init_req.rank to pick device
             let device = new_device(init_req.dev_id)?;
 
@@ -499,21 +501,23 @@ fn main() -> anyhow::Result<()> {
                     let refs = sequences.iter().collect::<Vec<_>>();
                     match runner.run(Seqs::SeqRefs(&refs), true) {
                         Ok(outputs) => {
-                            let response = MyelonResponse::RunResponse(outputs);
-                            if !logged_first_response {
-                                let payload_len = response
-                                    .encode()
-                                    .map(|payload| payload.len())
-                                    .unwrap_or_default();
-                                vllm_rs::log_info!(
-                                    "Runner sent first Myelon response bytes={}.",
-                                    payload_len
-                                );
-                                logged_first_response = true;
+                            if runner_rank == 0 {
+                                let response = MyelonResponse::RunResponse(outputs);
+                                if !logged_first_response {
+                                    let payload_len = response
+                                        .encode()
+                                        .map(|payload| payload.len())
+                                        .unwrap_or_default();
+                                    vllm_rs::log_info!(
+                                        "Runner sent first Myelon response bytes={}.",
+                                        payload_len
+                                    );
+                                    logged_first_response = true;
+                                }
+                                response_producer
+                                    .send_response(&response)
+                                    .expect("serialize Myelon prefill outputs");
                             }
-                            response_producer
-                                .send_response(&response)
-                                .expect("serialize Myelon prefill outputs");
                         }
                         Err(error) => {
                             response_producer.send_error(error);
@@ -523,21 +527,23 @@ fn main() -> anyhow::Result<()> {
                 MyelonRequest::RunDecode { sequences } => {
                     match runner.run(Seqs::DecodeVec(&sequences), false) {
                         Ok(outputs) => {
-                            let response = MyelonResponse::RunResponse(outputs);
-                            if !logged_first_response {
-                                let payload_len = response
-                                    .encode()
-                                    .map(|payload| payload.len())
-                                    .unwrap_or_default();
-                                vllm_rs::log_info!(
-                                    "Runner sent first Myelon response bytes={}.",
-                                    payload_len
-                                );
-                                logged_first_response = true;
+                            if runner_rank == 0 {
+                                let response = MyelonResponse::RunResponse(outputs);
+                                if !logged_first_response {
+                                    let payload_len = response
+                                        .encode()
+                                        .map(|payload| payload.len())
+                                        .unwrap_or_default();
+                                    vllm_rs::log_info!(
+                                        "Runner sent first Myelon response bytes={}.",
+                                        payload_len
+                                    );
+                                    logged_first_response = true;
+                                }
+                                response_producer
+                                    .send_response(&response)
+                                    .expect("serialize Myelon decode outputs");
                             }
-                            response_producer
-                                .send_response(&response)
-                                .expect("serialize Myelon decode outputs");
                         }
                         Err(error) => {
                             response_producer.send_error(error);

@@ -890,3 +890,22 @@ Reference-guided transport follow-up on `2026-04-02`:
   - the old missing piece was not build-script drift
   - the old Python payload env vars were a red herring for Rust `vllm.rs`
   - the remaining gap versus the old archive is now narrowed to transport-path/runtime behavior on the current branch, not missing build flags
+
+Reference-aligned response fan-in follow-up on `2026-04-02`:
+
+- one more semantic mismatch from the old winning branch is now fixed on latest:
+  - old reference Myelon only consumed one authoritative `RunResponse` for normal prefill/decode
+  - current latest had drifted into waiting on every TP rank response and comparing them
+  - latest now restores the reference-style hot path for normal run outputs:
+    - rank `0` is the authoritative Myelon `RunResponse` sender
+    - engine-side Myelon output collection waits on the authoritative response ring only
+    - PD helper responses still fan in across all ranks because those operations carry real control/data-plane status
+- exact-model rerun after that fix, same TP=2 shape:
+  - Myelon pass 2:
+    - prompt `2048 in 1.06s = 1933.90 tok/s`
+    - decode `129024 in 79.68s = 1619.20 tok/s`
+- interpretation:
+  - this reference mismatch was real and did matter for prompt throughput
+  - but it is not the main missing piece behind the old `~30%` prompt win
+  - versus the stable current runner baseline (`1908.67 tok/s` prompt, `1618.62 tok/s` decode), current Myelon is now only about `+1.3%` on prompt and effectively flat on decode
+  - the old archive target remains unrecovered, so there is still a larger runtime-path difference left to find
