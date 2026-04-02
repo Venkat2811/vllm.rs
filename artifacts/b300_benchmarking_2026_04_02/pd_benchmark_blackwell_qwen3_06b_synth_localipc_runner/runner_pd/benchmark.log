@@ -1,0 +1,146 @@
+
+Collecting statistics...
+----------------------------------------------------------------------------------------------------
+[93mConversations statistics:[0m
+----------------------------------------------------------------------------------------------------
+                    count        mean  ...         99%         max
+conversation_turns    8.0    5.000000  ...    6.000000    6.000000
+user_tokens           8.0  196.458333  ...  253.596667  253.666667
+assistant_tokens      8.0   35.437500  ...   45.325000   45.500000
+
+[3 rows x 10 columns]
+----------------------------------------------------------------------------------------------------
+[93mRequest statistics:[0m
+----------------------------------------------------------------------------------------------------
+                count    mean         std   min  ...     75%    90%     99%    max
+request_tokens   20.0  404.95  227.616592  90.0  ...  485.75  795.3  827.34  830.0
+
+[1 rows x 10 columns]
+----------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+[93mParameters:[0m
+model=/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca
+num_clients=1
+num_conversations=8
+active_conversations=2
+seed=0
+[93mConversations Generation Parameters:[0m
+text_files=/root/Documents/myelon-launch/vllm/benchmarks/sonnet.txt
+input_num_turns=UniformDistribution[2, 6]
+input_common_prefix_num_tokens=Constant[0]
+input_prefix_num_tokens=UniformDistribution[32, 192]
+input_num_tokens=LognormalDistribution[160, 0.75, 384]
+output_num_tokens=UniformDistribution[24, 48]
+----------------------------------------------------------------------------------------------------
+[93mStatistics summary:[0m
+runtime_sec = 0.784
+requests_per_sec = 7.657
+warmup_runtime_sec = 0.917
+total_runtime_incl_warmup_sec = 1.701
+----------------------------------------------------------------------------------------------------
+                   count    mean     std  ...     75%     90%     max
+ttft_ms              6.0  129.58    1.47  ...  130.54  130.75  130.95
+tpot_ms              6.0    0.00    0.00  ...    0.00    0.00    0.00
+latency_ms           6.0  129.58    1.47  ...  130.54  130.75  130.95
+input_num_turns      6.0    3.00    0.00  ...    3.00    3.00    3.00
+input_num_tokens     6.0  397.67  122.95  ...  393.25  516.00  633.00
+output_num_tokens    6.0    0.00    0.00  ...    0.00    0.00    0.00
+output_num_chunks    6.0    0.00    0.00  ...    0.00    0.00    0.00
+
+[7 rows x 9 columns]
+----------------------------------------------------------------------------------------------------
+
+PyTorch was not found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
+02-04-2026 16:52:24 [INFO] - Namespace(input_file='/root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/synthetic_multi_turn_smoke.json', output_file='/root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/pd_benchmark_blackwell_qwen3_06b_synth_localipc_runner/runner_pd/conversations.json', seed=0, model='/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca', served_model_name='c1899de289a04d12100db370d81485cdf75e47ca', url='http://127.0.0.1:18080', num_clients=1, max_active_conversations=2, max_num_requests=16, warmup_step=True, max_turns=2, no_early_stop=False, limit_max_tokens=0, limit_min_tokens=0, request_rate=0.0, max_retries=1, conversation_sampling=<ConversationSampling.ROUND_ROBIN: 'round_robin'>, verify_output=False, request_timeout_sec=180, no_stream=False, excel_output=False, verbose=False, print_content=False, warmup_percentages='0%')
+02-04-2026 16:52:24 [INFO] - [92mInput parameters:[0m
+02-04-2026 16:52:24 [INFO] - url=http://127.0.0.1:18080
+02-04-2026 16:52:24 [INFO] - model=/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca
+02-04-2026 16:52:24 [INFO] - num_clients=1
+02-04-2026 16:52:24 [INFO] - Loading tokenizer
+02-04-2026 16:52:24 [INFO] - [94mCollecting information from server: http://127.0.0.1:18080[0m
+02-04-2026 16:52:24 [INFO] - [94mModels:[0m
+02-04-2026 16:52:24 [INFO] - [94m	model_id='c1899de289a04d12100db370d81485cdf75e47ca', max_model_len=4096[0m
+02-04-2026 16:52:24 [INFO] - Reading input file: /root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/synthetic_multi_turn_smoke.json
+02-04-2026 16:52:24 [INFO] - Using input file with filetype: generate_conversations
+02-04-2026 16:52:24 [INFO] - [95mGenerating conversations...[0m
+02-04-2026 16:52:24 [INFO] - GenConvArgs(num_conversations=8, text_files=['/root/Documents/myelon-launch/vllm/benchmarks/sonnet.txt'], input_num_turns=UniformDistribution[2, 6], input_common_prefix_num_tokens=Constant[0], input_prefix_num_tokens=UniformDistribution[32, 192], input_num_tokens=LognormalDistribution[160, 0.75, 384], output_num_tokens=UniformDistribution[24, 48], print_stats=True)
+02-04-2026 16:52:24 [INFO] - Loaded 5569 tokens from file /root/Documents/myelon-launch/vllm/benchmarks/sonnet.txt, total tokens so far: 5569
+
+Generating conversations:   0%|          | 0/8 [00:00<?, ?conv/s]
+Generating conversations: 100%|██████████| 8/8 [00:00<00:00, 4783.24conv/s]
+02-04-2026 16:52:24 [INFO] - [95mMax turns per conversation is limited to 2[0m
+02-04-2026 16:52:24 [INFO] - [95mWarmup start[0m
+02-04-2026 16:52:24 [INFO] - [92mStarting 1 clients[0m
+02-04-2026 16:52:24 [INFO] - [96mStarted client 0: max_num_requests=16, max_active_conversations=1[0m
+02-04-2026 16:52:25 [INFO] - [96mFinished 3 out of 8 conversations (38%), 0 out of 1 clients finished, collected 3 measurements, runtime 0.461 sec[0m
+02-04-2026 16:52:25 [INFO] - [96mEstimated req/sec N/A, estimated runtime left 0.768 sec[0m
+02-04-2026 16:52:25 [INFO] - --------------------------------------------------
+02-04-2026 16:52:25 [INFO] - [moving_avg_ttft_ms       ] avg:     94.837 (3 samples)
+02-04-2026 16:52:25 [INFO] - [moving_avg_tpot_ms       ] avg:      1.453 (3 samples)
+02-04-2026 16:52:25 [INFO] - [ttft_ms                  ] avg:     94.837, min:     76.382, max:    125.686
+02-04-2026 16:52:25 [INFO] - [tpot_ms                  ] avg:      1.453, min:      0.000, max:      4.359
+02-04-2026 16:52:25 [INFO] - [latency_ms               ] avg:    150.046, min:     76.382, max:    291.312
+02-04-2026 16:52:25 [INFO] - [input_num_turns          ] avg:      1.000, min:      1.000, max:      1.000
+02-04-2026 16:52:25 [INFO] - [input_num_tokens         ] avg:    196.667, min:     90.000, max:    305.000
+02-04-2026 16:52:25 [INFO] - [output_num_tokens        ] avg:     13.000, min:      0.000, max:     39.000
+02-04-2026 16:52:25 [INFO] - --------------------------------------------------
+02-04-2026 16:52:25 [INFO] - [96mFinished 6 out of 8 conversations (75%), 0 out of 1 clients finished, collected 5 measurements, runtime 0.752 sec[0m
+02-04-2026 16:52:25 [INFO] - [96mEstimated req/sec 6.649, estimated runtime left 0.251 sec[0m
+02-04-2026 16:52:25 [INFO] - --------------------------------------------------
+02-04-2026 16:52:25 [INFO] - [moving_avg_ttft_ms       ] avg:     88.797 (5 samples)
+02-04-2026 16:52:25 [INFO] - [moving_avg_tpot_ms       ] avg:      0.872 (5 samples)
+02-04-2026 16:52:25 [INFO] - [ttft_ms                  ] avg:     88.797, min:     76.382, max:    125.686
+02-04-2026 16:52:25 [INFO] - [tpot_ms                  ] avg:      0.872, min:      0.000, max:      4.359
+02-04-2026 16:52:25 [INFO] - [latency_ms               ] avg:    121.922, min:     76.382, max:    291.312
+02-04-2026 16:52:25 [INFO] - [input_num_turns          ] avg:      1.000, min:      1.000, max:      1.000
+02-04-2026 16:52:25 [INFO] - [input_num_tokens         ] avg:    206.600, min:     90.000, max:    305.000
+02-04-2026 16:52:25 [INFO] - [output_num_tokens        ] avg:      7.800, min:      0.000, max:     39.000
+02-04-2026 16:52:25 [INFO] - --------------------------------------------------
+02-04-2026 16:52:25 [INFO] - [93mClient 0 has no more work[0m
+02-04-2026 16:52:25 [INFO] - [96mClient 0 is done (num_successes=8, num_failures=0)[0m
+02-04-2026 16:52:25 [INFO] - [96m1 out of 1 clients finished[0m
+02-04-2026 16:52:25 [INFO] - [96mAll 1 clients finished[0m
+02-04-2026 16:52:25 [INFO] - Collected 8 samples from all the clients
+02-04-2026 16:52:25 [INFO] - [96mWaiting for client client_0 (is alive: True)[0m
+02-04-2026 16:52:25 [INFO] - All 1 clients exited (successfully finished 8 out of 8 conversations)
+02-04-2026 16:52:25 [INFO] - [95mWarmup runtime: 0.917 sec (917.362 ms)[0m
+02-04-2026 16:52:25 [INFO] - [95mWarmup done[0m
+02-04-2026 16:52:25 [INFO] - [92mStarting 1 clients[0m
+02-04-2026 16:52:25 [INFO] - [96mStarted client 0: max_num_requests=16, max_active_conversations=2[0m
+02-04-2026 16:52:26 [INFO] - [96mFinished 3 out of 8 conversations (38%), 0 out of 1 clients finished, collected 2 measurements, runtime 0.394 sec[0m
+02-04-2026 16:52:26 [INFO] - [96mEstimated req/sec N/A, estimated runtime left 0.657 sec[0m
+02-04-2026 16:52:26 [INFO] - --------------------------------------------------
+02-04-2026 16:52:26 [INFO] - [moving_avg_ttft_ms       ] avg:    128.952 (2 samples)
+02-04-2026 16:52:26 [INFO] - [moving_avg_tpot_ms       ] avg:      0.000 (2 samples)
+02-04-2026 16:52:26 [INFO] - [ttft_ms                  ] avg:    128.952, min:    127.394, max:    130.511
+02-04-2026 16:52:26 [INFO] - [tpot_ms                  ] avg:      0.000, min:      0.000, max:      0.000
+02-04-2026 16:52:26 [INFO] - [latency_ms               ] avg:    128.952, min:    127.394, max:    130.511
+02-04-2026 16:52:26 [INFO] - [input_num_turns          ] avg:      3.000, min:      3.000, max:      3.000
+02-04-2026 16:52:26 [INFO] - [input_num_tokens         ] avg:    351.500, min:    327.000, max:    376.000
+02-04-2026 16:52:26 [INFO] - [output_num_tokens        ] avg:      0.000, min:      0.000, max:      0.000
+02-04-2026 16:52:26 [INFO] - --------------------------------------------------
+02-04-2026 16:52:26 [INFO] - [96mFinished 6 out of 8 conversations (75%), 0 out of 1 clients finished, collected 5 measurements, runtime 0.789 sec[0m
+02-04-2026 16:52:26 [INFO] - [93mClient 0 has no more work[0m
+02-04-2026 16:52:26 [INFO] - [96mEstimated req/sec 6.339, estimated runtime left 0.263 sec[0m
+02-04-2026 16:52:26 [INFO] - --------------------------------------------------
+02-04-2026 16:52:26 [INFO] - [moving_avg_ttft_ms       ] avg:    129.504 (5 samples)
+02-04-2026 16:52:26 [INFO] - [moving_avg_tpot_ms       ] avg:      0.000 (5 samples)
+02-04-2026 16:52:26 [INFO] - [ttft_ms                  ] avg:    129.504, min:    127.394, max:    130.955
+02-04-2026 16:52:26 [INFO] - [tpot_ms                  ] avg:      0.000, min:      0.000, max:      0.000
+02-04-2026 16:52:26 [INFO] - [latency_ms               ] avg:    129.504, min:    127.394, max:    130.955
+02-04-2026 16:52:26 [INFO] - [input_num_turns          ] avg:      3.000, min:      3.000, max:      3.000
+02-04-2026 16:52:26 [INFO] - [input_num_tokens         ] avg:    397.400, min:    279.000, max:    633.000
+02-04-2026 16:52:26 [INFO] - [output_num_tokens        ] avg:      0.000, min:      0.000, max:      0.000
+02-04-2026 16:52:26 [INFO] - --------------------------------------------------
+02-04-2026 16:52:26 [INFO] - [96mClient 0 is done (num_successes=6, num_failures=0)[0m
+02-04-2026 16:52:26 [INFO] - [96m1 out of 1 clients finished[0m
+02-04-2026 16:52:26 [INFO] - [93mSending termination signal to clients[0m
+02-04-2026 16:52:26 [INFO] - [96mAll 1 clients finished[0m
+02-04-2026 16:52:26 [INFO] - Collected 6 samples from all the clients
+02-04-2026 16:52:26 [INFO] - [96mWaiting for client client_0 (is alive: True)[0m
+02-04-2026 16:52:26 [INFO] - All 1 clients exited (successfully finished 6 out of 8 conversations)
+02-04-2026 16:52:26 [INFO] - [92mAll clients finished, benchmark runtime: 0.793 sec (793.280 ms), requests per second: 7.564[0m
+02-04-2026 16:52:26 [INFO] - [92mWarmup runtime: 0.917 sec (917.362 ms)[0m
+02-04-2026 16:52:26 [INFO] - [92mTotal runtime (including warmup): 1.711 sec (1710.642 ms)[0m
+02-04-2026 16:52:26 [INFO] - Processing 6 samples...
+02-04-2026 16:52:26 [INFO] - [92mWriting conversations file: /root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/pd_benchmark_blackwell_qwen3_06b_synth_localipc_runner/runner_pd/conversations.json[0m
