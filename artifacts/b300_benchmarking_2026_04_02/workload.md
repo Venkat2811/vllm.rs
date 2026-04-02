@@ -14,7 +14,7 @@ Track the benchmark workload plan and important findings for `vllm.rs` on the tw
 
 ## Current Model Ladder
 
-- small: `Qwen/Qwen1.5-0.5B-Chat-GPTQ-Int4`
+- small: `Qwen/Qwen3-0.6B`
 - medium: `Qwen/Qwen3-4B`
 - large: `Qwen/Qwen3.5-27B-FP8`
 
@@ -332,6 +332,149 @@ Interpretation:
 
 - this is not a good model candidate for the TP=2 Myelon benchmark ladder on the current host
 - do not spend time forcing this GPTQ model into the benchmark matrix just to preserve a nominal small / medium / large label
+
+Replacement chosen on this host:
+
+- `Qwen/Qwen3-0.6B` downloads cleanly (`~1.5G`) and behaves normally on both single-GPU and TP=2 serving slices
+- this is the current small-model ladder entry for the Blackwell host benchmark matrix
+
+### Replacement small-model slices on Blackwell: `Qwen/Qwen3-0.6B`
+
+Single-GPU synthetic:
+
+- runner:
+  - runtime `1.141s`
+  - requests/sec `5.259`
+  - warmup runtime `1.512s`
+  - TTFT `55.398 ms`
+  - TPOT `4.077 ms`
+  - latency `182.058 ms`
+- myelon:
+  - runtime `1.157s`
+  - requests/sec `5.184`
+  - warmup runtime `1.533s`
+  - TTFT `55.909 ms`
+  - TPOT `4.146 ms`
+  - latency `184.834 ms`
+
+Single-GPU ShareGPT-backed:
+
+- runner:
+  - runtime `23.151s`
+  - requests/sec `0.648`
+  - warmup runtime `13.284s`
+  - TTFT `60.531 ms`
+  - TPOT `3.928 ms`
+  - latency `1568.028 ms`
+  - finished `15/16` conversations
+- myelon:
+  - runtime `23.374s`
+  - requests/sec `0.642`
+  - warmup runtime `13.384s`
+  - TTFT `58.261 ms`
+  - TPOT `3.990 ms`
+  - latency `1556.395 ms`
+  - finished `15/16` conversations
+
+TP=2 synthetic:
+
+- runner:
+  - runtime `1.192s`
+  - requests/sec `5.032`
+  - warmup runtime `1.590s`
+  - TTFT `55.482 ms`
+  - TPOT `4.318 ms`
+  - latency `190.303 ms`
+- myelon:
+  - runtime `1.190s`
+  - requests/sec `5.044`
+  - warmup runtime `1.602s`
+  - TTFT `54.734 ms`
+  - TPOT `4.331 ms`
+  - latency `197.113 ms`
+
+TP=2 ShareGPT-backed:
+
+- runner:
+  - runtime `23.488s`
+  - requests/sec `0.639`
+  - warmup runtime `13.906s`
+  - TTFT `58.331 ms`
+  - TPOT `4.092 ms`
+  - latency `1597.240 ms`
+  - finished `15/16` conversations
+- myelon:
+  - runtime `23.545s`
+  - requests/sec `0.637`
+  - warmup runtime `13.966s`
+  - TTFT `58.216 ms`
+  - TPOT `4.089 ms`
+  - latency `1567.515 ms`
+  - finished `15/16` conversations
+
+Interpretation:
+
+- `Qwen/Qwen3-0.6B` is a viable working replacement for the broken GPTQ small-model slot
+- single-GPU and TP=2 results are both effectively neutral between runner and Myelon on the current workloads
+- the same upstream `15/16` termination quirk remains visible on the bounded ShareGPT replay
+
+### Large-model TP=2 measured slices on Blackwell: `Qwen/Qwen3.5-27B-FP8`
+
+TP=2 synthetic:
+
+- runner:
+  - runtime `21.791s`
+  - requests/sec `0.275`
+  - warmup runtime `28.793s`
+  - TTFT `799.696 ms`
+  - TPOT `80.767 ms`
+  - latency `3501.258 ms`
+- myelon:
+  - runtime `21.782s`
+  - requests/sec `0.275`
+  - warmup runtime `28.369s`
+  - TTFT `796.963 ms`
+  - TPOT `80.769 ms`
+  - latency `3498.654 ms`
+
+TP=2 ShareGPT-backed:
+
+- runner:
+  - runtime `485.174s`
+  - requests/sec `0.031`
+  - warmup runtime `280.783s`
+  - TTFT `699.655 ms`
+  - TPOT `81.663 ms`
+  - latency `32341.384 ms`
+  - finished `15/16` conversations
+- myelon:
+  - runtime `485.271s`
+  - requests/sec `0.031`
+  - warmup runtime `279.978s`
+  - TTFT `700.085 ms`
+  - TPOT `81.679 ms`
+  - latency `32347.693 ms`
+  - finished `15/16` conversations
+
+Interpretation:
+
+- the large FP8 TP=2 slices are decisively compute-bound on this host
+- runner and Myelon are functionally identical on both synthetic and bounded ShareGPT replay
+
+### Current benchmark-matrix conclusion on the Blackwell host
+
+With the current corrected build, the working non-PD model ladder on this host is:
+
+- small: `Qwen/Qwen3-0.6B`
+- medium: `Qwen/Qwen3-4B`
+- large: `Qwen/Qwen3.5-27B-FP8`
+
+Across that ladder:
+
+- single-GPU non-disaggregated serving is effectively parity between runner and Myelon
+- TP=2 non-disaggregated serving is also effectively parity between runner and Myelon
+- the current repeated artifact is not "Myelon wins throughput" but rather "Myelon does not materially change end-to-end serving on these controlled Blackwell workloads"
+- the remaining benchmark gap is PD-disaggregation, not basic non-PD process A/B coverage
 
 Interpretation:
 
