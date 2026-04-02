@@ -268,6 +268,20 @@ Important interpretation:
 - but both current TP=2 serving slices are effectively TTFT-only artifacts with no generated output, so they are not yet valid decode or end-to-end serving benchmarks
 - the next TP=2 benchmark step should focus on why the current serving path returns `output_num_tokens=0` on these wrapper runs before using this lane for performance conclusions
 
+Direct TP=2 serving probe after the wrapper fix:
+
+- a direct `POST /v1/chat/completions` request against the TP=2 runner server on `Qwen/Qwen3-4B` returned `choices: []` with zero usage counts
+- this proves the empty-output issue is not just an upstream benchmark-script artifact
+- server-side error during that direct probe:
+  - `Runner prefill error: Err(shape mismatch value_cache [512, 4, 128, 64], expected (512, 8, 16, 64, 8))`
+  - `Step error: Runner step error, no response!`
+
+Important interpretation:
+
+- the current TP=2 serving blocker is a real multi-shard runtime bug in `vllm.rs`
+- this bug affects both the benchmark lane and direct TP=2 serving correctness
+- until that prefill/cache-shape mismatch is fixed or a different model/mode avoids it, TP=2 serving latency conclusions on this host are not trustworthy
+
 ## Next Updates
 
 Add results here when one of these completes:
