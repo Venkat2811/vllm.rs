@@ -317,12 +317,27 @@ impl Attention {
             return Ok(None);
         }
 
-        let q_weight =
-            q_vb.get_with_hints_dtype((q_out_dim, hidden_size), "weight", q_shard, dtype)?;
-        let k_weight =
-            k_vb.get_with_hints_dtype((kv_out_dim, hidden_size), "weight", kv_shard, dtype)?;
-        let v_weight =
-            v_vb.get_with_hints_dtype((kv_out_dim, hidden_size), "weight", kv_shard, dtype)?;
+        let q_weight = Self::normalize_sharded_2d(
+            q_vb.get_with_hints_dtype((q_out_dim, hidden_size), "weight", q_shard, dtype)?,
+            q_shard,
+            q_out_dim,
+            hidden_size,
+            "q_proj.weight",
+        )?;
+        let k_weight = Self::normalize_sharded_2d(
+            k_vb.get_with_hints_dtype((kv_out_dim, hidden_size), "weight", kv_shard, dtype)?,
+            kv_shard,
+            kv_out_dim,
+            hidden_size,
+            "k_proj.weight",
+        )?;
+        let v_weight = Self::normalize_sharded_2d(
+            v_vb.get_with_hints_dtype((kv_out_dim, hidden_size), "weight", kv_shard, dtype)?,
+            kv_shard,
+            kv_out_dim,
+            hidden_size,
+            "v_proj.weight",
+        )?;
 
         let local_q = q_weight.dim(0)?;
         let local_k = k_weight.dim(0)?;
