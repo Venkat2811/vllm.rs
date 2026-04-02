@@ -109,11 +109,18 @@ Confirmed result on this host after the extension:
 - PD server logs now show the formerly missing step:
   - `Runner received Myelon KvCacheSend for seq ...`
   - followed by successful KV transfer and client completion
+- LocalIPC `myelon_pd` now shows the same control-path fix:
+  - PD server reaches `Runner received Myelon KvCacheSend for seq ...`
+  - PD server reports successful `KvCacheSend`
+  - client receives the KV transfer envelope
+  - failure now occurs later at CUDA IPC import on the client:
+    - `cuIpcOpenMemHandle_v2 ... CUDA_ERROR_PEER_ACCESS_UNSUPPORTED`
 
 Current status after the fix:
 
 - TCP runner PD: green
 - TCP Myelon PD: green on the current `Qwen/Qwen3-0.6B` first-transfer and warmed synthetic slices
-- LocalIPC PD: still blocked for real KV transfer on this VM by `CUDA_ERROR_PEER_ACCESS_UNSUPPORTED`
+- LocalIPC PD control path: fixed
+- LocalIPC PD data path: still blocked for real KV transfer on this VM by `CUDA_ERROR_PEER_ACCESS_UNSUPPORTED`
 
 This is still separate from TP inside prefill/decode nodes. TP-within-node may be pursued independently of the LocalIPC PD limitation on this VM.
