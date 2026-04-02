@@ -61,6 +61,45 @@ Possible future dataset shaping:
 - B300 host required CUDA `13.0` plus local `cudaforge` `100f` parsing support
 - single-GPU CUDA and TP=2 CUDA now work after rebuilding with `CUDA_COMPUTE_CAP=100f`
 
+### New-host portability checkpoint
+
+Current machine differs materially from the earlier B300 host:
+
+- `2 x NVIDIA RTX PRO 6000 Blackwell Server Edition`
+- `~96 GiB` VRAM per GPU
+- `60` vCPUs
+- `176 GiB` system RAM
+- `229 GiB` free on `/` at start of validation
+
+Important build finding:
+
+- the carried-over `release` binaries were invalid on this host and failed immediately with `CUDA_ERROR_INVALID_PTX` while loading `cast_u32_f32`
+- a partial rebuild was not enough because `candle-kernels` still reused stale PTX targeting `sm_100f`, and `attention-rs` still reported an old kernel build compute capability of `103`
+- a full `cargo clean` plus rebuild with `CUDA_COMPUTE_CAP=120f` was required to regenerate both stacks correctly on this host
+- after the full clean rebuild:
+  - `attention-rs` kernel build reported compute capability `120`
+  - `candle-kernels` PTX regenerated with `.target sm_120f`
+
+Important harness finding:
+
+- `scripts/run_myelon_server_benchmark_matrix.py` no longer hardcodes `CUDA_COMPUTE_CAP=100f`
+- the wrapper now only forwards `CUDA_COMPUTE_CAP` when it is explicitly set in the environment, so the benchmark harness does not silently pin the old B300 architecture on newer hosts
+
+Functional validation on the Blackwell server-edition host:
+
+- TP=2 forced-runner CLI generation on `Qwen/Qwen3-4B` is green
+- TP=2 Myelon CLI generation on `Qwen/Qwen3-4B` is green
+- TP=2 forced-runner server mode on `Qwen/Qwen3-4B` is green:
+  - direct `POST /v1/chat/completions` returned a normal completion with nonzero usage counts
+- TP=2 Myelon server mode on `Qwen/Qwen3-4B` is green:
+  - direct `POST /v1/chat/completions` returned a normal completion with nonzero usage counts
+  - repeated requests on one server instance passed `2/2`
+
+Interpretation:
+
+- the earlier TP=2 serving `value_cache` blocker from the B300 notes does not reproduce on this host after a full clean rebuild for `sm_120f`
+- on this machine, the next benchmark work should resume from actual warmup-plus-measured A/B runs rather than more TP=2 serving bug hunting
+
 ### Preliminary TP=2 directional results
 
 `Qwen/Qwen3-4B`
