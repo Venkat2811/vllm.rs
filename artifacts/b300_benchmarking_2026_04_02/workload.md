@@ -497,6 +497,82 @@ Interpretation:
 - the current host and model ladder are good enough to start a real PD baseline harness next
 - the next work is methodology, not basic PD wiring
 
+### PD-disagg benchmark results on the Blackwell VM
+
+The first real PD benchmark pass is now split into three distinct outcomes on `Qwen/Qwen3-0.6B`.
+
+1. LocalIPC same-node PD benchmark is not usable on this VM for real KV transfer.
+
+- workload: `synthetic_multi_turn_smoke.json`, `num_clients=1`, `max_active_conversations=2`, `max_num_requests=8`, `max_turns=2`, warmup enabled
+- runner PD setup launched and the benchmark process itself exited `0`, but the real PD path failed during KV receive
+- failing client-side error:
+  - `KvCacheReceive failed: Err(cuIpcOpenMemHandle_v2 failed: DriverError(CUDA_ERROR_PEER_ACCESS_UNSUPPORTED, "peer access is not supported between these two devices"))`
+- downstream symptom:
+  - sequences aborted after prefill transfer failure
+  - measured outputs degraded to `output_num_tokens avg: 0.000`
+
+Interpretation:
+
+- the earlier LocalIPC smoke only proved control-plane bring-up and a light request path
+- this KVM Blackwell VM does not expose the GPU peer-access path needed for real LocalIPC PD KV transfer between GPU `0` and GPU `1`
+- LocalIPC PD A/B numbers on this host are therefore not meaningful for performance conclusions
+
+2. TCP PD baseline on the same host is valid for the current runner path.
+
+- transport: `tcp://127.0.0.1:18100`
+- workload: `synthetic_multi_turn_smoke.json`, `num_clients=1`, `max_active_conversations=2`, `max_num_requests=8`, `max_turns=2`, warmup enabled
+- result: runner PD completed cleanly
+- measured runner PD synthetic result:
+  - runtime `1.218s`
+  - requests/sec `4.926`
+  - warmup `2.396s`
+  - total runtime incl warmup `3.614s`
+  - TTFT `56.027 ms`
+  - TPOT `4.388 ms`
+  - latency `192.912 ms`
+  - input tokens mean `431.6`
+  - output tokens mean `32.4`
+
+3. Current Myelon PD path is still hanging on real transferred prefill, even after routing PD over TCP.
+
+- synthetic TCP run with warmup and `max_active_conversations=2` stalled after the client accepted the next request
+- narrower fallback run was used to remove concurrency and warmup from the equation:
+  - workload: `pd_inputs/pd_transfer_first_request.json`
+  - one conversation
+  - one measured request
+  - no warmup
+  - first request forced to `578` input tokens / `32` output tokens target
+- runner PD fallback completed cleanly:
+  - runtime `0.567s`
+  - requests/sec `1.764`
+  - TTFT `429.73 ms`
+  - TPOT `4.43 ms`
+  - latency `566.95 ms`
+- Myelon PD fallback still hung
+
+Exact observed stop point on the failing Myelon PD fallback:
+
+- client log:
+  - `Prefill request (Seq 0, 586 tokens) transfered to PD server.`
+- PD server log:
+  - `PD Server: received TransferPrefill for Seq 0 (586 tokens)`
+  - `Runner configuring Myelon transport ...`
+  - `Enabled Myelon IPC hot path across 1 runner(s).`
+  - `Dispatching first Myelon request kind=1 bytes=2502.`
+  - `Runner entered Myelon hot path with first kind=1 bytes=2502.`
+  - `Runner sent first Myelon response bytes=12.`
+  - `Received first Myelon response kind=100 bytes=12.`
+- and then no further progress
+
+Interpretation:
+
+- current PD-disagg status on this VM is not "Myelon slower" or "Myelon faster"
+- the current status is:
+  - runner PD over TCP is benchmarkable and green
+  - LocalIPC PD is blocked by VM peer-access limits
+  - Myelon PD hangs as soon as a real transferred prefill enters the Myelon hot path
+- the next PD step is debugging the Myelon-plus-PD interaction after first transferred prefill, not collecting more broad PD performance data
+
 Interpretation:
 
 - the first bounded ShareGPT slice is realistic enough to create actual context pressure
@@ -583,5 +659,4 @@ Important interpretation:
 
 Add results here when one of these completes:
 
-- first reusable `tp2` benchmark run on all three models
-- first PD-disagg benchmark slice
+- first Myelon PD fix and successful TCP PD A/B rerun
