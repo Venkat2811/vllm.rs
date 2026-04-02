@@ -476,6 +476,27 @@ Across that ladder:
 - the current repeated artifact is not "Myelon wins throughput" but rather "Myelon does not materially change end-to-end serving on these controlled Blackwell workloads"
 - the remaining benchmark gap is PD-disaggregation, not basic non-PD process A/B coverage
 
+### PD-disagg bring-up checkpoint on Blackwell
+
+The first same-node PD-disagg LocalIPC smoke is green with the replacement small model.
+
+- PD server: GPU `0`, `Qwen/Qwen3-0.6B`, `--pd-server --prefix-cache --force-runner`
+- PD client: GPU `1`, `Qwen/Qwen3-0.6B`, `--server --port 18080 --pd-client --prefix-cache --force-runner`
+- transport: implicit CUDA LocalIPC (`pd_url` omitted)
+- result: `GET /v1/models` on the PD client returned normally, the PD server accepted the LocalIPC connection, and a real `POST /v1/chat/completions` request returned a completion with nonzero usage counts
+
+Observed smoke response:
+
+- prompt tokens `15`
+- completion tokens `12`
+- prefill `0.12s`
+- decode `0.04s`
+
+Interpretation:
+
+- the current host and model ladder are good enough to start a real PD baseline harness next
+- the next work is methodology, not basic PD wiring
+
 Interpretation:
 
 - the first bounded ShareGPT slice is realistic enough to create actual context pressure
