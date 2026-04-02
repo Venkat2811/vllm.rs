@@ -850,3 +850,43 @@ Important interpretation:
 - decode is basically flat to slightly positive versus runner on that shape
 - prompt is still about `11-12%` slower than runner on that shape, so the old `~30%` prompt win is not reproduced yet
 - the remaining gap is no longer a basic Myelon hang; it is a performance regression versus the reference branch
+
+Reference-tuned rebuild and rerun on `2026-04-02`:
+
+- rebuilt `vllm.rs` from clean with release binaries after aligning the local benchmark/build helpers to the reference-style defaults:
+  - release build by default instead of debug
+  - Myelon transport defaults in `vllm.rs` now resolve to deep rings (`8192/8192`) and busy-spin unless explicitly overridden
+- exact-model rerun on the fresh build, same TP=2 shape as above:
+  - runner pass 1:
+    - prompt `2048 in 1.05s = 1946.77 tok/s`
+    - decode `129024 in 79.56s = 1621.70 tok/s`
+  - runner pass 2:
+    - prompt `2048 in 1.07s = 1912.23 tok/s`
+    - decode `129024 in 79.34s = 1626.22 tok/s`
+  - Myelon pass 1:
+    - prompt `2048 in 1.22s = 1684.21 tok/s`
+    - decode `129024 in 79.45s = 1624.05 tok/s`
+- conclusion from the clean rebuild:
+  - the old mismatch was not a debug-build artifact and not a shallow-ring default artifact
+  - current TP=2 Myelon on `Qwen/Qwen3-30B-A3B` remains roughly `12-13%` slower than runner on prompt while decode stays effectively flat
+  - the next work item is not more build cleanup; it is a transport-path diff against the reference implementation
+
+Reference-guided transport follow-up on `2026-04-02`:
+
+- fully re-read the current/latest and reference build surfaces:
+  - old Python `DISRUPTOR_PAYLOAD_KB` / `DISRUPTOR_PAYLOAD_BYTES` build vars belong to the older Python bindings path and are not part of the current Rust `vllm.rs` Myelon transport
+  - the relevant Rust-side reference knobs are already aligned on latest:
+    - release binary
+    - `64KB` RPC frame payload
+    - `4KB` response frame payload
+    - deep `8192/8192` rings
+    - busy-spin
+    - eager transport attach before the first request
+- added one more reference-driven hot-path fix on latest:
+  - `MyelonResponse::RunResponse(Vec<u32>)` no longer uses `bincode`
+  - it now uses a trivial raw little-endian layout: `u32 count` + packed `u32` ids
+  - this keeps the change local to the Myelon response path and removes one `bincode` encode/decode step from every prefill/decode response
+- current state after the reference-aligned fixes:
+  - the old missing piece was not build-script drift
+  - the old Python payload env vars were a red herring for Rust `vllm.rs`
+  - the remaining gap versus the old archive is now narrowed to transport-path/runtime behavior on the current branch, not missing build flags
