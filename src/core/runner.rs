@@ -6,6 +6,8 @@ use crate::models::layers::linear::set_linear_is_prefill;
 use crate::models::layers::VarBuilderX;
 use crate::server::EmbeddingStrategy;
 use crate::transfer::Transfer;
+#[cfg(feature = "myelon")]
+use crate::ipc::myelon_ipc::MyelonEngineTransport;
 #[cfg(all(feature = "cuda", feature = "graph"))]
 use crate::utils::graph::{
     planned_graph_capture_batches, CudaGraphFn, CudaGraphWrapper, GraphCapturer, ModelFn,
@@ -98,7 +100,13 @@ pub enum Model {
 
 pub enum RunnerType {
     Thread(ModelRunner),
-    Process(Vec<LocalStream>),
+    Process(ProcessRunnerGroup),
+}
+
+pub struct ProcessRunnerGroup {
+    pub streams: Vec<LocalStream>,
+    #[cfg(feature = "myelon")]
+    pub myelon_transport: Option<MyelonEngineTransport>,
 }
 
 pub struct ModelRunner {

@@ -621,6 +621,71 @@ Interpretation:
   - avoid enabling Myelon on PD server runners
 - this is separate from TP inside prefill/decode nodes; TP-within-node can still be pursued even if current PD server KV export is not Myelon-compatible yet
 
+### PD/Myelon helper-verb fix checkpoint
+
+That architectural gap is now closed for the current process-runner PD path.
+
+Fix applied in `vllm.rs`:
+
+- Myelon protocol now carries the PD helper verbs used by the existing process-runner PD flow:
+  - `TransferPrefill`
+  - `ReceivePrefill`
+  - `CheckPrefillStatus`
+  - `KvCacheSend`
+  - `KvCacheReceive`
+  - `KvCacheRelease`
+  - `CheckKvCacheRelease`
+- once a runner has switched into the Myelon hot path, `BlockManager` now routes those helper calls through `MyelonEngineTransport` instead of trying to use the abandoned legacy socket loop
+- the runner-side Myelon loop now handles those helper requests and returns typed responses
+
+Validated TCP PD results on `Qwen/Qwen3-0.6B` after the protocol extension:
+
+First-transfer fallback:
+
+- runner:
+  - runtime `0.567s`
+  - requests/sec `1.764`
+  - TTFT `429.73 ms`
+  - TPOT `4.43 ms`
+  - latency `566.95 ms`
+- myelon:
+  - runtime `0.638s`
+  - requests/sec `1.567`
+  - TTFT `499.50 ms`
+  - TPOT `4.48 ms`
+  - latency `638.29 ms`
+
+Warmed synthetic TCP PD slice:
+
+- workload: `synthetic_multi_turn_smoke.json`
+- `num_clients=1`
+- `max_active_conversations=2`
+- `max_num_requests=8`
+- `max_turns=2`
+- warmup enabled
+- runner:
+  - runtime `1.208s`
+  - requests/sec `4.969`
+  - warmup runtime `2.450s`
+  - TTFT `55.05 ms`
+  - TPOT `4.43 ms`
+  - latency `193.49 ms`
+- myelon:
+  - runtime `1.219s`
+  - requests/sec `4.924`
+  - warmup runtime `2.428s`
+  - TTFT `60.61 ms`
+  - TPOT `4.33 ms`
+  - latency `202.06 ms`
+
+Important interpretation:
+
+- TCP PD + Myelon is no longer hanging on real transferred-prefill traffic for the current small-model process-runner path
+- the repeated synthetic lane now completes cleanly under Myelon, not just the one-request fallback
+- on this host and workload, Myelon is slightly slower than runner PD rather than obviously faster
+- LocalIPC PD is still blocked separately by `CUDA_ERROR_PEER_ACCESS_UNSUPPORTED` on this KVM VM, so current PD A/B conclusions must remain TCP-only
+- the next real question is broader PD coverage and tuning, not whether the basic Myelon PD process path can complete at all
+
 Interpretation:
 
 - the first bounded ShareGPT slice is realistic enough to create actual context pressure

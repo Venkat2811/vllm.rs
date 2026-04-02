@@ -1,12 +1,12 @@
 //src/core/engine.rs
-use super::runner::{ModelRunner, RunnerType, Seqs};
+use super::runner::{ModelRunner, ProcessRunnerGroup, RunnerType, Seqs};
 use super::scheduler::{Scheduler, KVCACHE_SWAP_THRESHOLD};
 use super::sequence::Sequence;
 use crate::core::scheduler::PD_PREFILL_STATUS_CHECK_COOLING_PERIOD;
 use crate::core::sequence::{DecodeSequence, SequenceStatus};
 use crate::core::GenerationOutput;
 #[cfg(feature = "myelon")]
-use crate::ipc::myelon_ipc::{resolve_myelon_transport_config, MyelonEngineTransport};
+use crate::ipc::myelon_ipc::resolve_myelon_transport_config;
 use crate::models::layers::distributed::Comm;
 #[cfg(feature = "nccl")]
 use crate::models::layers::distributed::Id;
@@ -79,8 +79,6 @@ pub enum RequestType {
 #[allow(dead_code)]
 pub struct LLMEngine {
     pub runners: Arc<RwLock<RunnerType>>,
-    #[cfg(feature = "myelon")]
-    myelon_transport: Option<MyelonEngineTransport>,
     #[cfg(feature = "myelon")]
     pending_myelon_session: Option<String>,
     pub scheduler: Scheduler,
@@ -199,8 +197,6 @@ impl LLMEngine {
         #[cfg(feature = "nvtx")]
         let use_runner = false;
 
-        #[cfg(feature = "myelon")]
-        let mut myelon_transport = None;
         #[cfg(feature = "myelon")]
         let mut pending_myelon_session = None;
         let runners = if !use_runner {
@@ -411,7 +407,11 @@ impl LLMEngine {
                     runner_streams.len()
                 );
             }
-            RunnerType::Process(runner_streams)
+            RunnerType::Process(ProcessRunnerGroup {
+                streams: runner_streams,
+                #[cfg(feature = "myelon")]
+                myelon_transport: None,
+            })
         };
 
         if econfig.max_model_len.is_none() {
@@ -496,8 +496,6 @@ impl LLMEngine {
 
         let engine = Arc::new(RwLock::new(Self {
             runners,
-            #[cfg(feature = "myelon")]
-            myelon_transport,
             #[cfg(feature = "myelon")]
             pending_myelon_session,
             scheduler,
@@ -767,15 +765,14 @@ impl LLMEngine {
     }
 
     pub fn notify_runner_finished(&mut self, id: usize) -> Result<()> {
-        #[cfg(feature = "myelon")]
-        if let Some(transport) = self.myelon_transport.as_mut() {
-            return transport.finish_decode(id);
-        }
-
         match &mut *self.runners.write() {
             RunnerType::Thread(model_runner) => Ok(model_runner.finished(id)),
-            RunnerType::Process(ref mut runner_streams) => {
-                for stream in runner_streams {
+            RunnerType::Process(ref mut runner_group) => {
+                #[cfg(feature = "myelon")]
+                if let Some(transport) = runner_group.myelon_transport.as_mut() {
+                    return transport.finish_decode(id);
+                }
+                for stream in &mut runner_group.streams {
                     send_local(
                         &mut vec![stream.try_clone()?],
                         &MessageType::FinishDecode(id),
@@ -814,24 +811,23 @@ impl LLMEngine {
             // Get immutable references to scheduled sequences for model_runner
             let seqs = self.scheduler.get_sequences(&scheduled_ids);
             #[cfg(feature = "myelon")]
-            let output_ids = if let Some(transport) = self.myelon_transport.as_mut() {
-                if is_prefill {
-                    let sequences = seqs.iter().map(|s| (*s).clone()).collect::<Vec<_>>();
-                    transport.run_prefill(sequences)?
-                } else {
-                    let sequences = seqs
-                        .iter()
-                        .map(|s| DecodeSequence::new(s))
-                        .collect::<Vec<_>>();
-                    transport.run_decode(sequences)?
+            let output_ids = match &mut *self.runners.write() {
+                RunnerType::Thread(model_runner) => {
+                    model_runner.run(Seqs::SeqRefs(&seqs), is_prefill)?
                 }
-            } else {
-                match &mut *self.runners.write() {
-                    RunnerType::Thread(model_runner) => {
-                        // Run model on the scheduled sequences in the main thread
-                        model_runner.run(Seqs::SeqRefs(&seqs), is_prefill)?
-                    }
-                    RunnerType::Process(ref mut runner_streams) => {
+                RunnerType::Process(ref mut runner_group) => {
+                    if let Some(transport) = runner_group.myelon_transport.as_mut() {
+                        if is_prefill {
+                            let sequences = seqs.iter().map(|s| (*s).clone()).collect::<Vec<_>>();
+                            transport.run_prefill(sequences)?
+                        } else {
+                            let sequences = seqs
+                                .iter()
+                                .map(|s| DecodeSequence::new(s))
+                                .collect::<Vec<_>>();
+                            transport.run_decode(sequences)?
+                        }
+                    } else {
                         let request = if is_prefill {
                             let sequences = seqs.iter().map(|s| (*s).clone()).collect::<Vec<_>>();
                             MessageType::RunPrefill((sequences, true))
@@ -843,7 +839,8 @@ impl LLMEngine {
                             MessageType::RunDecode((sequences, false))
                         };
 
-                        let cloned_streams: Vec<LocalStream> = runner_streams
+                        let cloned_streams: Vec<LocalStream> = runner_group
+                            .streams
                             .iter_mut()
                             .map(|s| s.try_clone().expect("clone failed"))
                             .collect();
@@ -885,7 +882,7 @@ impl LLMEngine {
                     // Run model on the scheduled sequences in the main thread
                     model_runner.run(Seqs::SeqRefs(&seqs), is_prefill)?
                 }
-                RunnerType::Process(ref mut runner_streams) => {
+                RunnerType::Process(ref mut runner_group) => {
                     let request = if is_prefill {
                         let sequences = seqs.iter().map(|s| (*s).clone()).collect::<Vec<_>>();
                         MessageType::RunPrefill((sequences, true))
@@ -897,7 +894,8 @@ impl LLMEngine {
                         MessageType::RunDecode((sequences, false))
                     };
 
-                    let cloned_streams: Vec<LocalStream> = runner_streams
+                    let cloned_streams: Vec<LocalStream> = runner_group
+                        .streams
                         .iter_mut()
                         .map(|s| s.try_clone().expect("clone failed"))
                         .collect();
@@ -1147,29 +1145,29 @@ impl LLMEngine {
 
     #[cfg(feature = "myelon")]
     fn ensure_myelon_transport(&mut self) -> Result<()> {
-        if self.myelon_transport.is_some() {
-            return Ok(());
-        }
         let Some(session_label) = self.pending_myelon_session.take() else {
             return Ok(());
         };
 
         let mut runners = self.runners.write();
         match &mut *runners {
-            RunnerType::Process(ref mut runner_streams) => {
+            RunnerType::Process(ref mut runner_group) => {
+                if runner_group.myelon_transport.is_some() {
+                    return Ok(());
+                }
                 let transport_config = resolve_myelon_transport_config(
                     self.econfig.myelon_rpc_depth,
                     self.econfig.myelon_response_depth,
                     self.econfig.myelon_busy_spin,
                 )?;
-                self.myelon_transport = Some(MyelonEngineTransport::attach(
-                    runner_streams,
+                runner_group.myelon_transport = Some(crate::ipc::myelon_ipc::MyelonEngineTransport::attach(
+                    &mut runner_group.streams,
                     &session_label,
                     transport_config,
                 )?);
                 log_info!(
                     "Enabled Myelon IPC hot path across {} runner(s).",
-                    runner_streams.len()
+                    runner_group.streams.len()
                 );
                 Ok(())
             }
@@ -1512,30 +1510,23 @@ impl LLMEngine {
         }
 
         #[cfg(feature = "myelon")]
-        let had_myelon_transport = self.myelon_transport.is_some();
-        #[cfg(not(feature = "myelon"))]
-        let had_myelon_transport = false;
-
-        #[cfg(feature = "myelon")]
         {
             self.pending_myelon_session = None;
-            if let Some(mut transport) = self.myelon_transport.take() {
-                transport.shutdown();
-            }
         }
 
-        if !had_myelon_transport {
-            match &mut *self.runners.write() {
-                RunnerType::Thread(_) => {}
-                RunnerType::Process(ref mut runner_streams) => {
-                    for (rank, stream) in runner_streams.iter_mut().enumerate() {
-                        if let Err(error) = send_local(
-                            &mut vec![stream.try_clone()?],
-                            &MessageType::Shutdown,
-                            false,
-                        ) {
-                            log_warn!("failed to send shutdown to runner {}: {:?}", rank, error);
-                        }
+        match &mut *self.runners.write() {
+            RunnerType::Thread(_) => {}
+            RunnerType::Process(ref mut runner_group) => {
+                #[cfg(feature = "myelon")]
+                if let Some(mut transport) = runner_group.myelon_transport.take() {
+                    transport.shutdown();
+                    return Ok(());
+                }
+                for (rank, stream) in runner_group.streams.iter_mut().enumerate() {
+                    if let Err(error) =
+                        send_local(&mut vec![stream.try_clone()?], &MessageType::Shutdown, false)
+                    {
+                        log_warn!("failed to send shutdown to runner {}: {:?}", rank, error);
                     }
                 }
             }
@@ -1671,15 +1662,16 @@ impl LLMEngine {
                 let chunk_tokens = std::cmp::min(chunk_size, remaining);
                 let embedding_result = match &mut *self.runners.write() {
                     RunnerType::Thread(model_runner) => model_runner.embed(&[&seq], &strategy),
-                    RunnerType::Process(ref mut runner_streams) => {
+                    RunnerType::Process(ref mut runner_group) => {
                         #[cfg(feature = "myelon")]
-                        if self.myelon_transport.is_some() {
+                        if runner_group.myelon_transport.is_some() {
                             candle_core::bail!(
                                 "embedding requests are not supported with Myelon IPC yet"
                             );
                         }
                         let request = MessageType::RunEmbed((vec![seq.clone()], strategy.clone()));
-                        let cloned_streams: Vec<LocalStream> = runner_streams
+                        let cloned_streams: Vec<LocalStream> = runner_group
+                            .streams
                             .iter_mut()
                             .map(|s| s.try_clone().expect("clone failed"))
                             .collect();
