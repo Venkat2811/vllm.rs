@@ -105,6 +105,45 @@ Important interpretation:
   - GPTQ small-model candidates should not be promoted into the benchmark ladder until they pass the same fresh rerun standard
 - performance conclusions should still wait for proper warmup plus repeated measured runs; these fresh reruns are functional validation, not the final benchmark artifact
 
+### Single-GPU Myelon server lifecycle fix
+
+Root cause found on the B300 host:
+
+- the first Myelon-backed server request succeeded, but the second request stalled before prefill
+- this was not a benchmark-harness bug and not an engine-lock bug
+- after Myelon IPC handoff, the runner stops servicing the old local-socket command loop and only consumes the Myelon transport
+- `BlockManager::clear_blocks_guard()` still broadcast `MessageType::ClearBlocks` over that abandoned socket path when allocating fresh blocks for the next request
+- `ModelRunner::clear_blocks()` is already a no-op, so this was a pure dead-message hang rather than required cleanup
+
+Fix applied in `vllm.rs`:
+
+- `BlockManager` now records whether Myelon IPC is enabled
+- `clear_blocks_guard()` skips the socket-side `ClearBlocks` broadcast when Myelon IPC is active
+
+Validation on this host:
+
+- repeated non-streaming Myelon requests now work on one server instance:
+  - request 1: `0.769s`
+  - request 2: `0.148s`
+  - request 3: `0.149s`
+- repeated streaming Myelon requests now also work on one server instance
+- the upstream multi-turn serving benchmark now completes cleanly against the Myelon server on `Qwen/Qwen3-4B`
+
+Single-GPU upstream serving smoke with Myelon after the fix:
+
+- runtime: `1.830s`
+- requests/sec: `3.280`
+- warmup runtime: `2.252s`
+- TTFT mean: `62.61 ms`
+- TPOT mean: `7.29 ms`
+- latency mean: `302.76 ms`
+
+Interpretation:
+
+- the previous serving failure was a concrete lifecycle/control-plane bug after Myelon handoff
+- the current single-GPU Myelon serving path is now good enough to use for the next benchmark-harness iteration
+- remaining benchmark work should move back to methodology and model/regime coverage, not basic repeated-request stability on single GPU
+
 ## Next Updates
 
 Add results here when one of these completes:
