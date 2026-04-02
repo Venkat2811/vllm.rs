@@ -144,11 +144,45 @@ Interpretation:
 - the current single-GPU Myelon serving path is now good enough to use for the next benchmark-harness iteration
 - remaining benchmark work should move back to methodology and model/regime coverage, not basic repeated-request stability on single GPU
 
+### Single-GPU synthetic serving matrix on B300
+
+Completed with the upstream multi-turn serving benchmark wrapper on one GPU using:
+
+- `synthetic_multi_turn_smoke.json`
+- `num_clients=1`
+- `max_active_conversations=2`
+- `max_num_requests=8`
+- `max_turns=2`
+- warmup enabled
+- measured phase separated from warmup
+
+`Qwen/Qwen1.5-0.5B-Chat-GPTQ-Int4`
+
+- runner: runtime `1.075s`, requests/sec `5.580`, warmup `1.837s`, TTFT `58.51 ms`, TPOT `4.59 ms`, latency `177.22 ms`
+- myelon: runtime `1.188s`, requests/sec `5.052`, warmup `1.903s`, TTFT `57.84 ms`, TPOT `4.73 ms`, latency `195.86 ms`
+
+`Qwen/Qwen3-4B`
+
+- runner: runtime `1.816s`, requests/sec `3.305`, warmup `2.787s`, TTFT `63.00 ms`, TPOT `7.23 ms`, latency `300.94 ms`
+- myelon: runtime `1.816s`, requests/sec `3.304`, warmup `2.812s`, TTFT `61.10 ms`, TPOT `7.27 ms`, latency `300.46 ms`
+
+`Qwen/Qwen3.5-27B-FP8`
+
+- runner: runtime `39.730s`, requests/sec `0.151`, warmup `50.677s`, TTFT `1420.59 ms`, TPOT `148.23 ms`, latency `6616.56 ms`
+- myelon: runtime `39.705s`, requests/sec `0.151`, warmup `50.797s`, TTFT `1417.93 ms`, TPOT `148.19 ms`, latency `6612.31 ms`
+
+Interpretation:
+
+- small model: runner is better on throughput and end-to-end latency; Myelon only edges TTFT slightly
+- medium model: runner and Myelon are effectively at parity on this workload
+- large model: runner and Myelon are effectively at parity; the workload is compute-bound enough that transport choice does not move the result
+- current single-GPU synthetic serving evidence does not support a broad claim that Myelon improves non-TP, non-disaggregated serving throughput on this host
+- this slice is still useful because it gives a stable baseline before TP=2, ShareGPT-backed replay, and PD-disagg work
+
 ## Next Updates
 
 Add results here when one of these completes:
 
-- first reusable `single_gpu` benchmark run on all three models
 - first reusable `tp2` benchmark run on all three models
 - first ShareGPT-backed serving workload
 - first PD-disagg benchmark slice
