@@ -745,6 +745,7 @@ impl BlockManager {
         pub,
         try_swap_kvcache,
         swap_kvcache,
+        swap_kvcache,
         (mappings: HashMap<usize, usize>, swap_in: bool),
         MessageType::KVCacheSwap,
         ((mappings.clone(), swap_in)),

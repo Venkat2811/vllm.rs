@@ -806,3 +806,47 @@ Important interpretation:
 Add results here when one of these completes:
 
 - first Myelon PD fix and successful TCP PD A/B rerun
+
+## Exact Reference-Model Reproduction On Blackwell
+
+Reference archive recheck:
+
+- the old non-PD TP=2 prompt win was recorded on `Qwen/Qwen3-30B-A3B`, not `Qwen/Qwen3-30B-A3B-Instruct-2507`
+- current repros on this host use the exact base checkpoint from Hugging Face
+
+Exact-model current-branch findings:
+
+- archived reference shape `batch=256`, `max-model-len=1024`, `max-tokens=1024` still fails on current `vllm.rs` in plain runner mode with:
+  - `Runner decode error: Err(DriverError(CUDA_ERROR_INVALID_VALUE, "invalid argument"))`
+- the same failure also appears at `batch=256`, `max-model-len=2560`
+- descending batch probe on the exact base model found the largest current green batch at `128`
+
+Exact-model TP=2 runner baseline on the current branch:
+
+- model: `Qwen/Qwen3-30B-A3B`
+- shape: `batch=128`, `max-model-len=1024`, `max-tokens=1024`, `temperature=0.6`, `top_p=0.95`, `top_k=20`
+- runner:
+  - prompt `2048 in 1.07s = 1908.67 tok/s`
+  - decode `129024 in 79.71s = 1618.62 tok/s`
+
+Current Myelon-specific fixes needed to make the exact-model non-PD run complete:
+
+- TP=2 Myelon output collection no longer aborts when rank outputs differ
+- non-PD CPU swap now works after adding `KVCacheSwap` to the Myelon protocol
+- Myelon response collection now keeps the last rank response to match legacy process-runner behavior
+
+Exact-model TP=2 Myelon on the current branch after those fixes:
+
+- Myelon, deep rings, blocking waits:
+  - prompt `2048 in 1.22s = 1678.69 tok/s`
+  - decode `129024 in 79.31s = 1626.82 tok/s`
+- Myelon, deep rings, busy-spin:
+  - prompt `2048 in 1.21s = 1686.99 tok/s`
+  - decode `129024 in 79.60s = 1620.85 tok/s`
+
+Important interpretation:
+
+- the current branch now runs the exact base checkpoint under Myelon at the largest currently stable batch (`128`)
+- decode is basically flat to slightly positive versus runner on that shape
+- prompt is still about `11-12%` slower than runner on that shape, so the old `~30%` prompt win is not reproduced yet
+- the remaining gap is no longer a basic Myelon hang; it is a performance regression versus the reference branch
