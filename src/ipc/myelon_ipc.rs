@@ -2,13 +2,11 @@ use anyhow::{Context, Result};
 use candle_core::Result as CandleResult;
 use interprocess::local_socket::Stream as LocalStream;
 use interprocess::TryClone;
-use myelon_playground::transport::{
-    FixedFrame, FramedTransportConsumer, FramedTransportProducer,
-};
-use std::collections::HashMap;
+use myelon_playground::transport::{FixedFrame, FramedTransportConsumer, FramedTransportProducer};
 pub use myelon_playground::{
     MyelonTransportConfig, MyelonTransportLayout, MyelonWaitStrategy, RunnerMyelonTransportConfig,
 };
+use std::collections::HashMap;
 
 use crate::core::sequence::{DecodeSequence, Sequence};
 use crate::log_info;
@@ -18,6 +16,8 @@ pub const RPC_FRAME_HEADER_BYTES: usize = 12;
 pub const RESPONSE_FRAME_HEADER_BYTES: usize = 12;
 pub const RPC_FRAME_DATA_BYTES: usize = 64 * 1024 - RPC_FRAME_HEADER_BYTES;
 pub const RESPONSE_FRAME_DATA_BYTES: usize = 4 * 1024 - RESPONSE_FRAME_HEADER_BYTES;
+pub const VLLM_RS_DEFAULT_MYELON_RPC_DEPTH: usize = 8192;
+pub const VLLM_RS_DEFAULT_MYELON_RESPONSE_DEPTH: usize = 8192;
 
 pub type RpcFrame = FixedFrame<RPC_FRAME_DATA_BYTES>;
 pub type ResponseFrame = FixedFrame<RESPONSE_FRAME_DATA_BYTES>;
@@ -74,7 +74,9 @@ impl MsgKind {
             x if x == Self::Error as u8 => Ok(Self::Error),
             x if x == Self::TransferPrefillResponse as u8 => Ok(Self::TransferPrefillResponse),
             x if x == Self::ReceivePrefillResponse as u8 => Ok(Self::ReceivePrefillResponse),
-            x if x == Self::CheckPrefillStatusResponse as u8 => Ok(Self::CheckPrefillStatusResponse),
+            x if x == Self::CheckPrefillStatusResponse as u8 => {
+                Ok(Self::CheckPrefillStatusResponse)
+            }
             x if x == Self::KvCacheSendResponse as u8 => Ok(Self::KvCacheSendResponse),
             x if x == Self::KvCacheReceiveResponse as u8 => Ok(Self::KvCacheReceiveResponse),
             x if x == Self::KvCacheReleaseResponse as u8 => Ok(Self::KvCacheReleaseResponse),
@@ -91,12 +93,57 @@ fn myelon_to_candle<E: std::fmt::Display>(error: E) -> candle_core::Error {
     candle_core::Error::Msg(error.to_string())
 }
 
+fn encode_u32_slice(values: &[u32]) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(4 + values.len() * std::mem::size_of::<u32>());
+    bytes.extend_from_slice(&(values.len() as u32).to_le_bytes());
+    for value in values {
+        bytes.extend_from_slice(&value.to_le_bytes());
+    }
+    bytes
+}
+
+fn decode_u32_slice(payload: &[u8]) -> CandleResult<Vec<u32>> {
+    if payload.len() < 4 {
+        candle_core::bail!(
+            "Myelon RunResponse payload too short: {} bytes",
+            payload.len()
+        );
+    }
+    let count = u32::from_le_bytes(payload[..4].try_into().expect("slice length checked")) as usize;
+    let expected_len = 4 + count * std::mem::size_of::<u32>();
+    if payload.len() != expected_len {
+        candle_core::bail!(
+            "Myelon RunResponse payload len {} did not match expected {} for {} ids",
+            payload.len(),
+            expected_len,
+            count
+        );
+    }
+    let mut values = Vec::with_capacity(count);
+    for chunk in payload[4..].chunks_exact(std::mem::size_of::<u32>()) {
+        values.push(u32::from_le_bytes(
+            chunk.try_into().expect("chunk size is exactly four bytes"),
+        ));
+    }
+    Ok(values)
+}
+
 pub fn resolve_myelon_transport_config(
     rpc_depth: Option<usize>,
     response_depth: Option<usize>,
     busy_spin: Option<bool>,
 ) -> CandleResult<MyelonTransportConfig> {
-    MyelonTransportConfig::resolve(rpc_depth, response_depth, busy_spin).map_err(myelon_to_candle)
+    let wait_strategy = if busy_spin.unwrap_or(true) {
+        MyelonWaitStrategy::BusySpin
+    } else {
+        MyelonWaitStrategy::Block
+    };
+    MyelonTransportConfig::new(
+        rpc_depth.unwrap_or(VLLM_RS_DEFAULT_MYELON_RPC_DEPTH),
+        response_depth.unwrap_or(VLLM_RS_DEFAULT_MYELON_RESPONSE_DEPTH),
+        wait_strategy,
+    )
+    .map_err(myelon_to_candle)
 }
 
 pub struct RpcBroadcastProducer {
@@ -203,17 +250,40 @@ impl ResponseConsumer {
 
 #[derive(Debug)]
 pub enum MyelonRequest {
-    RunPrefill { sequences: Vec<Sequence> },
-    RunDecode { sequences: Vec<DecodeSequence> },
-    FinishDecode { sequence_id: usize },
-    Cancel { sequence_id: usize },
-    TransferPrefill { sequence: Sequence },
-    ReceivePrefill { available_tokens: usize },
-    CheckPrefillStatus { sequence_id: usize },
-    KvCacheSend { sequence: Sequence, first_token: u32 },
-    KvCacheReceive { sequence: Sequence },
-    KvCacheRelease { sequence_id: usize },
-    CheckKvCacheRelease { sequence_id: usize },
+    RunPrefill {
+        sequences: Vec<Sequence>,
+    },
+    RunDecode {
+        sequences: Vec<DecodeSequence>,
+    },
+    FinishDecode {
+        sequence_id: usize,
+    },
+    Cancel {
+        sequence_id: usize,
+    },
+    TransferPrefill {
+        sequence: Sequence,
+    },
+    ReceivePrefill {
+        available_tokens: usize,
+    },
+    CheckPrefillStatus {
+        sequence_id: usize,
+    },
+    KvCacheSend {
+        sequence: Sequence,
+        first_token: u32,
+    },
+    KvCacheReceive {
+        sequence: Sequence,
+    },
+    KvCacheRelease {
+        sequence_id: usize,
+    },
+    CheckKvCacheRelease {
+        sequence_id: usize,
+    },
     KvCacheSwap {
         mappings: HashMap<usize, usize>,
         swap_in: bool,
@@ -304,8 +374,7 @@ impl MyelonRequest {
                 Ok(Self::TransferPrefill { sequence })
             }
             MsgKind::ReceivePrefill => {
-                let available_tokens =
-                    bincode::deserialize(payload).map_err(myelon_to_candle)?;
+                let available_tokens = bincode::deserialize(payload).map_err(myelon_to_candle)?;
                 Ok(Self::ReceivePrefill { available_tokens })
             }
             MsgKind::CheckPrefillStatus => {
@@ -391,9 +460,7 @@ impl MyelonResponse {
 
     pub fn encode(&self) -> CandleResult<Vec<u8>> {
         match self {
-            Self::RunResponse(output_ids) => {
-                bincode::serialize(output_ids).map_err(myelon_to_candle)
-            }
+            Self::RunResponse(output_ids) => Ok(encode_u32_slice(output_ids)),
             Self::TransferPrefillResponse(value)
             | Self::CheckPrefillStatusResponse(value)
             | Self::KvCacheSendResponse(value)
@@ -414,10 +481,7 @@ impl MyelonResponse {
 
     pub fn decode(kind: u8, payload: &[u8]) -> CandleResult<Self> {
         match MsgKind::from_u8(kind)? {
-            MsgKind::RunResponse => {
-                let output_ids = bincode::deserialize(payload).map_err(myelon_to_candle)?;
-                Ok(Self::RunResponse(output_ids))
-            }
+            MsgKind::RunResponse => Ok(Self::RunResponse(decode_u32_slice(payload)?)),
             MsgKind::TransferPrefillResponse => {
                 let value = bincode::deserialize(payload).map_err(myelon_to_candle)?;
                 Ok(Self::TransferPrefillResponse(value))
@@ -554,7 +618,9 @@ impl MyelonEngineTransport {
             },
             |response| match response {
                 MyelonResponse::TransferPrefillResponse(value) => Ok(value),
-                other => candle_core::bail!("unexpected Myelon transfer_prefill response: {other:?}"),
+                other => {
+                    candle_core::bail!("unexpected Myelon transfer_prefill response: {other:?}")
+                }
             },
         )
     }
@@ -567,18 +633,23 @@ impl MyelonEngineTransport {
             &MyelonRequest::ReceivePrefill { available_tokens },
             |response| match response {
                 MyelonResponse::ReceivePrefillResponse(value) => Ok(value),
-                other => candle_core::bail!("unexpected Myelon receive_prefill response: {other:?}"),
+                other => {
+                    candle_core::bail!("unexpected Myelon receive_prefill response: {other:?}")
+                }
             },
         )
     }
 
     pub fn check_prefill_status(&mut self, sequence_id: usize) -> CandleResult<bool> {
-        self.publish_and_collect_bool(&MyelonRequest::CheckPrefillStatus { sequence_id }, |response| {
-            match response {
+        self.publish_and_collect_bool(
+            &MyelonRequest::CheckPrefillStatus { sequence_id },
+            |response| match response {
                 MyelonResponse::CheckPrefillStatusResponse(value) => Ok(value),
-                other => candle_core::bail!("unexpected Myelon check_prefill_status response: {other:?}"),
-            }
-        })
+                other => {
+                    candle_core::bail!("unexpected Myelon check_prefill_status response: {other:?}")
+                }
+            },
+        )
     }
 
     pub fn send_kvcache(&mut self, sequence: &Sequence, first_token: u32) -> CandleResult<bool> {
@@ -594,17 +665,16 @@ impl MyelonEngineTransport {
         )
     }
 
-    pub fn receive_kvcache(
-        &mut self,
-        sequence: &Sequence,
-    ) -> CandleResult<(bool, u32, usize)> {
+    pub fn receive_kvcache(&mut self, sequence: &Sequence) -> CandleResult<(bool, u32, usize)> {
         self.publish_and_collect_value(
             &MyelonRequest::KvCacheReceive {
                 sequence: sequence.clone(),
             },
             |response| match response {
                 MyelonResponse::KvCacheReceiveResponse(value) => Ok(value),
-                other => candle_core::bail!("unexpected Myelon receive_kvcache response: {other:?}"),
+                other => {
+                    candle_core::bail!("unexpected Myelon receive_kvcache response: {other:?}")
+                }
             },
         )
     }
@@ -613,7 +683,9 @@ impl MyelonEngineTransport {
         self.publish_and_collect_bool(&MyelonRequest::KvCacheRelease { sequence_id }, |response| {
             match response {
                 MyelonResponse::KvCacheReleaseResponse(value) => Ok(value),
-                other => candle_core::bail!("unexpected Myelon release_remote_kvcache response: {other:?}"),
+                other => candle_core::bail!(
+                    "unexpected Myelon release_remote_kvcache response: {other:?}"
+                ),
             }
         })
     }
@@ -623,7 +695,9 @@ impl MyelonEngineTransport {
             &MyelonRequest::CheckKvCacheRelease { sequence_id },
             |response| match response {
                 MyelonResponse::CheckKvCacheReleaseResponse(value) => Ok(value),
-                other => candle_core::bail!("unexpected Myelon check_kvcache_release response: {other:?}"),
+                other => candle_core::bail!(
+                    "unexpected Myelon check_kvcache_release response: {other:?}"
+                ),
             },
         )
     }
@@ -692,7 +766,8 @@ impl MyelonEngineTransport {
             last_value = Some(value);
         }
 
-        last_value.ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))
+        last_value
+            .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))
     }
 
     fn publish_and_collect_bool(
@@ -748,9 +823,7 @@ mod tests {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use myelon_playground::{
-        frame_flags, publish_framed_payload, transport::FramedTransportFrame,
-    };
+    use myelon_playground::{frame_flags, publish_framed_payload, transport::FramedTransportFrame};
 
     static UNIQUE_SUFFIX: AtomicU64 = AtomicU64::new(0);
 
