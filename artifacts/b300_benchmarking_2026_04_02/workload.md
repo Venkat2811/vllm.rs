@@ -179,10 +179,47 @@ Interpretation:
 - current single-GPU synthetic serving evidence does not support a broad claim that Myelon improves non-TP, non-disaggregated serving throughput on this host
 - this slice is still useful because it gives a stable baseline before TP=2, ShareGPT-backed replay, and PD-disagg work
 
+### ShareGPT converter and first realistic serving slice
+
+Important upstream-harness finding:
+
+- the upstream `vllm/benchmarks/multi_turn/convert_sharegpt_to_openai.py` content filter currently accepts non-ASCII messages instead of rejecting them
+- `scripts/prepare_myelon_sharegpt_dataset.py` now imports the upstream converter directly and patches that validator to keep ASCII-only content by default, while preserving the rest of the upstream conversion logic
+
+First bounded ShareGPT-derived dataset prepared on this host:
+
+- source: `philschmid/sharegpt-raw` `sharegpt_20230401_clean_lang_split.json`
+- output: `artifacts/b300_benchmarking_2026_04_02/sharegpt_conv_128_mt4_8.json`
+- seed: `99`
+- bounds: `min_turns=4`, `max_turns=8`
+- file size: `679 KB`
+
+Token/turn profile of the bounded ShareGPT slice using the local `Qwen/Qwen3-4B` tokenizer:
+
+- turns: min `4`, p50 `7`, p90 `8`, max `8`, mean `6.61`
+- total conversation tokens: min `184`, p50 `961`, p90 `1876`, p99 `2797`, max `3530`, mean `1061.34`
+- first-user tokens: min `1`, p50 `21`, p90 `99`, p99 `353`, max `399`, mean `43.27`
+
+Interpretation:
+
+- the first bounded ShareGPT slice is realistic enough to create actual context pressure
+- `max_model_len=1024` is too tight for this slice; the first real ShareGPT serving run used `max_model_len=4096`
+
+First ShareGPT-backed single-GPU serving A/B on `Qwen/Qwen3-4B`:
+
+- workload: bounded ShareGPT slice, `num_clients=1`, `max_active_conversations=2`, `max_num_requests=16`, `max_turns=4`, `max_model_len=4096`
+- runner: runtime `39.188s`, requests/sec `0.383`, warmup `21.742s`, TTFT `70.54 ms`, TPOT `7.10 ms`, latency `2608.66 ms`
+- myelon: runtime `39.088s`, requests/sec `0.384`, warmup `21.511s`, TTFT `70.06 ms`, TPOT `7.08 ms`, latency `2602.03 ms`
+- both cases used the same measured input/output profile: input tokens mean `303.87`, output tokens mean `368.07`
+
+Additional harness finding:
+
+- the first higher-concurrency attempt on this same ShareGPT slice (`num_clients=2`, `max_active_conversations=4`) stalled after the request-capped runner phase and never advanced cleanly into the rest of the matrix
+- the simpler `num_clients=1`, `max_active_conversations=2` configuration completed on both runner and Myelon, so this currently looks like an upstream multi-turn harness/control issue tied to the chosen concurrency shape rather than a basic `vllm.rs` serving correctness failure
+
 ## Next Updates
 
 Add results here when one of these completes:
 
 - first reusable `tp2` benchmark run on all three models
-- first ShareGPT-backed serving workload
 - first PD-disagg benchmark slice
