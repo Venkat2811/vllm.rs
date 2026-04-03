@@ -1,12 +1,12 @@
 use crate::models::gemma3::Gemma3ForConditionalGeneration;
 // src/core/runner.rs
+#[cfg(feature = "myelon")]
+use crate::ipc::myelon_ipc::MyelonEngineTransport;
 use crate::models::layers::distributed::Comm;
 use crate::models::layers::linear::set_fp8_linear_is_prefill;
 use crate::models::layers::VarBuilderX;
 use crate::server::EmbeddingStrategy;
 use crate::transfer::Transfer;
-#[cfg(feature = "myelon")]
-use crate::ipc::myelon_ipc::MyelonEngineTransport;
 #[cfg(all(feature = "cuda", feature = "graph"))]
 use crate::utils::graph::{
     planned_graph_capture_batches, CudaGraphFn, CudaGraphWrapper, GraphCapturer, ModelFn,

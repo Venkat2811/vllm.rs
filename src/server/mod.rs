@@ -2034,13 +2034,7 @@ mod tests {
 
     #[test]
     fn test_args_reject_empty_device_id_entries() {
-        let result = Args::try_parse_from([
-            "vllm-rs",
-            "--w",
-            "/tmp/model",
-            "--device-ids",
-            "0,,1",
-        ]);
+        let result = Args::try_parse_from(["vllm-rs", "--w", "/tmp/model", "--device-ids", "0,,1"]);
 
         assert!(result.is_err());
     }
