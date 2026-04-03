@@ -102,9 +102,9 @@ def main() -> int:
     build_profile = env_str("VLLM_BUILD_PROFILE", "release")
     device_ids = os.environ.get("VLLM_DEVICE_IDS")
     parsed_device_ids = parse_device_ids(device_ids)
-    myelon_rpc_depth = os.environ.get("VLLM_MYELON_RPC_DEPTH")
-    myelon_response_depth = os.environ.get("VLLM_MYELON_RESPONSE_DEPTH")
-    myelon_busy_spin = env_str("VLLM_MYELON_BUSY_SPIN", "0").lower() in {
+    myelon_rpc_depth = env_str("VLLM_MYELON_RPC_DEPTH", "8192")
+    myelon_response_depth = env_str("VLLM_MYELON_RESPONSE_DEPTH", "8192")
+    myelon_busy_spin = env_str("VLLM_MYELON_BUSY_SPIN", "1").lower() in {
         "1",
         "true",
         "yes",

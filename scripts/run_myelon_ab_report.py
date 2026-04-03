@@ -33,15 +33,16 @@ def main() -> int:
     parsed_num_shards = int(num_shards)
     device_ids = os.environ.get("VLLM_DEVICE_IDS")
     parsed_device_ids = parse_device_ids(device_ids)
-    myelon_rpc_depth = os.environ.get("VLLM_MYELON_RPC_DEPTH")
-    myelon_response_depth = os.environ.get("VLLM_MYELON_RESPONSE_DEPTH")
-    myelon_busy_spin = env_str("VLLM_MYELON_BUSY_SPIN", "0").lower() in {
+    myelon_rpc_depth = env_str("VLLM_MYELON_RPC_DEPTH", "8192")
+    myelon_response_depth = env_str("VLLM_MYELON_RESPONSE_DEPTH", "8192")
+    myelon_busy_spin = env_str("VLLM_MYELON_BUSY_SPIN", "1").lower() in {
         "1",
         "true",
         "yes",
     }
     timeout_seconds = int(env_str("VLLM_TIMEOUT_SECONDS", "60"))
     build_features = env_str("VLLM_BUILD_FEATURES", "cuda,myelon")
+    build_profile = env_str("VLLM_BUILD_PROFILE", "release")
     max_myelon_prompt_ratio = env_float("VLLM_MAX_MYELON_PROMPT_RATIO", 4.0)
     if "VLLM_BUILD_FEATURES" not in os.environ:
         build_features = default_build_features()
@@ -68,7 +69,17 @@ def main() -> int:
         return 1
 
     subprocess.run(
-        ["cargo", "build", "--bin", "vllm-rs", "--bin", "runner", "--features", build_features],
+        [
+            "cargo",
+            "build",
+            f"--{build_profile}",
+            "--bin",
+            "vllm-rs",
+            "--bin",
+            "runner",
+            "--features",
+            build_features,
+        ],
         cwd=repo_root,
         check=True,
     )
@@ -93,7 +104,7 @@ def main() -> int:
     for label, extra_args in cases:
         command = build_command(
             repo_root,
-            repo_root / "target" / "debug" / "vllm-rs",
+            repo_root / "target" / build_profile / "vllm-rs",
             model_path,
             prompt,
             max_model_len,
@@ -127,6 +138,7 @@ def main() -> int:
         "performance_expectation": performance_expectation,
         "direct_case_included": parsed_num_shards == 1,
         "build_features": build_features,
+        "build_profile": build_profile,
         "results": results,
     }
 

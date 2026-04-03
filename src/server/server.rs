@@ -105,7 +105,11 @@ fn resolve_keep_alive_interval_ms_from_env(raw: Option<&str>) -> Option<u64> {
     match raw {
         Some(value) => {
             let parsed = value.parse::<u64>().unwrap_or(100);
-            if parsed == 0 { None } else { Some(parsed) }
+            if parsed == 0 {
+                None
+            } else {
+                Some(parsed)
+            }
         }
         None => Some(100),
     }
@@ -1109,11 +1113,11 @@ pub async fn chat_completion(
         });
 
         let sse = Sse::new(Streamer {
-                rx: client_rx,
-                status: StreamingStatus::Uninitialized,
-                disconnect_tx: Some(disconnect_tx),
-                pending_recv: None,
-            });
+            rx: client_rx,
+            status: StreamingStatus::Uninitialized,
+            disconnect_tx: Some(disconnect_tx),
+            pending_recv: None,
+        });
         let sse = if let Some(interval_ms) = resolve_keep_alive_interval_ms() {
             sse.keep_alive(
                 KeepAlive::new()
@@ -1734,7 +1738,10 @@ mod tests {
 
     #[test]
     fn keep_alive_interval_invalid_falls_back_to_default() {
-        assert_eq!(resolve_keep_alive_interval_ms_from_env(Some("not-a-number")), Some(100));
+        assert_eq!(
+            resolve_keep_alive_interval_ms_from_env(Some("not-a-number")),
+            Some(100)
+        );
     }
 
     #[test]

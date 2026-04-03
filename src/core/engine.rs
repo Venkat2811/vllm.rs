@@ -527,6 +527,12 @@ impl LLMEngine {
             engine_task: None,
         }));
 
+        #[cfg(feature = "myelon")]
+        {
+            let mut engine_guard = engine.write();
+            engine_guard.ensure_myelon_transport()?;
+        }
+
         let engine_task = Self::start_engine(engine.clone());
         engine.write().engine_task = Some(engine_task);
         Ok(engine)
@@ -1163,11 +1169,12 @@ impl LLMEngine {
                     self.econfig.myelon_response_depth,
                     self.econfig.myelon_busy_spin,
                 )?;
-                runner_group.myelon_transport = Some(crate::ipc::myelon_ipc::MyelonEngineTransport::attach(
-                    &mut runner_group.streams,
-                    &session_label,
-                    transport_config,
-                )?);
+                runner_group.myelon_transport =
+                    Some(crate::ipc::myelon_ipc::MyelonEngineTransport::attach(
+                        &mut runner_group.streams,
+                        &session_label,
+                        transport_config,
+                    )?);
                 log_info!(
                     "Enabled Myelon IPC hot path across {} runner(s).",
                     runner_group.streams.len()
@@ -1525,9 +1532,11 @@ impl LLMEngine {
                     return Ok(());
                 }
                 for (rank, stream) in runner_group.streams.iter_mut().enumerate() {
-                    if let Err(error) =
-                        send_local(&mut vec![stream.try_clone()?], &MessageType::Shutdown, false)
-                    {
+                    if let Err(error) = send_local(
+                        &mut vec![stream.try_clone()?],
+                        &MessageType::Shutdown,
+                        false,
+                    ) {
                         log_warn!("failed to send shutdown to runner {}: {:?}", rank, error);
                     }
                 }
@@ -1848,13 +1857,14 @@ impl LLMEngine {
 #[cfg(test)]
 mod tests {
     use super::LLMEngine;
-    use crate::utils::guidance::GuidanceTokens;
     #[cfg(feature = "myelon")]
-    use crate::ipc::myelon_ipc::resolve_myelon_transport_config;
-    use crate::utils::config::EngineConfig;
-    use myelon_playground::{
-        MyelonWaitStrategy, DEFAULT_MYELON_RESPONSE_DEPTH, DEFAULT_MYELON_RPC_DEPTH,
+    use crate::ipc::myelon_ipc::{
+        resolve_myelon_transport_config, VLLM_RS_DEFAULT_MYELON_RESPONSE_DEPTH,
+        VLLM_RS_DEFAULT_MYELON_RPC_DEPTH,
     };
+    use crate::utils::config::EngineConfig;
+    use crate::utils::guidance::GuidanceTokens;
+    use myelon_playground::MyelonWaitStrategy;
 
     #[test]
     fn trim_prompt_replay_prefix_accepts_single_reasoning_token() {
@@ -1968,7 +1978,7 @@ mod tests {
 
     #[cfg(feature = "myelon")]
     #[test]
-    fn myelon_transport_config_defaults_to_blocking_depths() {
+    fn myelon_transport_config_defaults_to_reference_tuned_depths() {
         let econfig = test_engine_config();
         let resolved = resolve_myelon_transport_config(
             econfig.myelon_rpc_depth,
@@ -1976,9 +1986,12 @@ mod tests {
             econfig.myelon_busy_spin,
         )
         .unwrap();
-        assert_eq!(resolved.rpc_depth, DEFAULT_MYELON_RPC_DEPTH);
-        assert_eq!(resolved.response_depth, DEFAULT_MYELON_RESPONSE_DEPTH);
-        assert_eq!(resolved.wait_strategy, MyelonWaitStrategy::Block);
+        assert_eq!(resolved.rpc_depth, VLLM_RS_DEFAULT_MYELON_RPC_DEPTH);
+        assert_eq!(
+            resolved.response_depth,
+            VLLM_RS_DEFAULT_MYELON_RESPONSE_DEPTH
+        );
+        assert_eq!(resolved.wait_strategy, MyelonWaitStrategy::BusySpin);
     }
 
     #[cfg(feature = "myelon")]

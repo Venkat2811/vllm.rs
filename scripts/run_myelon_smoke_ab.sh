@@ -12,9 +12,10 @@ seed="${VLLM_SEED:-123}"
 timeout_seconds="${VLLM_TIMEOUT_SECONDS:-60}"
 num_shards="${VLLM_NUM_SHARDS:-1}"
 device_ids="${VLLM_DEVICE_IDS:-}"
-myelon_rpc_depth="${VLLM_MYELON_RPC_DEPTH:-}"
-myelon_response_depth="${VLLM_MYELON_RESPONSE_DEPTH:-}"
-myelon_busy_spin="${VLLM_MYELON_BUSY_SPIN:-0}"
+myelon_rpc_depth="${VLLM_MYELON_RPC_DEPTH:-8192}"
+myelon_response_depth="${VLLM_MYELON_RESPONSE_DEPTH:-8192}"
+myelon_busy_spin="${VLLM_MYELON_BUSY_SPIN:-1}"
+build_profile="${VLLM_BUILD_PROFILE:-release}"
 
 if [[ ! -d "${model_path}" ]]; then
     echo "model path does not exist: ${model_path}" >&2
@@ -30,7 +31,7 @@ else
     build_features="cuda,myelon"
 fi
 echo "==> building vllm-rs and runner with features: ${build_features}"
-cargo build --bin vllm-rs --bin runner --features "${build_features}"
+cargo build --"${build_profile}" --bin vllm-rs --bin runner --features "${build_features}"
 
 common_args=(
     --w "${model_path}"
@@ -61,8 +62,8 @@ run_case() {
     shift
     echo
     echo "==> ${label}"
-    echo "command: timeout ${timeout_seconds} ./target/debug/vllm-rs ${common_args[*]} $*"
-    timeout "${timeout_seconds}" ./target/debug/vllm-rs "${common_args[@]}" "$@"
+    echo "command: timeout ${timeout_seconds} ./target/${build_profile}/vllm-rs ${common_args[*]} $*"
+    timeout "${timeout_seconds}" "./target/${build_profile}/vllm-rs" "${common_args[@]}" "$@"
 }
 
 if [[ "${num_shards}" == "1" ]]; then
