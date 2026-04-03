@@ -69,9 +69,7 @@ impl Stream for Streamer {
                     ChatResponse::ValidationError(e) => {
                         Poll::Ready(Some(Ok(Event::default().data(e))))
                     }
-                    ChatResponse::ModelError(e) => {
-                        Poll::Ready(Some(Ok(Event::default().data(e))))
-                    }
+                    ChatResponse::ModelError(e) => Poll::Ready(Some(Ok(Event::default().data(e)))),
                     ChatResponse::Chunk(response) => {
                         if self.status != StreamingStatus::Started {
                             self.status = StreamingStatus::Started;
@@ -101,9 +99,7 @@ impl Stream for Streamer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::server::{
-        ChatChoiceChunk, ChatCompletionChunk, Delta,
-    };
+    use crate::server::{ChatChoiceChunk, ChatCompletionChunk, Delta};
     use futures::StreamExt;
     use std::time::Duration;
 
@@ -146,8 +142,14 @@ mod tests {
                 .expect("done send should succeed");
         });
 
-        let first = streamer.next().await.expect("stream should yield first event");
-        let second = streamer.next().await.expect("stream should yield done event");
+        let first = streamer
+            .next()
+            .await
+            .expect("stream should yield first event");
+        let second = streamer
+            .next()
+            .await
+            .expect("stream should yield done event");
 
         let first_event = first.expect("first event should be valid");
         let second_event = second.expect("second event should be valid");
