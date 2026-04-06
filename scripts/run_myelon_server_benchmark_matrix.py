@@ -36,7 +36,7 @@ TOTAL_RUNTIME_RE = re.compile(
     r"^total_runtime_incl_warmup_sec = ([0-9.]+)$", re.MULTILINE
 )
 AVG_LINE_RE = re.compile(
-    r"^\[(ttft_ms|tpot_ms|latency_ms)\s*\]\s+avg:\s+([0-9.]+),\s+min:\s+([0-9.]+),\s+max:\s+([0-9.]+)$",
+    r"^.*\[(ttft_ms|tpot_ms|latency_ms)\s*\]\s+avg:\s+([0-9.]+),\s+min:\s+([0-9.]+),\s+max:\s+([0-9.]+)$",
     re.MULTILINE,
 )
 
