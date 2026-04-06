@@ -235,6 +235,135 @@ class BenchmarkContractHelperTests(unittest.TestCase):
         )
         self.assertEqual(status, "partial")
 
+    def test_infer_case_result_boundary_classifies_completion_and_runtime(self) -> None:
+        self.assertEqual(
+            report_common.infer_case_result_boundary(
+                {
+                    "label": "runner",
+                    "stop_point": "full_completion",
+                    "skip_reason": None,
+                    "benchmark_exit_code": 0,
+                }
+            ),
+            "benchmark_complete",
+        )
+        self.assertEqual(
+            report_common.infer_case_result_boundary(
+                {
+                    "label": "runner",
+                    "stop_point": "benchmark_timeout",
+                    "skip_reason": None,
+                    "benchmark_exit_code": None,
+                }
+            ),
+            "runtime_limited",
+        )
+        self.assertEqual(
+            report_common.infer_case_result_boundary(
+                {
+                    "label": "runner",
+                    "stop_point": "full_completion",
+                    "skip_reason": "unsupported_transport_localipc_missing_p2p_read",
+                    "benchmark_exit_code": None,
+                }
+            ),
+            "transport_limited",
+        )
+
+    def test_normalize_report_infers_result_boundary(self) -> None:
+        normalized = report_common.normalize_report(
+            {
+                "status": "completed",
+                "benchmark_contract": {
+                    "benchmark_family": "pd_qos",
+                    "benchmark_submode": "cold_turn",
+                    "question_answered": "pd",
+                    "workload_class": "synthetic_multi_turn",
+                    "warmup_policy": "measure_first_turn",
+                    "first_turn_measured": True,
+                    "arrival_pattern": "saturation_zero_gap",
+                    "concurrency_policy": {"driver": "pd_server_client_http"},
+                    "cache_pressure_profile": "unspecified",
+                    "equivalence_group": None,
+                    "topology_overlay": "pd_tp1",
+                    "transport_mode": "pd_tcp_localhost",
+                    "run_class": "fullpass",
+                    "stop_point": "full_completion",
+                    "skip_reason": None,
+                },
+                "cases": [
+                    {
+                        "label": "runner_pd",
+                        "stop_point": "benchmark_timeout",
+                        "skip_reason": None,
+                        "benchmark_exit_code": None,
+                    }
+                ],
+            }
+        )
+        self.assertEqual(normalized["result_boundary"], "runtime_limited")
+
+        skipped = report_common.normalize_report(
+            {
+                "status": "skipped_unsupported_architecture",
+                "benchmark_contract": {
+                    "benchmark_family": "pd_qos",
+                    "benchmark_submode": "cold_turn",
+                    "question_answered": "pd",
+                    "workload_class": "synthetic_multi_turn",
+                    "warmup_policy": "measure_first_turn",
+                    "first_turn_measured": True,
+                    "arrival_pattern": "saturation_zero_gap",
+                    "concurrency_policy": {"driver": "pd_server_client_http"},
+                    "cache_pressure_profile": "unspecified",
+                    "equivalence_group": None,
+                    "topology_overlay": "pd_tp1",
+                    "transport_mode": "pd_tcp_localhost",
+                    "run_class": "fullpass",
+                    "stop_point": "full_completion",
+                    "skip_reason": "unsupported_architecture_pd_state_transfer",
+                },
+                "cases": [],
+            }
+        )
+        self.assertEqual(skipped["result_boundary"], "architecture_limited")
+
+    def test_build_run_index_rows_include_result_boundary(self) -> None:
+        report = report_common.normalize_report(
+            {
+                "status": "completed",
+                "benchmark_contract": {
+                    "benchmark_family": "prefill_stress",
+                    "benchmark_submode": "fixed_prompt_burst",
+                    "question_answered": "prefill",
+                    "workload_class": "synthetic_prompt_short",
+                    "warmup_policy": "cli_warmup_runs:1",
+                    "first_turn_measured": True,
+                    "arrival_pattern": "prompt_burst_serial_runs",
+                    "concurrency_policy": {"driver": "cli", "max_num_seqs": 1},
+                    "cache_pressure_profile": "unspecified",
+                    "equivalence_group": "fixed_prompt_burst_bridge",
+                    "topology_overlay": "tp2",
+                    "transport_mode": "socket_vs_myelon_process_runner",
+                    "run_class": "fullpass",
+                    "stop_point": "full_completion",
+                    "skip_reason": None,
+                },
+                "machine_profile": {"hostname": "test-host", "gpu_inventory": []},
+                "model_capability": {"model_label": "Qwen/Test", "architecture": "TestArch", "pd_supported": True},
+                "cases": [
+                    {
+                        "label": "runner",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                    }
+                ],
+            }
+        )
+        rows = report_common.build_run_index_rows(report, Path("/tmp/report.json"))
+        self.assertEqual(rows[0]["result_boundary"], "benchmark_complete")
+
     def test_normalize_report_backfills_observed_cache_pressure_from_server_log(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
