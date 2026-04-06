@@ -13,6 +13,7 @@ from myelon_validation_common import (
     extract_server_kvcache_plan,
     infer_pd_transport_mode,
     infer_request_run_class,
+    infer_tp_scale_contract_fields,
     infer_workload_class_from_path,
 )
 
@@ -602,6 +603,11 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
                 else None
             ),
             "topology_overlay": contract.get("topology_overlay"),
+            "tp_scale_overlay": contract.get("tp_scale_overlay"),
+            "prefill_tp_size": contract.get("prefill_tp_size"),
+            "decode_tp_size": contract.get("decode_tp_size"),
+            "pd_enabled": contract.get("pd_enabled"),
+            "pd_role_layout": contract.get("pd_role_layout"),
             "transport_mode": contract.get("transport_mode"),
             "build_features": report.get("build_features"),
             "effective_device_ids": report.get("effective_device_ids"),
@@ -712,7 +718,15 @@ def infer_report_result_boundary(report: dict[str, object]) -> str:
 def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
     existing = report.get("benchmark_contract")
     if isinstance(existing, dict) and existing:
-        return existing
+        contract = dict(existing)
+        tp_fields = infer_tp_scale_contract_fields(
+            str(contract.get("topology_overlay", "")),
+            contract.get("transport_mode"),
+        )
+        for key, value in tp_fields.items():
+            if contract.get(key) is None:
+                contract[key] = value
+        return contract
 
     workload_file = str(report.get("workload_file", ""))
     workload_class = infer_workload_class_from_path(workload_file)
@@ -746,6 +760,11 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
                 "request_rate": request_rate,
             },
             "topology_overlay": "pd_tp1",
+            "tp_scale_overlay": "pd(tp1/tp1)",
+            "prefill_tp_size": 1,
+            "decode_tp_size": 1,
+            "pd_enabled": True,
+            "pd_role_layout": "same_host_split_roles",
             "transport_mode": infer_pd_transport_mode(report.get("pd_url")),
             "run_class": run_class,
             "cache_pressure_profile": "unspecified",
@@ -796,6 +815,11 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
                 else None
             ),
             "topology_overlay": mode,
+            "tp_scale_overlay": "tp1" if mode == "single_gpu" else "tp2",
+            "prefill_tp_size": 1 if mode == "single_gpu" else 2,
+            "decode_tp_size": 1 if mode == "single_gpu" else 2,
+            "pd_enabled": False,
+            "pd_role_layout": None,
             "transport_mode": "socket_vs_myelon_process_runner",
             "run_class": run_class,
             "stop_point": "full_completion",
@@ -816,6 +840,19 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
         "cache_pressure_profile": "unspecified",
         "equivalence_group": None,
         "topology_overlay": str(report.get("mode", "legacy_cli")),
+        "tp_scale_overlay": (
+            "tp1"
+            if str(report.get("mode", "legacy_cli")) == "single_gpu"
+            else str(report.get("mode", "legacy_cli"))
+        ),
+        "prefill_tp_size": (
+            1 if str(report.get("mode", "legacy_cli")) == "single_gpu" else None
+        ),
+        "decode_tp_size": (
+            1 if str(report.get("mode", "legacy_cli")) == "single_gpu" else None
+        ),
+        "pd_enabled": False,
+        "pd_role_layout": None,
         "transport_mode": "socket_vs_myelon_process_runner",
         "run_class": "quickpass",
         "stop_point": "full_completion",
@@ -1465,6 +1502,11 @@ def write_benchmark_reports(
             else None,
         ),
         ("topology_overlay", contract.get("topology_overlay")),
+        ("tp_scale_overlay", contract.get("tp_scale_overlay")),
+        ("prefill_tp_size", contract.get("prefill_tp_size")),
+        ("decode_tp_size", contract.get("decode_tp_size")),
+        ("pd_enabled", contract.get("pd_enabled")),
+        ("pd_role_layout", contract.get("pd_role_layout")),
         ("transport_mode", contract.get("transport_mode")),
         ("build_features", report.get("build_features")),
         ("effective_device_ids", report.get("effective_device_ids")),
@@ -1557,6 +1599,11 @@ def write_bundle_manifest(
         "benchmark_submode": contract.get("benchmark_submode"),
         "model_label": model_capability.get("model_label"),
         "topology_overlay": contract.get("topology_overlay"),
+        "tp_scale_overlay": contract.get("tp_scale_overlay"),
+        "prefill_tp_size": contract.get("prefill_tp_size"),
+        "decode_tp_size": contract.get("decode_tp_size"),
+        "pd_enabled": contract.get("pd_enabled"),
+        "pd_role_layout": contract.get("pd_role_layout"),
         "transport_mode": contract.get("transport_mode"),
         "run_class": contract.get("run_class"),
         "status": normalized_report.get("status"),
@@ -1578,6 +1625,11 @@ def write_bundle_manifest(
         ("benchmark_submode", manifest["benchmark_submode"]),
         ("model_label", manifest["model_label"]),
         ("topology_overlay", manifest["topology_overlay"]),
+        ("tp_scale_overlay", manifest["tp_scale_overlay"]),
+        ("prefill_tp_size", manifest["prefill_tp_size"]),
+        ("decode_tp_size", manifest["decode_tp_size"]),
+        ("pd_enabled", manifest["pd_enabled"]),
+        ("pd_role_layout", manifest["pd_role_layout"]),
         ("transport_mode", manifest["transport_mode"]),
         ("run_class", manifest["run_class"]),
         ("status", manifest["status"]),

@@ -22,7 +22,12 @@
     "transport_mode": "socket_vs_myelon_process_runner",
     "run_class": "fullpass",
     "stop_point": "first_prefill_completion",
-    "skip_reason": null
+    "skip_reason": null,
+    "tp_scale_overlay": "tp2",
+    "prefill_tp_size": 2,
+    "decode_tp_size": 2,
+    "pd_enabled": false,
+    "pd_role_layout": null
   },
   "machine_profile": {
     "hostname": "hazy-instance-completes-fin-02",
