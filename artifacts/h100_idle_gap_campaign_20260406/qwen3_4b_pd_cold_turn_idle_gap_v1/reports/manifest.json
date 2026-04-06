@@ -1,0 +1,45 @@
+{
+  "benchmark_family": "pd_qos",
+  "benchmark_submode": "cold_turn_idle_gap",
+  "model_label": "Qwen/Qwen3-4B",
+  "topology_overlay": "pd_tp1",
+  "tp_scale_overlay": "pd(tp1/tp1)",
+  "prefill_tp_size": 1,
+  "decode_tp_size": 1,
+  "pd_enabled": true,
+  "pd_role_layout": "same_host_split_roles",
+  "transport_mode": "pd_tcp",
+  "transport_settings_profile": "pd_tcp/rpc8192/resp8192/busy_spin/prefix_off",
+  "run_class": "fullpass",
+  "status": "completed",
+  "result_boundary": "benchmark_complete",
+  "artifact_class": "fullpass/benchmark_complete/full_completion",
+  "stop_point": "full_completion",
+  "host": "hazy-instance-completes-fin-02",
+  "report_json": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_cold_turn_idle_gap_v1/report.json",
+  "transport_settings": {
+    "build_features": "cuda,myelon,nccl",
+    "effective_device_ids": null,
+    "myelon_rpc_depth": 8192,
+    "myelon_response_depth": 8192,
+    "myelon_busy_spin": true,
+    "prefix_cache_enabled": null,
+    "prefix_cache_max_tokens": null,
+    "kv_fraction": null,
+    "cpu_mem_fold": null,
+    "no_stream": false
+  },
+  "system_info": {
+    "json": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_cold_turn_idle_gap_v1/reports/system_info/system_snapshot.json",
+    "csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_cold_turn_idle_gap_v1/reports/system_info/system_snapshot.csv",
+    "md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_cold_turn_idle_gap_v1/reports/system_info/system_snapshot.md"
+  },
+  "benchmarks": {
+    "summary_md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_cold_turn_idle_gap_v1/reports/benchmarks/run_summary.md",
+    "details_csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_cold_turn_idle_gap_v1/reports/benchmarks/run_details.csv",
+    "run_index_csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_cold_turn_idle_gap_v1/reports/benchmarks/run_index.csv",
+    "run_index_md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_cold_turn_idle_gap_v1/reports/benchmarks/run_index.md",
+    "side_by_side_csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_cold_turn_idle_gap_v1/reports/benchmarks/per_variant_side_by_side.csv",
+    "side_by_side_md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_cold_turn_idle_gap_v1/reports/benchmarks/per_variant_side_by_side.md"
+  }
+}
