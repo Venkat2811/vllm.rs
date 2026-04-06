@@ -367,6 +367,7 @@ def main() -> int:
     )
     benchmark_contract = build_benchmark_contract(
         benchmark_family="serving_qos",
+        benchmark_submode="warm_steady_state" if warmup_step else "cold_turn",
         question_answered="What user-facing QoS difference does Myelon produce in persistent serving?",
         workload_class=workload_class,
         warmup_policy=warmup_policy,
@@ -382,6 +383,8 @@ def main() -> int:
             "request_rate": float(request_rate),
             "mode": mode,
         },
+        topology_overlay=mode,
+        transport_mode="socket_vs_myelon_process_runner",
         run_class=run_class,
         stop_point="full_completion",
         skip_reason=None,
