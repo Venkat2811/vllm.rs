@@ -371,6 +371,7 @@ async fn main() -> Result<()> {
                         let mut rx = stream;
                         while let Some(item) = rx.recv().await {
                             match item {
+                                StreamItem::PhaseTrace(_) => {}
                                 StreamItem::Token(t, _token_id) => {
                                     decode_output += &t.to_string();
                                     print!("{}", t);
