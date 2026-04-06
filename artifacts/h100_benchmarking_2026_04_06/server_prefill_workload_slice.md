@@ -16,6 +16,7 @@ Implemented in:
 
 ## New Built-In Workloads
 
+- `artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_fixed_prompt_burst.json`
 - `artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_stress_round_robin.json`
 - `artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_shared_prefix_round_robin.json`
 
@@ -35,6 +36,16 @@ When `VLLM_SERVER_BENCHMARK_FAMILY=server_prefill_stress` and no overriding env 
 - `kv_fraction=0.35`
 - `cpu_mem_fold=0.1`
 - `cache_pressure_profile=hard_thrash`
+
+For `benchmark_submode=fixed_prompt_burst`:
+
+- built-in workload switches to the fixed-prompt synthetic config
+- `limit_min_tokens=1`
+- `limit_max_tokens=1`
+- `prefix_cache=false`
+- `kv_fraction=0.55`
+- `cpu_mem_fold=0.5`
+- `cache_pressure_profile=relaxed`
 
 For `benchmark_submode=shared_prefix_round_robin_control`:
 
@@ -56,6 +67,7 @@ This turns the new bridge family into an executable benchmark lane:
 
 That makes the next H100 rerun wave meaningful:
 
+- `fixed_prompt_burst` is now the direct server-side analogue of the old prompt-heavy question
 - `cache_thrash_round_robin` should expose whether large shared-memory wins survive through server mode
 - `shared_prefix_round_robin_control` gives an immediate control case without inventing a custom scheduler
 
@@ -74,6 +86,7 @@ New coverage proves:
 - default `server_prefill_stress` forwards round-robin and low-decode controls to the upstream benchmark
 - default `server_prefill_stress` forwards KV-pressure knobs to `vllm-rs`
 - `shared_prefix_round_robin_control` picks the shared-prefix built-in workload
+- `fixed_prompt_burst` picks the fixed-prompt built-in workload
 - retained `run_index` and summary reports now surface:
   - `conversation_sampling`
   - `limit_min_tokens`
