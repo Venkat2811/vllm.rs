@@ -32,6 +32,7 @@ BENCHMARK_TEXT = "\n".join(
 
 SERVER_LOG_TEXT = "\n".join(
     [
+        "2026-04-06T12:25:52.000000Z  WARN vllm_rs::utils::kvcache_allocator: KVCache Allocation: 662 GPU blocks (1.94 GB x 2), max usable kvcache tokens 42368 (48k bytes per token), scheduling limits [4 seqs x 10240 tokens]",
         "2026-04-06T12:25:53.916988Z  WARN vllm_rs::core::scheduler: Prefix cache enabled: 64 blocks (4096 tokens).",
         "2026-04-06T12:25:57.365547Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 5774 blocks (369536 tokens) free, used 0.4% (0.07GB/16.99GB); CPU swap used 0.0% (0.00GB/1.70GB)",
         "2026-04-06T12:25:58.294354Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 5745 blocks (367680 tokens) free, used 0.9% (0.16GB/16.99GB); CPU swap used 0.0% (0.00GB/1.70GB)",
@@ -207,6 +208,23 @@ class BenchmarkContractHelperTests(unittest.TestCase):
         )
         self.assertEqual(label, "Qwen/Qwen3-4B")
 
+    def test_extract_server_kvcache_plan_parses_scheduler_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_path = Path(tmp_dir) / "server.log"
+            log_path.write_text(SERVER_LOG_TEXT, encoding="utf-8")
+
+            plan = validation_common.extract_server_kvcache_plan(log_path)
+
+        self.assertEqual(
+            plan,
+            {
+                "planned_gpu_blocks": 662,
+                "planned_usable_kvcache_tokens": 42368,
+                "planned_max_seqs": 4,
+                "planned_tokens_per_seq_limit": 10240,
+            },
+        )
+
     def test_infer_report_status_marks_missing_expected_cases_partial(self) -> None:
         status = report_common.infer_report_status(
             {
@@ -258,6 +276,12 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             case = normalized["cases"][0]
             observed = case["observed_cache_pressure"]
             self.assertEqual(observed["observed_cache_pressure_level"], "minimal_pressure")
+            self.assertEqual(observed["requested_cache_pressure_profile"], "hard_thrash")
+            self.assertEqual(observed["pressure_profile_outcome"], "requested_thrash_not_observed")
+            self.assertEqual(observed["planned_gpu_blocks"], 662)
+            self.assertEqual(observed["planned_usable_kvcache_tokens"], 42368)
+            self.assertEqual(observed["planned_max_seqs"], 4)
+            self.assertEqual(observed["planned_tokens_per_seq_limit"], 10240)
             self.assertEqual(observed["configured_prefix_cache_blocks"], 64)
             self.assertEqual(observed["configured_prefix_cache_tokens"], 4096)
             self.assertEqual(observed["observed_prefix_cache_miss_count"], 2)
@@ -268,8 +292,64 @@ class BenchmarkContractHelperTests(unittest.TestCase):
 
             case_rows = report_common.build_case_rows(normalized)
             self.assertEqual(case_rows[0]["observed_cache_pressure_level"], "minimal_pressure")
+            self.assertEqual(case_rows[0]["pressure_profile_outcome"], "requested_thrash_not_observed")
+            self.assertEqual(case_rows[0]["planned_max_seqs"], 4)
+            self.assertEqual(case_rows[0]["planned_usable_kvcache_tokens"], 42368)
             self.assertEqual(case_rows[0]["observed_gpu_kv_usage_percent_max"], 1.1)
             self.assertEqual(case_rows[0]["observed_cpu_swap_usage_percent_max"], 0.0)
+
+    def test_normalize_report_classifies_requested_swap_without_cpu_swap(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            benchmark_log = tmp_path / "benchmark.log"
+            server_log = tmp_path / "server.log"
+            benchmark_log.write_text(BENCHMARK_TEXT, encoding="utf-8")
+            server_log.write_text(
+                "\n".join(
+                    [
+                        "2026-04-06T12:25:52.000000Z  WARN vllm_rs::utils::kvcache_allocator: KVCache Allocation: 8192 GPU blocks (24.00 GB x 2), max usable kvcache tokens 524288 (48k bytes per token), scheduling limits [64 seqs x 8192 tokens]",
+                        "2026-04-06T12:25:53.916988Z  WARN vllm_rs::core::scheduler: Prefix cache enabled: 8 blocks (512 tokens).",
+                        "2026-04-06T12:25:57.365547Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 345 blocks (22080 tokens) free, used 95.8% (22.99GB/24.00GB); CPU swap used 0.0% (0.00GB/48.00GB)",
+                        "2026-04-06T12:25:58.720030Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 221 blocks (14144 tokens) free, used 97.3% (23.35GB/24.00GB); CPU swap used 0.0% (0.00GB/48.00GB)",
+                        "2026-04-06T12:25:56.263013Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 0 (6003 tokens, 8 cached blocks, raw_match=0 blocks)",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            normalized = report_common.normalize_report(
+                {
+                    "benchmark_contract": {
+                        "benchmark_family": "server_prefill_stress",
+                        "benchmark_submode": "cache_thrash_round_robin",
+                        "question_answered": "bridge",
+                        "workload_class": "synthetic_server_prefill_stress",
+                        "warmup_policy": "measure_first_turn",
+                        "first_turn_measured": True,
+                        "arrival_pattern": "saturation_zero_gap",
+                        "concurrency_policy": {"driver": "persistent_http_server"},
+                        "cache_pressure_profile": "swap_pressure",
+                        "equivalence_group": None,
+                        "topology_overlay": "tp2",
+                        "transport_mode": "socket_vs_myelon_process_runner",
+                        "run_class": "fullpass",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                    },
+                    "cases": [
+                        {
+                            "label": "runner",
+                            "execution_variant": "runner",
+                            "benchmark_log_path": str(benchmark_log),
+                            "server_log_path": str(server_log),
+                        }
+                    ],
+                }
+            )
+
+            observed = normalized["cases"][0]["observed_cache_pressure"]
+            self.assertEqual(observed["observed_cache_pressure_level"], "high_gpu_pressure_no_swap")
+            self.assertEqual(observed["pressure_profile_outcome"], "requested_swap_reduced_to_gpu_pressure")
 
 
 class BenchmarkScriptReportTests(unittest.TestCase):
@@ -788,6 +868,69 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 msg=f"{name} should remain low-decode",
             )
 
+    def test_server_prefill_low_decode_selects_builtin_workload_and_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_dir = tmp_path / "server_prefill_low_decode_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_SERVER_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_SERVER_BENCHMARK_MODE": "single_gpu",
+                "VLLM_SERVER_BENCHMARK_FAMILY": "server_prefill_stress",
+                "VLLM_SERVER_BENCHMARK_SUBMODE": "low_decode",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] == "cargo":
+                    return CompletedProcess(command, 0, "", "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    server_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    server_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    server_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ):
+                    rc = server_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "low_decode")
+            self.assertEqual(report["benchmark_contract"]["cache_pressure_profile"], "relaxed")
+            self.assertEqual(report["num_clients"], 16)
+            self.assertEqual(report["max_active_conversations"], 32)
+            self.assertEqual(report["max_num_requests"], 192)
+            self.assertEqual(report["limit_min_tokens"], 16)
+            self.assertEqual(report["limit_max_tokens"], 32)
+            self.assertTrue(
+                report["workload_file"].endswith(
+                    "synthetic_server_prefill_stress_round_robin.json"
+                )
+            )
+
     def test_server_prefill_fixed_prompt_burst_selects_builtin_workload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
@@ -1021,6 +1164,154 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             run_mock.assert_not_called()
             popen_mock.assert_not_called()
             self.assertFalse((output_dir / "report.json").exists())
+
+    def test_server_prefill_swap_pressure_with_explicit_max_model_len_keeps_supported_profile_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_dir = tmp_path / "server_prefill_swap_profile_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_SERVER_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_SERVER_BENCHMARK_MODE": "single_gpu",
+                "VLLM_SERVER_BENCHMARK_FAMILY": "server_prefill_stress",
+                "VLLM_SERVER_BENCHMARK_SUBMODE": "cache_thrash_round_robin",
+                "VLLM_CACHE_PRESSURE_PROFILE": "swap_pressure",
+                "VLLM_MAX_MODEL_LEN": "8192",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] == "cargo":
+                    return CompletedProcess(command, 0, "", "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    server_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    server_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    server_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ):
+                    rc = server_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["max_model_len"], 8192)
+            self.assertEqual(report["cache_pressure_profile"], "swap_pressure")
+            self.assertIsNone(report["kv_fraction"])
+            self.assertEqual(report["cpu_mem_fold"], 2.0)
+            self.assertEqual(report["prefix_cache_max_tokens"], 512)
+            self.assertEqual(report["limit_min_tokens"], 32)
+            self.assertEqual(report["limit_max_tokens"], 32)
+            server_command = report["cases"][0]["server_command"]
+            self.assertIn("--max-model-len", server_command)
+            self.assertIn("8192", server_command)
+            self.assertNotIn("--kv-fraction", server_command)
+            self.assertIn("--cpu-mem-fold", server_command)
+            self.assertIn("2.0", server_command)
+
+    def test_server_prefill_swap_pressure_stops_when_allocator_collapses_seq_capacity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_dir = tmp_path / "server_prefill_swap_collapse_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_SERVER_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_SERVER_BENCHMARK_MODE": "single_gpu",
+                "VLLM_SERVER_BENCHMARK_FAMILY": "server_prefill_stress",
+                "VLLM_SERVER_BENCHMARK_SUBMODE": "cache_thrash_round_robin",
+                "VLLM_CACHE_PRESSURE_PROFILE": "swap_pressure",
+                "VLLM_SERVER_KV_FRACTION": "0.08",
+                "VLLM_SERVER_CPU_MEM_FOLD": "2.0",
+                "VLLM_SERVER_PREFIX_CACHE_MAX_TOKENS": "512",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] in {"cargo", "nvidia-smi", "git"}:
+                    return CompletedProcess(command, 0, "", "")
+                raise AssertionError("benchmark command should not execute after allocator collapse")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    server_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    server_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    server_matrix,
+                    "extract_server_kvcache_plan",
+                    return_value={
+                        "planned_gpu_blocks": 662,
+                        "planned_usable_kvcache_tokens": 42368,
+                        "planned_max_seqs": 1,
+                        "planned_tokens_per_seq_limit": 40960,
+                    },
+                ), mock.patch.object(
+                    server_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ):
+                    rc = server_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "partial")
+            self.assertEqual(
+                report["cases"][0]["stop_point"],
+                "allocator_seq_capacity_collapse",
+            )
+            self.assertEqual(
+                report["cases"][0]["skip_reason"],
+                "swap_pressure_profile_collapsed_effective_seq_capacity",
+            )
+            self.assertIsNone(report["cases"][0].get("benchmark_exit_code"))
+            self.assertEqual(
+                report["cases"][0]["allocator_plan"]["planned_max_seqs"],
+                1,
+            )
+            benchmark_log_text = Path(
+                report["cases"][0]["benchmark_log_path"]
+            ).read_text(encoding="utf-8")
+            self.assertIn("collapsed effective server capacity to 1 seq", benchmark_log_text)
 
     def test_pd_benchmark_report_includes_contract_and_case_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -1549,10 +1840,12 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             outputs = report_common.write_rollup_reports(tmp_path)
 
             current_findings_md = Path(outputs["current_findings_md"])
+            high_level_summary_md = Path(outputs["high_level_summary_md"])
             rollup_run_index_md = Path(outputs["rollup_run_index_md"])
             per_model_side_by_side_md = Path(outputs["per_model_side_by_side_md"])
             all_run_commands_md = Path(outputs["all_run_commands_md"])
             self.assertTrue(current_findings_md.is_file())
+            self.assertTrue(high_level_summary_md.is_file())
             self.assertTrue(rollup_run_index_md.is_file())
             self.assertTrue(per_model_side_by_side_md.is_file())
             self.assertTrue(all_run_commands_md.is_file())
@@ -1560,6 +1853,10 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             findings_text = current_findings_md.read_text(encoding="utf-8")
             self.assertIn("Qwen/Qwen3-4B", findings_text)
             self.assertIn("skipped_unsupported_topology", findings_text)
+
+            high_level_text = high_level_summary_md.read_text(encoding="utf-8")
+            self.assertIn("Strongest Requests/sec Gains", high_level_text)
+            self.assertIn("Incomplete / Unsupported", high_level_text)
 
             side_text = per_model_side_by_side_md.read_text(encoding="utf-8")
             self.assertIn("requests_per_sec", side_text)
