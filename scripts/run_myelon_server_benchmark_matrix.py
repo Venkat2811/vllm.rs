@@ -22,6 +22,7 @@ from myelon_validation_common import (
     infer_request_run_class,
     infer_workload_class_from_path,
     parse_device_ids,
+    resolve_cache_pressure_profile,
     resolve_run_class,
     validate_requested_topology,
 )
@@ -75,6 +76,20 @@ def env_bool(name: str, default: bool) -> bool:
     return value.lower() in {"1", "true", "yes"}
 
 
+def env_optional_float(name: str) -> float | None:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return None
+    return float(value)
+
+
+def env_optional_int(name: str) -> int | None:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return None
+    return int(value)
+
+
 def prepare_cases(mode: str) -> list[tuple[str, list[str]]]:
     if mode == "single_gpu":
         return [
@@ -87,6 +102,30 @@ def prepare_cases(mode: str) -> list[tuple[str, list[str]]]:
             ("myelon", ["--num-shards", "2", "--myelon-ipc"]),
         ]
     raise ValueError(f"unsupported VLLM_SERVER_BENCHMARK_MODE '{mode}'")
+
+
+def resolve_server_benchmark_family(explicit: str | None) -> str:
+    if explicit is None or explicit.strip() == "":
+        return "serving_qos"
+    candidate = explicit.strip()
+    if candidate not in {"serving_qos", "server_prefill_stress"}:
+        raise ValueError(
+            "unsupported VLLM_SERVER_BENCHMARK_FAMILY "
+            f"{candidate!r}; expected 'serving_qos' or 'server_prefill_stress'"
+        )
+    return candidate
+
+
+def infer_server_benchmark_submode(
+    benchmark_family: str,
+    warmup_step: bool,
+    explicit: str | None,
+) -> str:
+    if explicit is not None and explicit.strip():
+        return explicit.strip()
+    if benchmark_family == "serving_qos":
+        return "warm_steady_state" if warmup_step else "cold_turn"
+    return "cache_thrash_round_robin"
 
 
 def derive_device_ids(
@@ -247,6 +286,25 @@ def main() -> int:
     port_base = env_int("VLLM_SERVER_BENCH_PORT_BASE", 18080)
     warmup_step = env_bool("VLLM_SERVER_BENCH_WARMUP_STEP", True)
     no_stream = env_bool("VLLM_SERVER_BENCH_NO_STREAM", False)
+    benchmark_family = resolve_server_benchmark_family(
+        os.environ.get("VLLM_SERVER_BENCHMARK_FAMILY")
+    )
+    benchmark_submode = infer_server_benchmark_submode(
+        benchmark_family,
+        warmup_step,
+        os.environ.get("VLLM_SERVER_BENCHMARK_SUBMODE"),
+    )
+    prefix_cache_enabled = env_bool("VLLM_SERVER_PREFIX_CACHE", False)
+    prefix_cache_max_tokens = env_optional_int("VLLM_SERVER_PREFIX_CACHE_MAX_TOKENS")
+    kv_fraction = env_optional_float("VLLM_SERVER_KV_FRACTION")
+    cpu_mem_fold = env_optional_float("VLLM_SERVER_CPU_MEM_FOLD")
+    cache_pressure_profile = resolve_cache_pressure_profile(
+        os.environ.get("VLLM_CACHE_PRESSURE_PROFILE"),
+        kv_fraction=kv_fraction,
+        prefix_cache_enabled=prefix_cache_enabled,
+        prefix_cache_max_tokens=prefix_cache_max_tokens,
+        cpu_mem_fold=cpu_mem_fold,
+    )
     capture_raw_system = env_bool("VLLM_CAPTURE_RAW_SYSTEM_INFO", True)
     run_class = resolve_run_class(
         os.environ.get("VLLM_RUN_CLASS"),
@@ -332,6 +390,13 @@ def main() -> int:
         "server_ready_timeout_seconds": server_ready_timeout_seconds,
         "benchmark_timeout_seconds": benchmark_timeout_seconds,
         "request_timeout_seconds": request_timeout_seconds,
+        "benchmark_family": benchmark_family,
+        "benchmark_submode": benchmark_submode,
+        "prefix_cache_enabled": prefix_cache_enabled,
+        "prefix_cache_max_tokens": prefix_cache_max_tokens,
+        "kv_fraction": kv_fraction,
+        "cpu_mem_fold": cpu_mem_fold,
+        "cache_pressure_profile": cache_pressure_profile,
         "cases": [],
     }
 
@@ -370,9 +435,13 @@ def main() -> int:
         "warmup_step_skips_first_turn" if warmup_step else "measure_first_turn"
     )
     benchmark_contract = build_benchmark_contract(
-        benchmark_family="serving_qos",
-        benchmark_submode="warm_steady_state" if warmup_step else "cold_turn",
-        question_answered="What user-facing QoS difference does Myelon produce in persistent serving?",
+        benchmark_family=benchmark_family,
+        benchmark_submode=benchmark_submode,
+        question_answered=(
+            "What user-facing QoS difference does Myelon produce in persistent serving?"
+            if benchmark_family == "serving_qos"
+            else "How much shared-memory gain survives when the full server path stays in the loop under cache-hostile, prefill-dominant conditions?"
+        ),
         workload_class=workload_class,
         warmup_policy=warmup_policy,
         first_turn_measured=not warmup_step,
@@ -387,6 +456,7 @@ def main() -> int:
             "request_rate": float(request_rate),
             "mode": mode,
         },
+        cache_pressure_profile=cache_pressure_profile,
         topology_overlay=mode,
         transport_mode="socket_vs_myelon_process_runner",
         run_class=run_class,
@@ -431,6 +501,16 @@ def main() -> int:
         ]
         if effective_device_ids_str:
             server_command.extend(["--device-ids", effective_device_ids_str])
+        if prefix_cache_enabled:
+            server_command.append("--prefix-cache")
+        if prefix_cache_max_tokens is not None:
+            server_command.extend(
+                ["--prefix-cache-max-tokens", str(prefix_cache_max_tokens)]
+            )
+        if kv_fraction is not None:
+            server_command.extend(["--kv-fraction", str(kv_fraction)])
+        if cpu_mem_fold is not None:
+            server_command.extend(["--cpu-mem-fold", str(cpu_mem_fold)])
 
         benchmark_command = [
             "uv",
@@ -485,6 +565,7 @@ def main() -> int:
             "execution_variant": label,
             "stop_point": "full_completion",
             "skip_reason": None,
+            "cache_pressure_profile": cache_pressure_profile,
             "server_port": port,
             "server_command": server_command,
             "benchmark_command": benchmark_command,

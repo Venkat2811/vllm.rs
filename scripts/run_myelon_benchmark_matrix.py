@@ -200,6 +200,7 @@ def main() -> int:
             "mode": mode,
             "expected_num_shards": expected_num_shards,
         },
+        cache_pressure_profile="unspecified",
         topology_overlay=mode,
         transport_mode="socket_vs_myelon_process_runner",
         run_class=run_class,
