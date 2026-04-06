@@ -122,6 +122,10 @@ def resolve_cache_pressure_profile(
 
 def infer_workload_class_from_path(path: str) -> str:
     lowered = path.lower()
+    if "server_prefill" in lowered and "shared_prefix" in lowered:
+        return "synthetic_server_shared_prefix_control"
+    if "server_prefill" in lowered:
+        return "synthetic_server_prefill_stress"
     if "sharegpt" in lowered:
         return "sharegpt_bounded"
     if "synthetic" in lowered:
