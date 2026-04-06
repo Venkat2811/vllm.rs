@@ -2849,6 +2849,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
 
             current_findings_md = Path(outputs["current_findings_md"])
             high_level_summary_md = Path(outputs["high_level_summary_md"])
+            bridge_attribution_md = Path(outputs["bridge_attribution_md"])
             rollup_run_index_md = Path(outputs["rollup_run_index_md"])
             per_model_side_by_side_md = Path(outputs["per_model_side_by_side_md"])
             all_run_commands_md = Path(outputs["all_run_commands_md"])
@@ -2868,6 +2869,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             )
             self.assertTrue(current_findings_md.is_file())
             self.assertTrue(high_level_summary_md.is_file())
+            self.assertTrue(bridge_attribution_md.is_file())
             self.assertTrue(rollup_run_index_md.is_file())
             self.assertTrue(per_model_side_by_side_md.is_file())
             self.assertTrue(all_run_commands_md.is_file())
@@ -2927,6 +2929,14 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertNotIn("No prompt-throughput deltas were available.", high_level_text)
             self.assertIn("680", high_level_text)
             self.assertIn("310", high_level_text)
+
+            bridge_text = bridge_attribution_md.read_text(encoding="utf-8")
+            self.assertIn("Bridge Attribution Summary", bridge_text)
+            self.assertIn("Strongest Prompt Gains That Compressed End To End", bridge_text)
+            self.assertIn("prompt_gain_compressed", bridge_text)
+            self.assertIn("requested_relaxed_observed", bridge_text)
+            self.assertIn("Qwen/Qwen3-30B-A3B", bridge_text)
+            self.assertIn("No rejection-limited bridge runs were available.", bridge_text)
 
             side_text = per_model_side_by_side_md.read_text(encoding="utf-8")
             self.assertIn("requests_per_sec", side_text)
