@@ -246,6 +246,11 @@ def main() -> int:
             else None
         ),
         topology_overlay=mode,
+        tp_scale_overlay=("tp1" if mode == "single_gpu" else "tp2"),
+        prefill_tp_size=(1 if mode == "single_gpu" else 2),
+        decode_tp_size=(1 if mode == "single_gpu" else 2),
+        pd_enabled=False,
+        pd_role_layout=None,
         transport_mode="socket_vs_myelon_process_runner",
         run_class=run_class,
         stop_point=stop_point,

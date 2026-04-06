@@ -8,6 +8,11 @@
 | benchmark_submode | fixed_prompt_burst                                                                                                               |
 | model_label       | Qwen/Qwen3-30B-A3B                                                                                                               |
 | topology_overlay  | tp2                                                                                                                              |
+| tp_scale_overlay  | tp2                                                                                                                              |
+| prefill_tp_size   | 2                                                                                                                                |
+| decode_tp_size    | 2                                                                                                                                |
+| pd_enabled        | False                                                                                                                            |
+| pd_role_layout    |                                                                                                                                  |
 | transport_mode    | socket_vs_myelon_process_runner                                                                                                  |
 | run_class         | fullpass                                                                                                                         |
 | status            | warmup_incomplete_metrics                                                                                                        |
