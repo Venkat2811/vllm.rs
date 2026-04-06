@@ -97,6 +97,15 @@ class FakeProcess:
         self.returncode = 0
 
 
+class ExitedFakeProcess(FakeProcess):
+    def __init__(self, returncode: int) -> None:
+        super().__init__()
+        self.returncode = returncode
+
+    def poll(self) -> int:
+        return self.returncode
+
+
 class FakeStream:
     def __init__(self, text: str) -> None:
         self._lines = text.splitlines(keepends=True)
@@ -251,6 +260,17 @@ def complete_batch_completion_run(label: str) -> dict:
 
 
 class BenchmarkContractHelperTests(unittest.TestCase):
+    def test_wait_for_server_ready_fails_fast_when_server_exits(self) -> None:
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "server exited before readiness with code 9",
+        ):
+            server_matrix.wait_for_server_ready(
+                "http://127.0.0.1:18080",
+                timeout_seconds=10,
+                server_process=ExitedFakeProcess(9),
+            )
+
     def test_build_benchmark_contract_requires_expected_fields(self) -> None:
         contract = validation_common.build_benchmark_contract(
             benchmark_family="prefill_stress",
@@ -1736,7 +1756,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 "fixed_prompt_burst_bridge",
             )
             self.assertEqual(report["max_num_seqs"], 32)
-            self.assertEqual(report["max_model_len"], 4096)
+            self.assertEqual(report["max_model_len"], 2560)
             self.assertTrue(
                 report["workload_file"].endswith(
                     "synthetic_server_prefill_fixed_prompt_burst.json"
@@ -1749,7 +1769,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("--max-num-seqs", server_command)
             self.assertIn("32", server_command)
             self.assertIn("--max-model-len", server_command)
-            self.assertIn("4096", server_command)
+            self.assertIn("2560", server_command)
             self.assertNotIn("--kv-fraction", server_command)
             benchmark_command = report["cases"][0]["benchmark_command"]
             self.assertIn("benchmark_server_fixed_prompt_burst.py", " ".join(benchmark_command))
@@ -1812,12 +1832,12 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["max_active_conversations"], 256)
             self.assertEqual(report["max_num_requests"], 256)
             self.assertEqual(report["max_num_seqs"], 256)
-            self.assertEqual(report["max_model_len"], 4096)
+            self.assertEqual(report["max_model_len"], 2560)
             server_command = report["cases"][0]["server_command"]
             self.assertIn("--max-num-seqs", server_command)
             self.assertIn("256", server_command)
             self.assertIn("--max-model-len", server_command)
-            self.assertIn("4096", server_command)
+            self.assertIn("2560", server_command)
             self.assertNotIn("--kv-fraction", server_command)
 
     def test_server_prefill_explicit_max_model_len_drops_default_kv_fraction(self) -> None:
