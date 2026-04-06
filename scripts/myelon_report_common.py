@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import csv
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -13,6 +14,22 @@ from myelon_validation_common import (
     infer_request_run_class,
     infer_workload_class_from_path,
 )
+
+
+RUNTIME_RE = re.compile(r"^runtime_sec = ([0-9.]+)$", re.MULTILINE)
+REQUEST_RATE_RE = re.compile(r"^requests_per_sec = ([0-9.]+)$", re.MULTILINE)
+LOGGED_AVG_LINE_RE = re.compile(
+    r"^.*\[(ttft_ms|tpot_ms|latency_ms)\s*\]\s+avg:\s+([0-9.]+),\s+min:\s+([0-9.]+),\s+max:\s+([0-9.]+)$",
+    re.MULTILINE,
+)
+TRUNCATED_SUMMARY_ROW_RE = re.compile(
+    r"^\s*(ttft_ms|tpot_ms|latency_ms)\s+[0-9.]+\s+([0-9.]+)\s+[0-9.]+\s+\.\.\.\s+[0-9.]+\s+[0-9.]+\s+([0-9.]+)$",
+    re.MULTILINE,
+)
+SCHEDULER_KVCACHE_RE = re.compile(
+    r"GPU Kvcache: .* used ([0-9.]+)% \(([0-9.]+)GB/([0-9.]+)GB\); CPU swap used ([0-9.]+)% \(([0-9.]+)GB/([0-9.]+)GB\)"
+)
+PREFIX_CACHE_ENABLED_RE = re.compile(r"Prefix cache enabled: (\d+) blocks \((\d+) tokens\)\.")
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -200,6 +217,44 @@ def build_case_rows(report: dict[str, object]) -> list[dict[str, object]]:
             row["decode_tps_mean"] = measured_summary.get(
                 "decode_tokens_per_second", {}
             ).get("mean")
+        observed_cache_pressure = case.get("observed_cache_pressure") if isinstance(case, dict) else None
+        if isinstance(observed_cache_pressure, dict):
+            row["configured_prefix_cache_blocks"] = observed_cache_pressure.get(
+                "configured_prefix_cache_blocks"
+            )
+            row["configured_prefix_cache_tokens"] = observed_cache_pressure.get(
+                "configured_prefix_cache_tokens"
+            )
+            row["observed_gpu_kv_usage_percent_max"] = observed_cache_pressure.get(
+                "observed_gpu_kv_usage_percent_max"
+            )
+            row["observed_gpu_kv_usage_gb_max"] = observed_cache_pressure.get(
+                "observed_gpu_kv_usage_gb_max"
+            )
+            row["observed_gpu_kv_budget_gb"] = observed_cache_pressure.get(
+                "observed_gpu_kv_budget_gb"
+            )
+            row["observed_cpu_swap_usage_percent_max"] = observed_cache_pressure.get(
+                "observed_cpu_swap_usage_percent_max"
+            )
+            row["observed_cpu_swap_usage_gb_max"] = observed_cache_pressure.get(
+                "observed_cpu_swap_usage_gb_max"
+            )
+            row["observed_cpu_swap_budget_gb"] = observed_cache_pressure.get(
+                "observed_cpu_swap_budget_gb"
+            )
+            row["observed_prefix_cache_miss_count"] = observed_cache_pressure.get(
+                "observed_prefix_cache_miss_count"
+            )
+            row["observed_prefix_cache_insert_count"] = observed_cache_pressure.get(
+                "observed_prefix_cache_insert_count"
+            )
+            row["observed_prefix_cache_eviction_count"] = observed_cache_pressure.get(
+                "observed_prefix_cache_eviction_count"
+            )
+            row["observed_cache_pressure_level"] = observed_cache_pressure.get(
+                "observed_cache_pressure_level"
+            )
         rows.append(row)
     return rows
 
@@ -208,6 +263,26 @@ def _to_float(value: object) -> float | None:
     if isinstance(value, (int, float)):
         return float(value)
     return None
+
+
+def _classify_observed_cache_pressure(
+    gpu_usage_percent: float | None,
+    cpu_swap_percent: float | None,
+    eviction_count: int,
+) -> str | None:
+    if cpu_swap_percent is not None and cpu_swap_percent > 0.0:
+        return "swap_engaged"
+    if eviction_count > 0:
+        return "prefix_eviction"
+    if gpu_usage_percent is None:
+        return None
+    if gpu_usage_percent >= 50.0:
+        return "high_gpu_pressure"
+    if gpu_usage_percent >= 10.0:
+        return "moderate_gpu_pressure"
+    if gpu_usage_percent > 0.0:
+        return "minimal_pressure"
+    return "no_observed_pressure"
 
 
 def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[dict[str, object]]:
@@ -437,8 +512,176 @@ def infer_model_capability(report: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _backfill_case_summary_from_benchmark_log(case: dict[str, object]) -> None:
+    summary = case.get("summary")
+    if not isinstance(summary, dict):
+        summary = {
+            "runtime_sec": None,
+            "requests_per_sec": None,
+            "warmup_runtime_sec": None,
+            "total_runtime_incl_warmup_sec": None,
+            "table": {},
+        }
+        case["summary"] = summary
+
+    table = summary.get("table")
+    if not isinstance(table, dict):
+        table = {}
+        summary["table"] = table
+
+    if all(metric in table for metric in ("ttft_ms", "tpot_ms", "latency_ms")):
+        return
+
+    benchmark_log_path = case.get("benchmark_log_path")
+    if not isinstance(benchmark_log_path, str) or not benchmark_log_path:
+        return
+
+    path = Path(benchmark_log_path)
+    if not path.is_file():
+        return
+
+    text = path.read_text(encoding="utf-8")
+    if summary.get("runtime_sec") is None:
+        runtime_match = RUNTIME_RE.search(text)
+        if runtime_match:
+            summary["runtime_sec"] = float(runtime_match.group(1))
+    if summary.get("requests_per_sec") is None:
+        request_rate_match = REQUEST_RATE_RE.search(text)
+        if request_rate_match:
+            summary["requests_per_sec"] = float(request_rate_match.group(1))
+
+    for match in LOGGED_AVG_LINE_RE.finditer(text):
+        metric_name = match.group(1)
+        if metric_name in table:
+            continue
+        table[metric_name] = {
+            "mean": float(match.group(2)),
+            "min": float(match.group(3)),
+            "max": float(match.group(4)),
+        }
+    for match in TRUNCATED_SUMMARY_ROW_RE.finditer(text):
+        metric_name = match.group(1)
+        if metric_name in table:
+            continue
+        table[metric_name] = {
+            "mean": float(match.group(2)),
+            "max": float(match.group(3)),
+        }
+
+
+def _backfill_case_observed_cache_pressure(case: dict[str, object]) -> None:
+    existing = case.get("observed_cache_pressure")
+    if isinstance(existing, dict) and existing:
+        return
+
+    server_log_path = case.get("server_log_path")
+    if not isinstance(server_log_path, str) or not server_log_path:
+        return
+
+    path = Path(server_log_path)
+    if not path.is_file():
+        return
+
+    configured_prefix_cache_blocks = None
+    configured_prefix_cache_tokens = None
+    max_gpu_usage_percent = None
+    max_gpu_usage_gb = None
+    gpu_budget_gb = None
+    max_cpu_swap_percent = None
+    max_cpu_swap_gb = None
+    cpu_swap_budget_gb = None
+    prefix_cache_miss_count = 0
+    prefix_cache_insert_count = 0
+    prefix_cache_eviction_count = 0
+
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if "Prefix cache miss seq " in line:
+            prefix_cache_miss_count += 1
+        if "Prefix cache insert seq " in line:
+            prefix_cache_insert_count += 1
+        if "Prefix cache evict" in line or "Prefix cache eviction" in line:
+            prefix_cache_eviction_count += 1
+
+        prefix_match = PREFIX_CACHE_ENABLED_RE.search(line)
+        if prefix_match:
+            configured_prefix_cache_blocks = int(prefix_match.group(1))
+            configured_prefix_cache_tokens = int(prefix_match.group(2))
+
+        scheduler_match = SCHEDULER_KVCACHE_RE.search(line)
+        if scheduler_match:
+            gpu_usage_percent = float(scheduler_match.group(1))
+            gpu_usage_gb = float(scheduler_match.group(2))
+            gpu_budget = float(scheduler_match.group(3))
+            cpu_swap_percent = float(scheduler_match.group(4))
+            cpu_swap_gb = float(scheduler_match.group(5))
+            cpu_budget = float(scheduler_match.group(6))
+
+            max_gpu_usage_percent = (
+                gpu_usage_percent
+                if max_gpu_usage_percent is None
+                else max(max_gpu_usage_percent, gpu_usage_percent)
+            )
+            max_gpu_usage_gb = (
+                gpu_usage_gb
+                if max_gpu_usage_gb is None
+                else max(max_gpu_usage_gb, gpu_usage_gb)
+            )
+            max_cpu_swap_percent = (
+                cpu_swap_percent
+                if max_cpu_swap_percent is None
+                else max(max_cpu_swap_percent, cpu_swap_percent)
+            )
+            max_cpu_swap_gb = (
+                cpu_swap_gb
+                if max_cpu_swap_gb is None
+                else max(max_cpu_swap_gb, cpu_swap_gb)
+            )
+            gpu_budget_gb = gpu_budget
+            cpu_swap_budget_gb = cpu_budget
+
+    if all(
+        value is None
+        for value in (
+            configured_prefix_cache_blocks,
+            configured_prefix_cache_tokens,
+            max_gpu_usage_percent,
+            max_cpu_swap_percent,
+        )
+    ) and not any(
+        (
+            prefix_cache_miss_count,
+            prefix_cache_insert_count,
+            prefix_cache_eviction_count,
+        )
+    ):
+        return
+
+    case["observed_cache_pressure"] = {
+        "configured_prefix_cache_blocks": configured_prefix_cache_blocks,
+        "configured_prefix_cache_tokens": configured_prefix_cache_tokens,
+        "observed_gpu_kv_usage_percent_max": max_gpu_usage_percent,
+        "observed_gpu_kv_usage_gb_max": max_gpu_usage_gb,
+        "observed_gpu_kv_budget_gb": gpu_budget_gb,
+        "observed_cpu_swap_usage_percent_max": max_cpu_swap_percent,
+        "observed_cpu_swap_usage_gb_max": max_cpu_swap_gb,
+        "observed_cpu_swap_budget_gb": cpu_swap_budget_gb,
+        "observed_prefix_cache_miss_count": prefix_cache_miss_count,
+        "observed_prefix_cache_insert_count": prefix_cache_insert_count,
+        "observed_prefix_cache_eviction_count": prefix_cache_eviction_count,
+        "observed_cache_pressure_level": _classify_observed_cache_pressure(
+            max_gpu_usage_percent,
+            max_cpu_swap_percent,
+            prefix_cache_eviction_count,
+        ),
+    }
+
+
 def normalize_report(report: dict[str, object]) -> dict[str, object]:
-    normalized = dict(report)
+    normalized = json.loads(json.dumps(report))
+    for case in normalized.get("cases", []):
+        if isinstance(case, dict):
+            _backfill_case_summary_from_benchmark_log(case)
+            _backfill_case_observed_cache_pressure(case)
     normalized["benchmark_contract"] = infer_benchmark_contract(report)
     normalized["machine_profile"] = infer_machine_profile(report)
     normalized["model_capability"] = infer_model_capability(report)
@@ -478,6 +721,11 @@ def build_side_by_side_rows(report: dict[str, object]) -> list[dict[str, object]
         "prompt_tps_mean",
         "decode_seconds_mean",
         "decode_tps_mean",
+        "observed_gpu_kv_usage_percent_max",
+        "observed_cpu_swap_usage_percent_max",
+        "observed_prefix_cache_miss_count",
+        "observed_prefix_cache_insert_count",
+        "observed_prefix_cache_eviction_count",
     ]
     for metric in metrics:
         baseline_value = _to_float(baseline_case.get(metric))
@@ -677,6 +925,23 @@ def find_report_jsons(root: Path) -> list[Path]:
 def build_rollup_rows(report_path: Path, report: dict[str, object]) -> tuple[dict[str, object], list[dict[str, object]]]:
     normalized_report = normalize_report(report)
     run_index_row = build_run_index_rows(normalized_report, report_path)[0]
+    case_rows = build_case_rows(normalized_report)
+    baseline_case = next(
+        (
+            row
+            for row in case_rows
+            if "myelon" not in str(row.get("execution_variant", "")).lower()
+        ),
+        {},
+    )
+    myelon_case = next(
+        (
+            row
+            for row in case_rows
+            if "myelon" in str(row.get("execution_variant", "")).lower()
+        ),
+        {},
+    )
     side_by_side_rows = build_side_by_side_rows(normalized_report)
     metric_map = {
         row.get("metric"): row
@@ -695,6 +960,24 @@ def build_rollup_rows(report_path: Path, report: dict[str, object]) -> tuple[dic
             "baseline_latency_ms_mean": metric_map.get("latency_ms_mean", {}).get("baseline_value"),
             "myelon_latency_ms_mean": metric_map.get("latency_ms_mean", {}).get("myelon_value"),
             "latency_ms_delta_percent": metric_map.get("latency_ms_mean", {}).get("delta_percent"),
+            "baseline_observed_gpu_kv_usage_percent_max": baseline_case.get(
+                "observed_gpu_kv_usage_percent_max"
+            ),
+            "myelon_observed_gpu_kv_usage_percent_max": myelon_case.get(
+                "observed_gpu_kv_usage_percent_max"
+            ),
+            "baseline_observed_cpu_swap_usage_percent_max": baseline_case.get(
+                "observed_cpu_swap_usage_percent_max"
+            ),
+            "myelon_observed_cpu_swap_usage_percent_max": myelon_case.get(
+                "observed_cpu_swap_usage_percent_max"
+            ),
+            "baseline_observed_cache_pressure_level": baseline_case.get(
+                "observed_cache_pressure_level"
+            ),
+            "myelon_observed_cache_pressure_level": myelon_case.get(
+                "observed_cache_pressure_level"
+            ),
         }
     )
     detailed_rows: list[dict[str, object]] = []
