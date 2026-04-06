@@ -962,6 +962,10 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
                 "warm_steady_state" if warmup_step else "cold_turn",
             )
         )
+        topology_fields = infer_tp_scale_contract_fields(
+            mode,
+            "socket_vs_myelon_process_runner",
+        )
         return {
         "benchmark_family": benchmark_family,
         "benchmark_submode": benchmark_submode,
@@ -995,17 +999,22 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
                 else None
             ),
             "topology_overlay": mode,
-            "tp_scale_overlay": "tp1" if mode == "single_gpu" else "tp2",
-            "prefill_tp_size": 1 if mode == "single_gpu" else 2,
-            "decode_tp_size": 1 if mode == "single_gpu" else 2,
-            "pd_enabled": False,
-            "pd_role_layout": None,
+            "tp_scale_overlay": topology_fields["tp_scale_overlay"],
+            "prefill_tp_size": topology_fields["prefill_tp_size"],
+            "decode_tp_size": topology_fields["decode_tp_size"],
+            "pd_enabled": topology_fields["pd_enabled"],
+            "pd_role_layout": topology_fields["pd_role_layout"],
             "transport_mode": "socket_vs_myelon_process_runner",
             "run_class": run_class,
             "stop_point": "full_completion",
             "skip_reason": None,
         }
 
+    legacy_mode = str(report.get("mode", "legacy_cli"))
+    topology_fields = infer_tp_scale_contract_fields(
+        legacy_mode,
+        "socket_vs_myelon_process_runner",
+    )
     return {
         "benchmark_family": "prefill_stress",
         "benchmark_submode": "legacy_cli",
@@ -1019,20 +1028,12 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
         },
         "cache_pressure_profile": "unspecified",
         "equivalence_group": None,
-        "topology_overlay": str(report.get("mode", "legacy_cli")),
-        "tp_scale_overlay": (
-            "tp1"
-            if str(report.get("mode", "legacy_cli")) == "single_gpu"
-            else str(report.get("mode", "legacy_cli"))
-        ),
-        "prefill_tp_size": (
-            1 if str(report.get("mode", "legacy_cli")) == "single_gpu" else None
-        ),
-        "decode_tp_size": (
-            1 if str(report.get("mode", "legacy_cli")) == "single_gpu" else None
-        ),
-        "pd_enabled": False,
-        "pd_role_layout": None,
+        "topology_overlay": legacy_mode,
+        "tp_scale_overlay": topology_fields["tp_scale_overlay"],
+        "prefill_tp_size": topology_fields["prefill_tp_size"],
+        "decode_tp_size": topology_fields["decode_tp_size"],
+        "pd_enabled": topology_fields["pd_enabled"],
+        "pd_role_layout": topology_fields["pd_role_layout"],
         "transport_mode": "socket_vs_myelon_process_runner",
         "run_class": "quickpass",
         "stop_point": "full_completion",

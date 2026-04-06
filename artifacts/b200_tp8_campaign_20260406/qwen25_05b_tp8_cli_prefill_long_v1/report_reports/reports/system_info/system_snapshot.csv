@@ -1,0 +1,19 @@
+section,key,value
+machine_profile,hostname,weak-time-laughs-fin-03
+machine_profile,system,Linux
+machine_profile,release,6.8.0-100-generic
+machine_profile,platform,Linux-6.8.0-100-generic-x86_64-with-glibc2.39
+machine_profile,machine,x86_64
+machine_profile,python_version,3.12.3
+machine_profile,cpu_count,240
+machine_profile,cuda_visible_devices,
+machine_profile,cuda_compute_cap_override,100
+machine_profile,detected_cuda_device_count,8
+machine_profile,effective_device_ids,"[0, 1, 2, 3, 4, 5, 6, 7]"
+repo_state,repo_path,/root/Documents/myelon-launch/vllm.rs
+repo_state,branch,myelon-integration-1
+repo_state,commit,fb46926c9e9596dd3ccca9c4dd515d289495a794
+repo_state,status,"M scripts/myelon_report_common.py
+ M scripts/run_myelon_benchmark_matrix.py
+ M scripts/run_myelon_server_benchmark_matrix.py
+ M scripts/tests/test_benchmark_contract.py"
