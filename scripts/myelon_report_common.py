@@ -100,6 +100,20 @@ def _sorted_top_rows(
     return sortable[:limit]
 
 
+def _coerce_float(value: object) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _coerce_int(value: object) -> int | None:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return None
+
+
 def _slugify(value: object) -> str:
     text = str(value or "").strip().lower()
     if not text:
@@ -2056,6 +2070,8 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
     current_findings_csv = reports_dir / "current_findings.csv"
     current_findings_md = reports_dir / "current_findings.md"
     high_level_summary_md = reports_dir / "high_level_summary.md"
+    bridge_attribution_csv = reports_dir / "bridge_attribution_summary.csv"
+    bridge_attribution_md = reports_dir / "bridge_attribution_summary.md"
     rollup_run_index_csv = reports_dir / "rollup_run_index.csv"
     rollup_run_index_md = reports_dir / "rollup_run_index.md"
     per_model_side_by_side_csv = reports_dir / "per_model_side_by_side.csv"
@@ -2421,6 +2437,241 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         summary_lines.append("No incomplete or skipped runs.")
     high_level_summary_md.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
 
+    bridge_rows = [
+        row
+        for row in completed_rows
+        if row.get("benchmark_family") == "server_prefill_stress"
+    ]
+    bridge_attribution_rows: list[dict[str, object]] = []
+    for row in bridge_rows:
+        prompt_delta = _coerce_float(row.get("prompt_tps_delta_percent"))
+        rps_delta = _coerce_float(row.get("requests_per_sec_delta_percent"))
+        ttft_delta = _coerce_float(row.get("ttft_ms_delta_percent"))
+        latency_delta = _coerce_float(row.get("latency_ms_delta_percent"))
+        prefill_delta = _coerce_float(row.get("prefill_roundtrip_ms_delta_percent"))
+        baseline_422 = _coerce_int(row.get("baseline_observed_http_422_rejection_count")) or 0
+        myelon_422 = _coerce_int(row.get("myelon_observed_http_422_rejection_count")) or 0
+        baseline_failures = _coerce_int(row.get("baseline_observed_failed_requests_total")) or 0
+        myelon_failures = _coerce_int(row.get("myelon_observed_failed_requests_total")) or 0
+        baseline_successes = _coerce_int(row.get("baseline_observed_successful_requests_total")) or 0
+        myelon_successes = _coerce_int(row.get("myelon_observed_successful_requests_total")) or 0
+        has_failures_or_rejections = any(
+            count > 0
+            for count in (
+                baseline_422,
+                myelon_422,
+                baseline_failures,
+                myelon_failures,
+            )
+        )
+        prompt_to_rps_gap = None
+        if prompt_delta is not None and rps_delta is not None:
+            prompt_to_rps_gap = prompt_delta - rps_delta
+        if has_failures_or_rejections:
+            bridge_outcome = "rejection_or_failure_limited"
+        elif rps_delta is not None and rps_delta >= 50.0:
+            bridge_outcome = "strong_end_to_end_gain"
+        elif prompt_delta is not None and prompt_delta >= 20.0 and (rps_delta is None or rps_delta < 10.0):
+            bridge_outcome = "prompt_gain_compressed"
+        elif (
+            prompt_delta is not None
+            and prompt_delta > 0.0
+            and rps_delta is not None
+            and rps_delta > 0.0
+        ):
+            bridge_outcome = "modest_end_to_end_gain"
+        else:
+            bridge_outcome = "flat_or_negative"
+        bridge_attribution_rows.append(
+            {
+                "model_label": row.get("model_label"),
+                "benchmark_submode": row.get("benchmark_submode"),
+                "topology_overlay": row.get("topology_overlay"),
+                "cache_pressure_profile": row.get("cache_pressure_profile"),
+                "baseline_pressure_profile_outcome": row.get("baseline_pressure_profile_outcome"),
+                "myelon_pressure_profile_outcome": row.get("myelon_pressure_profile_outcome"),
+                "requests_per_sec_delta_percent": rps_delta,
+                "prompt_tps_delta_percent": prompt_delta,
+                "prompt_to_rps_gap_percent": prompt_to_rps_gap,
+                "prefill_roundtrip_ms_delta_percent": prefill_delta,
+                "ttft_ms_delta_percent": ttft_delta,
+                "latency_ms_delta_percent": latency_delta,
+                "baseline_successes": baseline_successes,
+                "myelon_successes": myelon_successes,
+                "baseline_failures": baseline_failures,
+                "myelon_failures": myelon_failures,
+                "baseline_http_422": baseline_422,
+                "myelon_http_422": myelon_422,
+                "bridge_outcome": bridge_outcome,
+                "report_json": row.get("report_json"),
+            }
+        )
+    bridge_attribution_fields = [
+        "model_label",
+        "benchmark_submode",
+        "topology_overlay",
+        "cache_pressure_profile",
+        "baseline_pressure_profile_outcome",
+        "myelon_pressure_profile_outcome",
+        "requests_per_sec_delta_percent",
+        "prompt_tps_delta_percent",
+        "prompt_to_rps_gap_percent",
+        "prefill_roundtrip_ms_delta_percent",
+        "ttft_ms_delta_percent",
+        "latency_ms_delta_percent",
+        "baseline_successes",
+        "myelon_successes",
+        "baseline_failures",
+        "myelon_failures",
+        "baseline_http_422",
+        "myelon_http_422",
+        "bridge_outcome",
+        "report_json",
+    ]
+    _write_csv(bridge_attribution_csv, bridge_attribution_rows, bridge_attribution_fields)
+    bridge_outcome_counts: dict[str, int] = {}
+    for row in bridge_attribution_rows:
+        key = str(row.get("bridge_outcome") or "unknown")
+        bridge_outcome_counts[key] = bridge_outcome_counts.get(key, 0) + 1
+    strongest_prompt_but_compressed = _sorted_top_rows(
+        [
+            row
+            for row in bridge_attribution_rows
+            if row.get("bridge_outcome") == "prompt_gain_compressed"
+        ],
+        "prompt_to_rps_gap_percent",
+        reverse=True,
+    )
+    strongest_end_to_end_bridge = _sorted_top_rows(
+        [
+            row
+            for row in bridge_attribution_rows
+            if row.get("requests_per_sec_delta_percent") is not None
+        ],
+        "requests_per_sec_delta_percent",
+        reverse=True,
+    )
+    rejection_limited_rows = [
+        row
+        for row in bridge_attribution_rows
+        if row.get("bridge_outcome") == "rejection_or_failure_limited"
+    ]
+    bridge_lines = [
+        "# Bridge Attribution Summary",
+        "",
+        f"- campaign_root: `{campaign_root}`",
+        f"- bridge_runs: `{len(bridge_attribution_rows)}`",
+        "",
+        "## Outcome Counts",
+        "",
+    ]
+    if bridge_outcome_counts:
+        outcome_rows = [
+            {"bridge_outcome": key, "count": value}
+            for key, value in sorted(bridge_outcome_counts.items())
+        ]
+        bridge_lines.append(
+            _markdown_table_from_rows(outcome_rows, ["bridge_outcome", "count"])
+        )
+    else:
+        bridge_lines.append("No completed `server_prefill_stress` runs were available.")
+    bridge_lines.extend(
+        [
+            "",
+            "## Strongest End-to-End Bridge Gains",
+            "",
+        ]
+    )
+    if strongest_end_to_end_bridge:
+        bridge_lines.append(
+            _markdown_table_from_rows(
+                strongest_end_to_end_bridge,
+                [
+                    "model_label",
+                    "benchmark_submode",
+                    "topology_overlay",
+                    "cache_pressure_profile",
+                    "requests_per_sec_delta_percent",
+                    "prompt_tps_delta_percent",
+                    "prompt_to_rps_gap_percent",
+                    "bridge_outcome",
+                ],
+            )
+        )
+    else:
+        bridge_lines.append("No completed `server_prefill_stress` runs were available.")
+    bridge_lines.extend(
+        [
+            "",
+            "## Strongest Prompt Gains That Compressed End To End",
+            "",
+        ]
+    )
+    if strongest_prompt_but_compressed:
+        bridge_lines.append(
+            _markdown_table_from_rows(
+                strongest_prompt_but_compressed,
+                [
+                    "model_label",
+                    "benchmark_submode",
+                    "topology_overlay",
+                    "cache_pressure_profile",
+                    "prompt_tps_delta_percent",
+                    "requests_per_sec_delta_percent",
+                    "prompt_to_rps_gap_percent",
+                    "prefill_roundtrip_ms_delta_percent",
+                    "ttft_ms_delta_percent",
+                    "bridge_outcome",
+                ],
+            )
+        )
+    else:
+        bridge_lines.append("No prompt-gain-compressed bridge cases were available.")
+    bridge_lines.extend(
+        [
+            "",
+            "## Rejection / Failure Limited Bridge Runs",
+            "",
+        ]
+    )
+    if rejection_limited_rows:
+        bridge_lines.append(
+            _markdown_table_from_rows(
+                rejection_limited_rows,
+                [
+                    "model_label",
+                    "benchmark_submode",
+                    "topology_overlay",
+                    "cache_pressure_profile",
+                    "baseline_successes",
+                    "myelon_successes",
+                    "baseline_failures",
+                    "myelon_failures",
+                    "baseline_http_422",
+                    "myelon_http_422",
+                    "requests_per_sec_delta_percent",
+                    "prompt_tps_delta_percent",
+                    "bridge_outcome",
+                ],
+            )
+        )
+    else:
+        bridge_lines.append("No rejection-limited bridge runs were available.")
+    bridge_lines.extend(
+        [
+            "",
+            "## All Completed Bridge Runs",
+            "",
+        ]
+    )
+    if bridge_attribution_rows:
+        bridge_lines.append(
+            _markdown_table_from_rows(bridge_attribution_rows, bridge_attribution_fields)
+        )
+    else:
+        bridge_lines.append("No completed `server_prefill_stress` runs were available.")
+    bridge_attribution_md.write_text("\n".join(bridge_lines) + "\n", encoding="utf-8")
+
     run_index_lines = [
         "# Rollup Run Index",
         "",
@@ -2583,6 +2834,8 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         "current_findings_csv": str(current_findings_csv),
         "current_findings_md": str(current_findings_md),
         "high_level_summary_md": str(high_level_summary_md),
+        "bridge_attribution_csv": str(bridge_attribution_csv),
+        "bridge_attribution_md": str(bridge_attribution_md),
         "rollup_run_index_csv": str(rollup_run_index_csv),
         "rollup_run_index_md": str(rollup_run_index_md),
         "per_model_side_by_side_csv": str(per_model_side_by_side_csv),
