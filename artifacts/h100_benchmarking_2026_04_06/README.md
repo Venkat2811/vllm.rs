@@ -107,3 +107,4 @@ See:
 - `artifacts/h100_benchmarking_2026_04_06/run_command_catalog_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/kvcache_pressure_server_bridge_note.md`
 - `artifacts/h100_benchmarking_2026_04_06/server_prefill_contract_slice.md`
+- `artifacts/h100_benchmarking_2026_04_06/server_prefill_workload_slice.md`

@@ -76,6 +76,13 @@ def env_bool(name: str, default: bool) -> bool:
     return value.lower() in {"1", "true", "yes"}
 
 
+def env_optional_bool(name: str) -> bool | None:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return None
+    return value.lower() in {"1", "true", "yes"}
+
+
 def env_optional_float(name: str) -> float | None:
     value = os.environ.get(name)
     if value is None or value == "":
@@ -126,6 +133,72 @@ def infer_server_benchmark_submode(
     if benchmark_family == "serving_qos":
         return "warm_steady_state" if warmup_step else "cold_turn"
     return "cache_thrash_round_robin"
+
+
+def default_server_workload_path(
+    repo_root: Path,
+    benchmark_family: str,
+    benchmark_submode: str,
+) -> Path:
+    if benchmark_family == "server_prefill_stress":
+        inputs_dir = repo_root / "artifacts" / "h100_benchmarking_2026_04_06" / "inputs"
+        if benchmark_submode == "shared_prefix_round_robin_control":
+            return inputs_dir / "synthetic_server_prefill_shared_prefix_round_robin.json"
+        return inputs_dir / "synthetic_server_prefill_stress_round_robin.json"
+    return (
+        repo_root
+        / "artifacts"
+        / "b300_benchmarking_2026_04_02"
+        / "synthetic_multi_turn_smoke.json"
+    )
+
+
+def env_or_default_int(name: str, default: int) -> int:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return default
+    return int(value)
+
+
+def env_or_default_float_string(name: str, default: float) -> str:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return str(default)
+    return value
+
+
+def resolve_server_prefill_defaults(benchmark_submode: str) -> dict[str, object]:
+    if benchmark_submode == "shared_prefix_round_robin_control":
+        return {
+            "warmup_step": False,
+            "num_clients": 1,
+            "max_active_conversations": 12,
+            "max_num_requests": 32,
+            "max_turns": 6,
+            "request_rate": "0",
+            "conversation_sampling": "round_robin",
+            "limit_min_tokens": 8,
+            "limit_max_tokens": 8,
+            "prefix_cache_enabled": True,
+            "prefix_cache_max_tokens": 32768,
+            "kv_fraction": 0.55,
+            "cpu_mem_fold": 0.5,
+        }
+    return {
+        "warmup_step": False,
+        "num_clients": 1,
+        "max_active_conversations": 16,
+        "max_num_requests": 32,
+        "max_turns": 6,
+        "request_rate": "0",
+        "conversation_sampling": "round_robin",
+        "limit_min_tokens": 8,
+        "limit_max_tokens": 8,
+        "prefix_cache_enabled": True,
+        "prefix_cache_max_tokens": 4096,
+        "kv_fraction": 0.35,
+        "cpu_mem_fold": 0.1,
+    }
 
 
 def derive_device_ids(
@@ -251,6 +324,25 @@ def main() -> int:
     upstream_benchmark_script = (
         upstream_repo_root / "benchmarks" / "multi_turn" / "benchmark_serving_multi_turn.py"
     )
+    benchmark_family = resolve_server_benchmark_family(
+        os.environ.get("VLLM_SERVER_BENCHMARK_FAMILY")
+    )
+    warmup_step_default = benchmark_family != "server_prefill_stress"
+    benchmark_submode = infer_server_benchmark_submode(
+        benchmark_family,
+        warmup_step_default,
+        os.environ.get("VLLM_SERVER_BENCHMARK_SUBMODE"),
+    )
+    prefill_defaults = (
+        resolve_server_prefill_defaults(benchmark_submode)
+        if benchmark_family == "server_prefill_stress"
+        else {}
+    )
+    workload_default = default_server_workload_path(
+        repo_root,
+        benchmark_family,
+        benchmark_submode,
+    )
     model_path = env_str(
         "VLLM_MODEL_PATH",
         "/root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c",
@@ -258,12 +350,7 @@ def main() -> int:
     workload_file = Path(
         env_str(
             "VLLM_BENCHMARK_INPUT_FILE",
-            str(
-                repo_root
-                / "artifacts"
-                / "b300_benchmarking_2026_04_02"
-                / "synthetic_multi_turn_smoke.json"
-            ),
+            str(workload_default),
         )
     )
     mode = env_str("VLLM_SERVER_BENCHMARK_MODE", "single_gpu")
@@ -277,27 +364,60 @@ def main() -> int:
     server_ready_timeout_seconds = env_int("VLLM_SERVER_READY_TIMEOUT_SECONDS", 300)
     benchmark_timeout_seconds = env_int("VLLM_SERVER_BENCH_TIMEOUT_SECONDS", 900)
     request_timeout_seconds = env_int("VLLM_SERVER_REQUEST_TIMEOUT_SECONDS", 180)
-    num_clients = env_int("VLLM_SERVER_BENCH_NUM_CLIENTS", 2)
-    max_active_conversations = env_int("VLLM_SERVER_BENCH_MAX_ACTIVE_CONVERSATIONS", 4)
-    max_num_requests = env_int("VLLM_SERVER_BENCH_MAX_NUM_REQUESTS", 16)
-    max_turns = env_int("VLLM_SERVER_BENCH_MAX_TURNS", 4)
+    num_clients = env_or_default_int(
+        "VLLM_SERVER_BENCH_NUM_CLIENTS",
+        int(prefill_defaults.get("num_clients", 2)),
+    )
+    max_active_conversations = env_or_default_int(
+        "VLLM_SERVER_BENCH_MAX_ACTIVE_CONVERSATIONS",
+        int(prefill_defaults.get("max_active_conversations", 4)),
+    )
+    max_num_requests = env_or_default_int(
+        "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS",
+        int(prefill_defaults.get("max_num_requests", 16)),
+    )
+    max_turns = env_or_default_int(
+        "VLLM_SERVER_BENCH_MAX_TURNS",
+        int(prefill_defaults.get("max_turns", 4)),
+    )
     max_retries = env_int("VLLM_SERVER_BENCH_MAX_RETRIES", 1)
-    request_rate = env_str("VLLM_SERVER_BENCH_REQUEST_RATE", "0")
+    request_rate = env_or_default_float_string(
+        "VLLM_SERVER_BENCH_REQUEST_RATE",
+        float(prefill_defaults.get("request_rate", 0.0)),
+    )
     port_base = env_int("VLLM_SERVER_BENCH_PORT_BASE", 18080)
-    warmup_step = env_bool("VLLM_SERVER_BENCH_WARMUP_STEP", True)
+    warmup_step = env_bool(
+        "VLLM_SERVER_BENCH_WARMUP_STEP",
+        bool(prefill_defaults.get("warmup_step", warmup_step_default)),
+    )
     no_stream = env_bool("VLLM_SERVER_BENCH_NO_STREAM", False)
-    benchmark_family = resolve_server_benchmark_family(
-        os.environ.get("VLLM_SERVER_BENCHMARK_FAMILY")
+    conversation_sampling = env_str(
+        "VLLM_SERVER_BENCH_CONVERSATION_SAMPLING",
+        str(prefill_defaults.get("conversation_sampling", "round_robin")),
     )
-    benchmark_submode = infer_server_benchmark_submode(
-        benchmark_family,
-        warmup_step,
-        os.environ.get("VLLM_SERVER_BENCHMARK_SUBMODE"),
+    limit_min_tokens = env_or_default_int(
+        "VLLM_SERVER_BENCH_LIMIT_MIN_TOKENS",
+        int(prefill_defaults.get("limit_min_tokens", -1)),
     )
-    prefix_cache_enabled = env_bool("VLLM_SERVER_PREFIX_CACHE", False)
+    limit_max_tokens = env_or_default_int(
+        "VLLM_SERVER_BENCH_LIMIT_MAX_TOKENS",
+        int(prefill_defaults.get("limit_max_tokens", -1)),
+    )
+    explicit_prefix_cache_enabled = env_optional_bool("VLLM_SERVER_PREFIX_CACHE")
+    prefix_cache_enabled = (
+        explicit_prefix_cache_enabled
+        if explicit_prefix_cache_enabled is not None
+        else bool(prefill_defaults.get("prefix_cache_enabled", False))
+    )
     prefix_cache_max_tokens = env_optional_int("VLLM_SERVER_PREFIX_CACHE_MAX_TOKENS")
+    if prefix_cache_max_tokens is None and "prefix_cache_max_tokens" in prefill_defaults:
+        prefix_cache_max_tokens = int(prefill_defaults["prefix_cache_max_tokens"])
     kv_fraction = env_optional_float("VLLM_SERVER_KV_FRACTION")
+    if kv_fraction is None and "kv_fraction" in prefill_defaults:
+        kv_fraction = float(prefill_defaults["kv_fraction"])
     cpu_mem_fold = env_optional_float("VLLM_SERVER_CPU_MEM_FOLD")
+    if cpu_mem_fold is None and "cpu_mem_fold" in prefill_defaults:
+        cpu_mem_fold = float(prefill_defaults["cpu_mem_fold"])
     cache_pressure_profile = resolve_cache_pressure_profile(
         os.environ.get("VLLM_CACHE_PRESSURE_PROFILE"),
         kv_fraction=kv_fraction,
@@ -387,6 +507,9 @@ def main() -> int:
         "request_rate": float(request_rate),
         "warmup_step": warmup_step,
         "no_stream": no_stream,
+        "conversation_sampling": conversation_sampling,
+        "limit_min_tokens": limit_min_tokens,
+        "limit_max_tokens": limit_max_tokens,
         "server_ready_timeout_seconds": server_ready_timeout_seconds,
         "benchmark_timeout_seconds": benchmark_timeout_seconds,
         "request_timeout_seconds": request_timeout_seconds,
@@ -454,6 +577,9 @@ def main() -> int:
             "max_num_requests": max_num_requests if max_num_requests > 0 else None,
             "max_turns": max_turns,
             "request_rate": float(request_rate),
+            "conversation_sampling": conversation_sampling,
+            "limit_min_tokens": limit_min_tokens if limit_min_tokens > 0 else None,
+            "limit_max_tokens": limit_max_tokens if limit_max_tokens > 0 else None,
             "mode": mode,
         },
         cache_pressure_profile=cache_pressure_profile,
@@ -547,6 +673,8 @@ def main() -> int:
             str(request_timeout_seconds),
             "--request-rate",
             request_rate,
+            "--conversation-sampling",
+            conversation_sampling,
         ]
         if max_num_requests > 0:
             benchmark_command.extend(
@@ -555,6 +683,10 @@ def main() -> int:
                     str(max_num_requests),
                 ]
             )
+        if limit_min_tokens > 0:
+            benchmark_command.extend(["--limit-min-tokens", str(limit_min_tokens)])
+        if limit_max_tokens > 0:
+            benchmark_command.extend(["--limit-max-tokens", str(limit_max_tokens)])
         if warmup_step:
             benchmark_command.append("--warmup-step")
         if no_stream:
@@ -566,6 +698,9 @@ def main() -> int:
             "stop_point": "full_completion",
             "skip_reason": None,
             "cache_pressure_profile": cache_pressure_profile,
+            "conversation_sampling": conversation_sampling,
+            "limit_min_tokens": limit_min_tokens if limit_min_tokens > 0 else None,
+            "limit_max_tokens": limit_max_tokens if limit_max_tokens > 0 else None,
             "server_port": port,
             "server_command": server_command,
             "benchmark_command": benchmark_command,

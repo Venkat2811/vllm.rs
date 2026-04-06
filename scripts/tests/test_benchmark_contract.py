@@ -409,6 +409,135 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("--kv-fraction", runner_command)
             self.assertIn("--cpu-mem-fold", runner_command)
 
+    def test_server_prefill_stress_defaults_to_round_robin_low_decode_and_builtin_workload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_dir = tmp_path / "server_prefill_default_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_SERVER_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_SERVER_BENCHMARK_MODE": "single_gpu",
+                "VLLM_SERVER_BENCHMARK_FAMILY": "server_prefill_stress",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] == "cargo":
+                    return CompletedProcess(command, 0, "", "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    server_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    server_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    server_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ):
+                    rc = server_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["benchmark_contract"]["benchmark_family"], "server_prefill_stress")
+            self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "cache_thrash_round_robin")
+            self.assertEqual(report["benchmark_contract"]["cache_pressure_profile"], "hard_thrash")
+            self.assertFalse(report["warmup_step"])
+            self.assertEqual(report["conversation_sampling"], "round_robin")
+            self.assertEqual(report["limit_min_tokens"], 8)
+            self.assertEqual(report["limit_max_tokens"], 8)
+            self.assertTrue(report["workload_file"].endswith("synthetic_server_prefill_stress_round_robin.json"))
+            benchmark_command = report["cases"][0]["benchmark_command"]
+            self.assertIn("--conversation-sampling", benchmark_command)
+            self.assertIn("--limit-min-tokens", benchmark_command)
+            self.assertIn("--limit-max-tokens", benchmark_command)
+            self.assertNotIn("--warmup-step", benchmark_command)
+            server_command = report["cases"][0]["server_command"]
+            self.assertIn("--prefix-cache", server_command)
+            self.assertIn("--prefix-cache-max-tokens", server_command)
+            self.assertIn("--kv-fraction", server_command)
+            self.assertIn("--cpu-mem-fold", server_command)
+
+    def test_server_prefill_shared_prefix_control_selects_builtin_workload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_dir = tmp_path / "server_prefill_shared_prefix_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_SERVER_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_SERVER_BENCHMARK_MODE": "single_gpu",
+                "VLLM_SERVER_BENCHMARK_FAMILY": "server_prefill_stress",
+                "VLLM_SERVER_BENCHMARK_SUBMODE": "shared_prefix_round_robin_control",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] == "cargo":
+                    return CompletedProcess(command, 0, "", "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    server_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    server_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    server_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ):
+                    rc = server_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                report["benchmark_contract"]["benchmark_submode"],
+                "shared_prefix_round_robin_control",
+            )
+            self.assertEqual(report["benchmark_contract"]["cache_pressure_profile"], "bounded_prefix")
+            self.assertTrue(
+                report["workload_file"].endswith(
+                    "synthetic_server_prefill_shared_prefix_round_robin.json"
+                )
+            )
+
     def test_pd_benchmark_report_includes_contract_and_case_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
