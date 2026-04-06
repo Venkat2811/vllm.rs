@@ -1,0 +1,9 @@
+# Per-Variant Side By Side
+
+| baseline_variant   | myelon_variant   | metric           |   baseline_value |   myelon_value |   delta_percent | baseline_status   | myelon_status   |
+|--------------------|------------------|------------------|------------------|----------------|-----------------|-------------------|-----------------|
+| runner             | myelon           | requests_per_sec |           10.987 |         11.529 |          4.9331 | completed         | completed       |
+| runner             | myelon           | runtime_sec      |            2.913 |          2.776 |         -4.7031 | completed         | completed       |
+| runner             | myelon           | ttft_ms_mean     |         2575.74  |       2507.19  |         -2.6614 | completed         | completed       |
+| runner             | myelon           | tpot_ms_mean     |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | latency_ms_mean  |         2787.55  |       2671.83  |         -4.1513 | completed         | completed       |

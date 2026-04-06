@@ -250,6 +250,10 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
             "transport_mode": contract.get("transport_mode"),
             "run_class": contract.get("run_class"),
             "status": report.get("status"),
+            "expected_case_count": report.get("expected_case_count"),
+            "observed_case_count": len(
+                [case for case in report.get("cases", []) if isinstance(case, dict)]
+            ),
             "stop_point": contract.get("stop_point"),
             "skip_reason": contract.get("skip_reason"),
             "transport_supported": transport_capability.get("pd_supported"),
@@ -265,8 +269,14 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
 
 
 def infer_report_status(report: dict[str, object]) -> str:
+    expected_case_count = report.get("expected_case_count")
+    observed_case_count = len(
+        [case for case in report.get("cases", []) if isinstance(case, dict)]
+    )
+    if isinstance(expected_case_count, int) and observed_case_count < expected_case_count:
+        return "partial"
     existing = report.get("status")
-    if isinstance(existing, str) and existing.strip():
+    if isinstance(existing, str) and existing.strip() and existing != "completed":
         return existing
     contract = report.get("benchmark_contract", {})
     if isinstance(contract, dict) and contract.get("skip_reason"):
@@ -569,6 +579,11 @@ def write_benchmark_reports(
         ("run_class", contract.get("run_class")),
         ("stop_point", contract.get("stop_point")),
         ("status", report.get("status")),
+        ("expected_case_count", report.get("expected_case_count")),
+        (
+            "observed_case_count",
+            len([case for case in report.get("cases", []) if isinstance(case, dict)]),
+        ),
         ("report_json", report_path),
     ]
     lines = [
