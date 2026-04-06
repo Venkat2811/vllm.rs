@@ -1,0 +1,8 @@
+Collecting statistics...
+runtime_sec = 9.032
+requests_per_sec = 28.343
+[ttft_ms] avg: 282.09, min: 222.26, max: 476.81
+[tpot_ms] avg: 0.00, min: 0.00, max: 0.00
+[latency_ms] avg: 282.09, min: 222.27, max: 476.81
+successful_requests = 256
+first_completion_ms = 222.27

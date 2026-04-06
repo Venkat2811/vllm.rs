@@ -1,0 +1,2050 @@
+[
+  {
+    "ttft_ms": 1617.093,
+    "latency_ms": 1617.095,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1613.153,
+    "latency_ms": 1613.156,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1617.406,
+    "latency_ms": 1617.408,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1618.042,
+    "latency_ms": 1618.044,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1613.28,
+    "latency_ms": 1613.284,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1617.779,
+    "latency_ms": 1617.782,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1616.119,
+    "latency_ms": 1616.12,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1614.961,
+    "latency_ms": 1614.965,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1617.367,
+    "latency_ms": 1617.369,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.659,
+    "latency_ms": 1609.663,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1606.127,
+    "latency_ms": 1606.147,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1607.575,
+    "latency_ms": 1607.586,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1615.266,
+    "latency_ms": 1615.27,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1614.384,
+    "latency_ms": 1614.386,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.003,
+    "latency_ms": 1609.007,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1612.143,
+    "latency_ms": 1612.146,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1615.112,
+    "latency_ms": 1615.116,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.393,
+    "latency_ms": 1609.396,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1612.267,
+    "latency_ms": 1612.269,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1612.058,
+    "latency_ms": 1612.06,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.225,
+    "latency_ms": 1609.228,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1607.539,
+    "latency_ms": 1607.545,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1615.217,
+    "latency_ms": 1615.219,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1610.634,
+    "latency_ms": 1610.636,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1614.993,
+    "latency_ms": 1614.995,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1603.952,
+    "latency_ms": 1603.957,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1607.023,
+    "latency_ms": 1607.026,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.998,
+    "latency_ms": 1610.0,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1611.941,
+    "latency_ms": 1611.943,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1607.397,
+    "latency_ms": 1607.402,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1610.779,
+    "latency_ms": 1610.781,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.626,
+    "latency_ms": 1609.628,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1613.827,
+    "latency_ms": 1613.831,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1608.546,
+    "latency_ms": 1608.551,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1607.391,
+    "latency_ms": 1607.395,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1613.552,
+    "latency_ms": 1613.554,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1608.969,
+    "latency_ms": 1608.971,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.898,
+    "latency_ms": 1609.901,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1603.265,
+    "latency_ms": 1603.271,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1613.885,
+    "latency_ms": 1613.888,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1610.529,
+    "latency_ms": 1610.532,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.362,
+    "latency_ms": 1609.366,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1606.371,
+    "latency_ms": 1606.375,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1611.152,
+    "latency_ms": 1611.154,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1606.108,
+    "latency_ms": 1606.113,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1607.25,
+    "latency_ms": 1607.253,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1607.855,
+    "latency_ms": 1607.857,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1607.621,
+    "latency_ms": 1607.624,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1612.14,
+    "latency_ms": 1612.142,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1612.91,
+    "latency_ms": 1612.913,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1605.662,
+    "latency_ms": 1605.666,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1608.363,
+    "latency_ms": 1608.365,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1605.397,
+    "latency_ms": 1605.401,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.942,
+    "latency_ms": 1609.944,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.827,
+    "latency_ms": 1609.829,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1611.304,
+    "latency_ms": 1611.306,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1608.758,
+    "latency_ms": 1608.765,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1600.204,
+    "latency_ms": 1600.212,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1610.175,
+    "latency_ms": 1610.18,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.298,
+    "latency_ms": 1609.301,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1608.264,
+    "latency_ms": 1608.267,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1608.14,
+    "latency_ms": 1608.143,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1609.835,
+    "latency_ms": 1609.838,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1607.05,
+    "latency_ms": 1607.053,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1477.09,
+    "latency_ms": 1477.093,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1475.845,
+    "latency_ms": 1475.848,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1476.219,
+    "latency_ms": 1476.222,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1481.658,
+    "latency_ms": 1481.674,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1478.114,
+    "latency_ms": 1478.118,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1488.675,
+    "latency_ms": 1488.677,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1475.129,
+    "latency_ms": 1475.132,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1479.412,
+    "latency_ms": 1479.415,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1473.059,
+    "latency_ms": 1473.064,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1473.731,
+    "latency_ms": 1473.734,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1473.388,
+    "latency_ms": 1473.39,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1472.8,
+    "latency_ms": 1472.804,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1472.089,
+    "latency_ms": 1472.093,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1479.305,
+    "latency_ms": 1479.308,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1478.235,
+    "latency_ms": 1478.238,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1485.691,
+    "latency_ms": 1485.694,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1486.589,
+    "latency_ms": 1486.591,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1483.173,
+    "latency_ms": 1483.176,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1473.681,
+    "latency_ms": 1473.686,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1486.411,
+    "latency_ms": 1486.415,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1485.912,
+    "latency_ms": 1485.915,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1476.059,
+    "latency_ms": 1476.062,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1477.844,
+    "latency_ms": 1477.847,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1471.538,
+    "latency_ms": 1471.541,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1469.237,
+    "latency_ms": 1469.247,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1482.362,
+    "latency_ms": 1482.366,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1471.027,
+    "latency_ms": 1471.031,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1485.758,
+    "latency_ms": 1485.76,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1479.1,
+    "latency_ms": 1479.104,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1483.421,
+    "latency_ms": 1483.425,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1483.645,
+    "latency_ms": 1483.648,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1484.824,
+    "latency_ms": 1484.827,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1477.238,
+    "latency_ms": 1477.241,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1477.932,
+    "latency_ms": 1477.935,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1474.868,
+    "latency_ms": 1474.871,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1475.323,
+    "latency_ms": 1475.326,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1482.536,
+    "latency_ms": 1482.538,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1483.109,
+    "latency_ms": 1483.113,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1483.095,
+    "latency_ms": 1483.097,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1482.623,
+    "latency_ms": 1482.626,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1479.648,
+    "latency_ms": 1479.651,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1479.049,
+    "latency_ms": 1479.052,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1473.851,
+    "latency_ms": 1473.855,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1484.225,
+    "latency_ms": 1484.229,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1475.812,
+    "latency_ms": 1475.815,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1477.253,
+    "latency_ms": 1477.257,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1479.041,
+    "latency_ms": 1479.045,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1479.949,
+    "latency_ms": 1479.952,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1482.053,
+    "latency_ms": 1482.056,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1471.607,
+    "latency_ms": 1471.611,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1477.393,
+    "latency_ms": 1477.396,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1480.22,
+    "latency_ms": 1480.223,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1560.483,
+    "latency_ms": 1560.486,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1559.707,
+    "latency_ms": 1559.71,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1559.87,
+    "latency_ms": 1559.873,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1558.166,
+    "latency_ms": 1558.176,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1560.653,
+    "latency_ms": 1560.657,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1558.938,
+    "latency_ms": 1558.941,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1558.381,
+    "latency_ms": 1558.384,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1558.839,
+    "latency_ms": 1558.841,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1558.296,
+    "latency_ms": 1558.298,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1558.629,
+    "latency_ms": 1558.633,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1558.51,
+    "latency_ms": 1558.513,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1558.88,
+    "latency_ms": 1558.884,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1558.542,
+    "latency_ms": 1558.545,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1549.274,
+    "latency_ms": 1549.284,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1551.772,
+    "latency_ms": 1551.775,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1549.979,
+    "latency_ms": 1549.983,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1549.123,
+    "latency_ms": 1549.128,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1551.207,
+    "latency_ms": 1551.21,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1549.038,
+    "latency_ms": 1549.042,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1549.427,
+    "latency_ms": 1549.43,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1554.791,
+    "latency_ms": 1554.795,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1548.201,
+    "latency_ms": 1548.206,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1548.553,
+    "latency_ms": 1548.556,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1550.104,
+    "latency_ms": 1550.107,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1554.867,
+    "latency_ms": 1554.871,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1556.756,
+    "latency_ms": 1556.759,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1552.401,
+    "latency_ms": 1552.405,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1552.562,
+    "latency_ms": 1552.565,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1553.616,
+    "latency_ms": 1553.619,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1555.3,
+    "latency_ms": 1555.303,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1548.131,
+    "latency_ms": 1548.135,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1550.197,
+    "latency_ms": 1550.2,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1549.841,
+    "latency_ms": 1549.845,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1547.543,
+    "latency_ms": 1547.546,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1551.764,
+    "latency_ms": 1551.767,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1552.848,
+    "latency_ms": 1552.851,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1549.493,
+    "latency_ms": 1549.496,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1541.869,
+    "latency_ms": 1541.873,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1542.271,
+    "latency_ms": 1542.275,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1550.202,
+    "latency_ms": 1550.205,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1548.968,
+    "latency_ms": 1548.97,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1548.052,
+    "latency_ms": 1548.056,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1548.747,
+    "latency_ms": 1548.75,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1547.751,
+    "latency_ms": 1547.753,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1620.612,
+    "latency_ms": 1620.615,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1541.166,
+    "latency_ms": 1541.17,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1618.222,
+    "latency_ms": 1618.235,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1622.512,
+    "latency_ms": 1622.514,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1621.527,
+    "latency_ms": 1621.53,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1537.008,
+    "latency_ms": 1537.011,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1537.645,
+    "latency_ms": 1537.648,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1617.255,
+    "latency_ms": 1617.26,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1616.895,
+    "latency_ms": 1616.904,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1619.405,
+    "latency_ms": 1619.408,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1618.444,
+    "latency_ms": 1618.446,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1619.078,
+    "latency_ms": 1619.08,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1619.061,
+    "latency_ms": 1619.063,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1620.013,
+    "latency_ms": 1620.015,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1616.319,
+    "latency_ms": 1616.323,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1616.845,
+    "latency_ms": 1616.853,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1618.689,
+    "latency_ms": 1618.691,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1615.348,
+    "latency_ms": 1615.358,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1623.093,
+    "latency_ms": 1623.097,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1612.448,
+    "latency_ms": 1612.463,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1541.061,
+    "latency_ms": 1541.064,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1540.188,
+    "latency_ms": 1540.191,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1542.247,
+    "latency_ms": 1542.25,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1540.253,
+    "latency_ms": 1540.256,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1540.878,
+    "latency_ms": 1540.881,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1540.473,
+    "latency_ms": 1540.477,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1539.497,
+    "latency_ms": 1539.5,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1541.19,
+    "latency_ms": 1541.192,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1541.065,
+    "latency_ms": 1541.069,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1539.041,
+    "latency_ms": 1539.046,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1538.333,
+    "latency_ms": 1538.336,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1538.648,
+    "latency_ms": 1538.65,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1526.322,
+    "latency_ms": 1526.325,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1523.931,
+    "latency_ms": 1523.942,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1523.891,
+    "latency_ms": 1523.893,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1523.857,
+    "latency_ms": 1523.859,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1523.729,
+    "latency_ms": 1523.731,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1524.974,
+    "latency_ms": 1524.978,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1525.046,
+    "latency_ms": 1525.049,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1522.911,
+    "latency_ms": 1522.916,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1523.889,
+    "latency_ms": 1523.895,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1522.067,
+    "latency_ms": 1522.069,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1528.214,
+    "latency_ms": 1528.226,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1521.896,
+    "latency_ms": 1521.9,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1523.46,
+    "latency_ms": 1523.463,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1532.257,
+    "latency_ms": 1532.26,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1520.433,
+    "latency_ms": 1520.435,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1519.392,
+    "latency_ms": 1519.394,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1520.642,
+    "latency_ms": 1520.644,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1528.076,
+    "latency_ms": 1528.08,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1518.901,
+    "latency_ms": 1518.904,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1526.29,
+    "latency_ms": 1526.294,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1523.767,
+    "latency_ms": 1523.772,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1523.152,
+    "latency_ms": 1523.16,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1530.512,
+    "latency_ms": 1530.515,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1524.506,
+    "latency_ms": 1524.509,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1523.143,
+    "latency_ms": 1523.147,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1527.598,
+    "latency_ms": 1527.601,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1534.378,
+    "latency_ms": 1534.381,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1521.689,
+    "latency_ms": 1521.692,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1528.392,
+    "latency_ms": 1528.395,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1527.44,
+    "latency_ms": 1527.443,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1521.184,
+    "latency_ms": 1521.19,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1526.279,
+    "latency_ms": 1526.282,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1528.293,
+    "latency_ms": 1528.296,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1534.732,
+    "latency_ms": 1534.735,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1523.489,
+    "latency_ms": 1523.493,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1456.983,
+    "latency_ms": 1456.985,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1451.462,
+    "latency_ms": 1451.467,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1455.16,
+    "latency_ms": 1455.163,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1454.063,
+    "latency_ms": 1454.067,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1452.566,
+    "latency_ms": 1452.569,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1450.178,
+    "latency_ms": 1450.182,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1452.265,
+    "latency_ms": 1452.268,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1450.825,
+    "latency_ms": 1450.829,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1451.565,
+    "latency_ms": 1451.568,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1449.429,
+    "latency_ms": 1449.433,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1455.674,
+    "latency_ms": 1455.678,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1449.307,
+    "latency_ms": 1449.31,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1455.448,
+    "latency_ms": 1455.45,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1449.179,
+    "latency_ms": 1449.183,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1450.612,
+    "latency_ms": 1450.616,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1448.081,
+    "latency_ms": 1448.085,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1450.508,
+    "latency_ms": 1450.513,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1447.635,
+    "latency_ms": 1447.639,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1454.677,
+    "latency_ms": 1454.68,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1451.376,
+    "latency_ms": 1451.379,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1455.736,
+    "latency_ms": 1455.739,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1451.425,
+    "latency_ms": 1451.427,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1454.045,
+    "latency_ms": 1454.047,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1449.004,
+    "latency_ms": 1449.007,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1454.44,
+    "latency_ms": 1454.443,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1449.033,
+    "latency_ms": 1449.036,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1452.126,
+    "latency_ms": 1452.129,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1454.017,
+    "latency_ms": 1454.02,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  },
+  {
+    "ttft_ms": 1448.638,
+    "latency_ms": 1448.64,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay,"
+  }
+]
