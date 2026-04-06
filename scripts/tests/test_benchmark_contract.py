@@ -12,6 +12,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 import myelon_validation_common as validation_common
+import myelon_report_common as report_common
 import run_myelon_benchmark_matrix as benchmark_matrix
 import run_myelon_pd_benchmark_matrix as pd_matrix
 import run_myelon_server_benchmark_matrix as server_matrix
@@ -154,6 +155,12 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             capability["pd_skip_reason"],
             "unsupported_topology_insufficient_visible_cuda_devices",
         )
+
+    def test_infer_model_label_handles_hf_cache_path(self) -> None:
+        label = validation_common.infer_model_label(
+            "/root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/abcdef"
+        )
+        self.assertEqual(label, "Qwen/Qwen3-4B")
 
 
 class BenchmarkScriptReportTests(unittest.TestCase):
@@ -494,6 +501,113 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             )
             self.assertFalse(report["topology_capability"]["pd_supported"])
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
+
+    def test_rollup_reports_aggregate_retained_campaigns(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            campaign_a = tmp_path / "single_gpu_random_qwen3_4b"
+            campaign_b = tmp_path / "pd_skip_qwen35_27b"
+            campaign_a.mkdir()
+            campaign_b.mkdir()
+
+            report_a = {
+                "status": "completed",
+                "benchmark_contract": {
+                    "benchmark_family": "serving_qos",
+                    "benchmark_submode": "warm_steady_state",
+                    "workload_class": "synthetic_multi_turn",
+                    "topology_overlay": "single_gpu",
+                    "transport_mode": "socket_vs_myelon_process_runner",
+                    "run_class": "quickpass",
+                    "stop_point": "full_completion",
+                    "skip_reason": None,
+                },
+                "machine_profile": {
+                    "hostname": "plain-bear-unfolds-fin-02",
+                    "gpu_inventory": [{"name": "NVIDIA H100 80GB HBM3"}],
+                },
+                "model_capability": {
+                    "model_label": "Qwen/Qwen3-4B",
+                    "architecture": "Qwen3ForCausalLM",
+                    "pd_supported": True,
+                },
+                "cases": [
+                    {
+                        "label": "runner",
+                        "execution_variant": "runner",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                        "summary": {
+                            "requests_per_sec": 3.0,
+                            "runtime_sec": 1.1,
+                            "table": {
+                                "ttft_ms": {"mean": 90.0},
+                                "tpot_ms": {"mean": 8.0},
+                                "latency_ms": {"mean": 320.0},
+                            },
+                        },
+                    },
+                    {
+                        "label": "myelon",
+                        "execution_variant": "myelon",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                        "summary": {
+                            "requests_per_sec": 3.2,
+                            "runtime_sec": 1.0,
+                            "table": {
+                                "ttft_ms": {"mean": 80.0},
+                                "tpot_ms": {"mean": 7.5},
+                                "latency_ms": {"mean": 300.0},
+                            },
+                        },
+                    },
+                ],
+            }
+            report_b = {
+                "status": "skipped_unsupported_topology",
+                "benchmark_contract": {
+                    "benchmark_family": "pd_qos",
+                    "benchmark_submode": "first_transfer_control",
+                    "workload_class": "pd_first_transfer_control",
+                    "topology_overlay": "pd_tp1",
+                    "transport_mode": "pd_localipc_default",
+                    "run_class": "quickpass",
+                    "stop_point": "full_completion",
+                    "skip_reason": "unsupported_topology_insufficient_visible_cuda_devices",
+                },
+                "machine_profile": {
+                    "hostname": "plain-bear-unfolds-fin-02",
+                    "gpu_inventory": [{"name": "NVIDIA H100 80GB HBM3"}],
+                },
+                "model_capability": {
+                    "model_label": "Qwen/Qwen3.5-27B-FP8",
+                    "architecture": "Qwen3_5ForConditionalGeneration",
+                    "pd_supported": False,
+                },
+                "cases": [],
+            }
+            (campaign_a / "report.json").write_text(json.dumps(report_a), encoding="utf-8")
+            (campaign_b / "report.json").write_text(json.dumps(report_b), encoding="utf-8")
+
+            outputs = report_common.write_rollup_reports(tmp_path)
+
+            current_findings_md = Path(outputs["current_findings_md"])
+            rollup_run_index_md = Path(outputs["rollup_run_index_md"])
+            per_model_side_by_side_md = Path(outputs["per_model_side_by_side_md"])
+            self.assertTrue(current_findings_md.is_file())
+            self.assertTrue(rollup_run_index_md.is_file())
+            self.assertTrue(per_model_side_by_side_md.is_file())
+
+            findings_text = current_findings_md.read_text(encoding="utf-8")
+            self.assertIn("Qwen/Qwen3-4B", findings_text)
+            self.assertIn("skipped_unsupported_topology", findings_text)
+
+            side_text = per_model_side_by_side_md.read_text(encoding="utf-8")
+            self.assertIn("requests_per_sec", side_text)
+            self.assertIn("Qwen/Qwen3-4B", side_text)
 
 
 if __name__ == "__main__":
