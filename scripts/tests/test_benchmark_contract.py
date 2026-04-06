@@ -99,6 +99,7 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             arrival_pattern="prompt_burst_serial_runs",
             concurrency_policy={"driver": "cli", "max_num_seqs": 1},
             cache_pressure_profile="unspecified",
+            equivalence_group="fixed_prompt_burst_bridge",
             topology_overlay="tp2",
             transport_mode="socket_vs_myelon_process_runner",
             run_class="quickpass",
@@ -108,6 +109,7 @@ class BenchmarkContractHelperTests(unittest.TestCase):
         self.assertEqual(contract["benchmark_family"], "prefill_stress")
         self.assertEqual(contract["benchmark_submode"], "fixed_prompt_burst")
         self.assertEqual(contract["cache_pressure_profile"], "unspecified")
+        self.assertEqual(contract["equivalence_group"], "fixed_prompt_burst_bridge")
         self.assertEqual(contract["run_class"], "quickpass")
         self.assertIn("concurrency_policy", contract)
 
@@ -599,6 +601,10 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 "fixed_prompt_burst",
             )
             self.assertEqual(report["benchmark_contract"]["cache_pressure_profile"], "relaxed")
+            self.assertEqual(
+                report["benchmark_contract"]["equivalence_group"],
+                "fixed_prompt_burst_bridge",
+            )
             self.assertTrue(
                 report["workload_file"].endswith(
                     "synthetic_server_prefill_fixed_prompt_burst.json"
