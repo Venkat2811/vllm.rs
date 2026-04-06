@@ -14,6 +14,11 @@
 | limit_min_tokens        |                                                                                                                         |
 | limit_max_tokens        |                                                                                                                         |
 | topology_overlay        | tp2                                                                                                                     |
+| tp_scale_overlay        | tp2                                                                                                                     |
+| prefill_tp_size         | 2                                                                                                                       |
+| decode_tp_size          | 2                                                                                                                       |
+| pd_enabled              | False                                                                                                                   |
+| pd_role_layout          |                                                                                                                         |
 | transport_mode          | socket_vs_myelon_process_runner                                                                                         |
 | build_features          |                                                                                                                         |
 | effective_device_ids    |                                                                                                                         |
