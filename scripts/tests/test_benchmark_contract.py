@@ -264,6 +264,11 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             cache_pressure_profile="unspecified",
             equivalence_group="fixed_prompt_burst_bridge",
             topology_overlay="tp2",
+            tp_scale_overlay="tp2",
+            prefill_tp_size=2,
+            decode_tp_size=2,
+            pd_enabled=False,
+            pd_role_layout=None,
             transport_mode="socket_vs_myelon_process_runner",
             run_class="quickpass",
             stop_point="full_completion",
@@ -274,6 +279,10 @@ class BenchmarkContractHelperTests(unittest.TestCase):
         self.assertEqual(contract["cache_pressure_profile"], "unspecified")
         self.assertEqual(contract["equivalence_group"], "fixed_prompt_burst_bridge")
         self.assertEqual(contract["run_class"], "quickpass")
+        self.assertEqual(contract["tp_scale_overlay"], "tp2")
+        self.assertEqual(contract["prefill_tp_size"], 2)
+        self.assertEqual(contract["decode_tp_size"], 2)
+        self.assertFalse(contract["pd_enabled"])
         self.assertIn("concurrency_policy", contract)
 
     def test_resolve_cache_pressure_profile_detects_hard_thrash(self) -> None:
@@ -612,6 +621,9 @@ class BenchmarkContractHelperTests(unittest.TestCase):
         )
         rows = report_common.build_run_index_rows(report, Path("/tmp/report.json"))
         self.assertEqual(rows[0]["result_boundary"], "benchmark_complete")
+        self.assertEqual(rows[0]["tp_scale_overlay"], "tp2")
+        self.assertEqual(rows[0]["prefill_tp_size"], 2)
+        self.assertEqual(rows[0]["decode_tp_size"], 2)
 
     def test_normalize_report_backfills_observed_cache_pressure_from_server_log(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -874,6 +886,10 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["benchmark_contract"]["benchmark_family"], "prefill_stress")
             self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "fixed_prompt_burst")
             self.assertEqual(report["benchmark_contract"]["topology_overlay"], "tp2")
+            self.assertEqual(report["benchmark_contract"]["tp_scale_overlay"], "tp2")
+            self.assertEqual(report["benchmark_contract"]["prefill_tp_size"], 2)
+            self.assertEqual(report["benchmark_contract"]["decode_tp_size"], 2)
+            self.assertFalse(report["benchmark_contract"]["pd_enabled"])
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
             self.assertEqual(report["benchmark_contract"]["stop_point"], "full_completion")
             self.assertEqual(
@@ -1117,6 +1133,10 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["benchmark_contract"]["benchmark_family"], "serving_qos")
             self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "warm_steady_state")
             self.assertEqual(report["benchmark_contract"]["cache_pressure_profile"], "relaxed")
+            self.assertEqual(report["benchmark_contract"]["tp_scale_overlay"], "tp1")
+            self.assertEqual(report["benchmark_contract"]["prefill_tp_size"], 1)
+            self.assertEqual(report["benchmark_contract"]["decode_tp_size"], 1)
+            self.assertFalse(report["benchmark_contract"]["pd_enabled"])
             self.assertEqual(
                 report["benchmark_contract"]["transport_mode"],
                 "socket_vs_myelon_process_runner",
@@ -2114,6 +2134,11 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             report = json.loads(report_path.read_text(encoding="utf-8"))
             self.assertEqual(report["benchmark_contract"]["benchmark_family"], "pd_qos")
             self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "first_transfer_control")
+            self.assertEqual(report["benchmark_contract"]["tp_scale_overlay"], "pd(tp1/tp1)")
+            self.assertEqual(report["benchmark_contract"]["prefill_tp_size"], 1)
+            self.assertEqual(report["benchmark_contract"]["decode_tp_size"], 1)
+            self.assertTrue(report["benchmark_contract"]["pd_enabled"])
+            self.assertEqual(report["benchmark_contract"]["pd_role_layout"], "same_host_split_roles")
             self.assertEqual(report["benchmark_contract"]["transport_mode"], "pd_localipc_default")
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
             self.assertEqual(report["status"], "completed")
