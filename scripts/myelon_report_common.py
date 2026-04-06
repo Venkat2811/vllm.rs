@@ -1951,6 +1951,9 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
     reports_dir = campaign_root / "reports" / "benchmarks"
     by_family_root = reports_dir / "by_family"
     by_equivalence_root = reports_dir / "by_equivalence"
+    by_workload_root = reports_dir / "by_workload"
+    by_topology_root = reports_dir / "by_topology"
+    by_run_class_root = reports_dir / "by_run_class"
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     current_findings_csv = reports_dir / "current_findings.csv"
@@ -2331,25 +2334,54 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         command_lines.append("No retained report.json files were found.")
     all_run_commands_md.write_text("\n".join(command_lines) + "\n", encoding="utf-8")
 
-    family_groups: dict[str, list[dict[str, object]]] = {}
-    family_detail_groups: dict[str, list[dict[str, object]]] = {}
-    for row in findings_rows:
-        family_key = str(row.get("benchmark_family") or "unspecified")
-        family_groups.setdefault(family_key, []).append(row)
-    for row in detailed_rows:
-        family_key = str(row.get("benchmark_family") or "unspecified")
-        family_detail_groups.setdefault(family_key, []).append(row)
-    for family_key, grouped_findings in family_groups.items():
-        _write_grouped_report_bundle(
-            group_root=by_family_root / _slugify(family_key),
-            title=f"Benchmark Family: {family_key}",
-            identity_key="benchmark_family",
-            identity_value=family_key,
-            findings_rows=grouped_findings,
-            findings_fields=findings_fields,
-            detailed_rows=family_detail_groups.get(family_key, []),
-            detailed_fields=detailed_fields,
-        )
+    grouping_specs = [
+        {
+            "root": by_family_root,
+            "field": "benchmark_family",
+            "title_prefix": "Benchmark Family",
+            "findings_stem": "findings",
+        },
+        {
+            "root": by_workload_root,
+            "field": "workload_class",
+            "title_prefix": "Workload Class",
+            "findings_stem": "findings",
+        },
+        {
+            "root": by_topology_root,
+            "field": "topology_overlay",
+            "title_prefix": "Topology Overlay",
+            "findings_stem": "findings",
+        },
+        {
+            "root": by_run_class_root,
+            "field": "run_class",
+            "title_prefix": "Run Class",
+            "findings_stem": "findings",
+        },
+    ]
+    for spec in grouping_specs:
+        field = spec["field"]
+        grouped_findings: dict[str, list[dict[str, object]]] = {}
+        grouped_details: dict[str, list[dict[str, object]]] = {}
+        for row in findings_rows:
+            group_key = str(row.get(field) or "unspecified")
+            grouped_findings.setdefault(group_key, []).append(row)
+        for row in detailed_rows:
+            group_key = str(row.get(field) or "unspecified")
+            grouped_details.setdefault(group_key, []).append(row)
+        for group_key, rows in grouped_findings.items():
+            _write_grouped_report_bundle(
+                group_root=spec["root"] / _slugify(group_key),
+                title=f"{spec['title_prefix']}: {group_key}",
+                identity_key=field,
+                identity_value=group_key,
+                findings_rows=rows,
+                findings_fields=findings_fields,
+                detailed_rows=grouped_details.get(group_key, []),
+                detailed_fields=detailed_fields,
+                findings_stem=spec["findings_stem"],
+            )
 
     equivalence_groups: dict[str, list[dict[str, object]]] = {}
     equivalence_detail_groups: dict[str, list[dict[str, object]]] = {}
@@ -2387,4 +2419,7 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         "all_run_commands_md": str(all_run_commands_md),
         "by_family_root": str(by_family_root),
         "by_equivalence_root": str(by_equivalence_root),
+        "by_workload_root": str(by_workload_root),
+        "by_topology_root": str(by_topology_root),
+        "by_run_class_root": str(by_run_class_root),
     }
