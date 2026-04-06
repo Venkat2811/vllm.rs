@@ -2773,6 +2773,12 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                                 "latency_ms": {"mean": 1500.0},
                             },
                         },
+                        "observed_server_path_attribution": {
+                            "observed_prefill_tps_mean": 520.0,
+                            "observed_prompt_tps_mean": 510.0,
+                            "observed_prefill_roundtrip_ms_mean": 480.0,
+                            "observed_ingress_to_emit_ms_mean": 620.0,
+                        },
                     },
                     {
                         "label": "myelon",
@@ -2788,6 +2794,12 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                                 "tpot_ms": {"mean": 9.5},
                                 "latency_ms": {"mean": 1400.0},
                             },
+                        },
+                        "observed_server_path_attribution": {
+                            "observed_prefill_tps_mean": 690.0,
+                            "observed_prompt_tps_mean": 680.0,
+                            "observed_prefill_roundtrip_ms_mean": 310.0,
+                            "observed_ingress_to_emit_ms_mean": 470.0,
                         },
                     },
                 ],
@@ -2831,8 +2843,12 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("Strongest Requests/sec Gains", high_level_text)
             self.assertIn("Strongest Prompt Throughput Gains", high_level_text)
             self.assertIn("Strongest First-Prefill Wins", high_level_text)
+            self.assertIn("Strongest Prefill-Roundtrip Wins", high_level_text)
             self.assertIn("Qwen/Qwen3-30B-A3B", high_level_text)
             self.assertIn("Incomplete / Unsupported", high_level_text)
+            self.assertNotIn("No prompt-throughput deltas were available.", high_level_text)
+            self.assertIn("680", high_level_text)
+            self.assertIn("310", high_level_text)
 
             side_text = per_model_side_by_side_md.read_text(encoding="utf-8")
             self.assertIn("requests_per_sec", side_text)
