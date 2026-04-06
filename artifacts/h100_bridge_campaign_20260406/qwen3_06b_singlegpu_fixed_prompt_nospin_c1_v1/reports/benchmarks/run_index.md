@@ -26,6 +26,7 @@
 | cpu_mem_fold            | 0.5                                                                                                                                     |
 | run_class               | fullpass                                                                                                                                |
 | status                  | completed                                                                                                                               |
+| result_boundary         | benchmark_complete                                                                                                                      |
 | expected_case_count     | 2                                                                                                                                       |
 | observed_case_count     | 2                                                                                                                                       |
 | stop_point              | full_completion                                                                                                                         |
