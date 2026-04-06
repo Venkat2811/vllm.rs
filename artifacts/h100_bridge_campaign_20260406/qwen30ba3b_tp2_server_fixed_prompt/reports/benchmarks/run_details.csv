@@ -1,2 +1,2 @@
-benchmark_exit_code,case_status,execution_variant,label,skip_reason,stop_point
-,runtime_error_boundary,runner,runner,,runtime_error_boundary
+benchmark_exit_code,case_status,execution_variant,label,latency_ms_mean,requests_per_sec,result_boundary,runtime_sec,skip_reason,stop_point,tpot_ms_mean,ttft_ms_mean
+,runtime_error_boundary,runner,runner,,,runtime_limited,,,runtime_error_boundary,,

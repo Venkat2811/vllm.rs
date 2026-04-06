@@ -35,6 +35,21 @@ SCHEDULER_KVCACHE_RE = re.compile(
     r"GPU Kvcache: .* used ([0-9.]+)% \(([0-9.]+)GB/([0-9.]+)GB\); CPU swap used ([0-9.]+)% \(([0-9.]+)GB/([0-9.]+)GB\)"
 )
 PREFIX_CACHE_ENABLED_RE = re.compile(r"Prefix cache enabled: (\d+) blocks \((\d+) tokens\)\.")
+PREFIX_CACHE_HIT_RE = re.compile(
+    r"Prefix cache hit seq \d+ \((\d+) cached tokens, (\d+) blocks\)"
+)
+PREFILL_EVENT_RE = re.compile(
+    r"Prefilling \[seq_id \d+\]: (\d+) tokens in ([0-9.]+)s \(([0-9.]+) tokens/s(?:, cache included)?\)"
+)
+PROMPT_METRIC_RE = re.compile(
+    r"\[Seq \d+\].*Prompt: (\d+) tokens in ([0-9.]+)s \(([0-9.]+) t/s\)"
+)
+DECODE_METRIC_RE = re.compile(
+    r"\[Seq \d+\].*Decoded: (\d+) tokens in ([0-9.]+)s \(([0-9.]+) t/s\)"
+)
+SWAP_OUT_ATTEMPT_RE = re.compile(r"Trying to swap out preempt Seq \d+")
+DROPPED_REQUEST_RE = re.compile(r"drop the oldest active request")
+STREAM_GENERATION_FAILED_RE = re.compile(r"Stream generation failed")
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -367,6 +382,72 @@ def build_case_rows(report: dict[str, object]) -> list[dict[str, object]]:
             row["observed_request_rejections"] = observed_benchmark_outcome.get(
                 "observed_request_rejections"
             )
+        observed_server_path_attribution = (
+            case.get("observed_server_path_attribution")
+            if isinstance(case, dict)
+            else None
+        )
+        if isinstance(observed_server_path_attribution, dict):
+            row["observed_prefill_event_count"] = observed_server_path_attribution.get(
+                "observed_prefill_event_count"
+            )
+            row["observed_prefill_tokens_total"] = observed_server_path_attribution.get(
+                "observed_prefill_tokens_total"
+            )
+            row["observed_prefill_seconds_total"] = observed_server_path_attribution.get(
+                "observed_prefill_seconds_total"
+            )
+            row["observed_prefill_seconds_mean"] = observed_server_path_attribution.get(
+                "observed_prefill_seconds_mean"
+            )
+            row["observed_prefill_tps_mean"] = observed_server_path_attribution.get(
+                "observed_prefill_tps_mean"
+            )
+            row["observed_prompt_metric_event_count"] = observed_server_path_attribution.get(
+                "observed_prompt_metric_event_count"
+            )
+            row["observed_prompt_tokens_total"] = observed_server_path_attribution.get(
+                "observed_prompt_tokens_total"
+            )
+            row["observed_prompt_seconds_total"] = observed_server_path_attribution.get(
+                "observed_prompt_seconds_total"
+            )
+            row["observed_prompt_seconds_mean"] = observed_server_path_attribution.get(
+                "observed_prompt_seconds_mean"
+            )
+            row["observed_prompt_tps_mean"] = observed_server_path_attribution.get(
+                "observed_prompt_tps_mean"
+            )
+            row["observed_decode_metric_event_count"] = observed_server_path_attribution.get(
+                "observed_decode_metric_event_count"
+            )
+            row["observed_decode_tokens_total"] = observed_server_path_attribution.get(
+                "observed_decode_tokens_total"
+            )
+            row["observed_decode_seconds_total"] = observed_server_path_attribution.get(
+                "observed_decode_seconds_total"
+            )
+            row["observed_decode_seconds_mean"] = observed_server_path_attribution.get(
+                "observed_decode_seconds_mean"
+            )
+            row["observed_decode_tps_mean"] = observed_server_path_attribution.get(
+                "observed_decode_tps_mean"
+            )
+            row["observed_prefix_cache_hit_count"] = observed_server_path_attribution.get(
+                "observed_prefix_cache_hit_count"
+            )
+            row["observed_prefix_cache_hit_tokens_total"] = observed_server_path_attribution.get(
+                "observed_prefix_cache_hit_tokens_total"
+            )
+            row["observed_swap_out_attempt_count"] = observed_server_path_attribution.get(
+                "observed_swap_out_attempt_count"
+            )
+            row["observed_dropped_request_count"] = observed_server_path_attribution.get(
+                "observed_dropped_request_count"
+            )
+            row["observed_stream_generation_failed_count"] = observed_server_path_attribution.get(
+                "observed_stream_generation_failed_count"
+            )
         rows.append(row)
     return rows
 
@@ -512,7 +593,10 @@ def infer_report_status(report: dict[str, object]) -> str:
     if isinstance(expected_case_count, int) and observed_case_count < expected_case_count:
         return "partial"
     existing = report.get("status")
-    if isinstance(existing, str) and existing.strip() and existing != "completed":
+    if isinstance(existing, str) and existing.strip() and existing not in {
+        "completed",
+        "partial",
+    }:
         return existing
     contract = report.get("benchmark_contract", {})
     if isinstance(contract, dict) and contract.get("skip_reason"):
@@ -817,6 +901,132 @@ def _backfill_case_benchmark_outcome_from_benchmark_log(case: dict[str, object])
     }
 
 
+def _summarize_triplet_matches(
+    matches: list[tuple[str, str, str]],
+) -> dict[str, float | int] | None:
+    if not matches:
+        return None
+
+    tokens = [int(token_count) for token_count, _, _ in matches]
+    seconds = [float(seconds_value) for _, seconds_value, _ in matches]
+    rates = [float(rate_value) for _, _, rate_value in matches]
+    return {
+        "count": len(matches),
+        "tokens_total": sum(tokens),
+        "seconds_total": round(sum(seconds), 3),
+        "seconds_mean": round(sum(seconds) / len(seconds), 3),
+        "tokens_per_second_mean": round(sum(rates) / len(rates), 3),
+    }
+
+
+def _backfill_case_server_path_attribution(case: dict[str, object]) -> None:
+    existing = case.get("observed_server_path_attribution")
+    if isinstance(existing, dict) and existing:
+        return
+
+    server_log_path = case.get("server_log_path")
+    if not isinstance(server_log_path, str) or not server_log_path:
+        return
+
+    path = Path(server_log_path)
+    if not path.is_file():
+        return
+
+    text = path.read_text(encoding="utf-8", errors="replace")
+    prefill_matches = PREFILL_EVENT_RE.findall(text)
+    prompt_matches = PROMPT_METRIC_RE.findall(text)
+    decode_matches = DECODE_METRIC_RE.findall(text)
+    prefix_cache_hit_matches = PREFIX_CACHE_HIT_RE.findall(text)
+    swap_out_attempt_count = len(SWAP_OUT_ATTEMPT_RE.findall(text))
+    dropped_request_count = len(DROPPED_REQUEST_RE.findall(text))
+    stream_generation_failed_count = len(STREAM_GENERATION_FAILED_RE.findall(text))
+
+    if not any(
+        (
+            prefill_matches,
+            prompt_matches,
+            decode_matches,
+            prefix_cache_hit_matches,
+            swap_out_attempt_count,
+            dropped_request_count,
+            stream_generation_failed_count,
+        )
+    ):
+        return
+
+    attribution: dict[str, float | int] = {
+        "observed_swap_out_attempt_count": swap_out_attempt_count,
+        "observed_dropped_request_count": dropped_request_count,
+        "observed_stream_generation_failed_count": stream_generation_failed_count,
+        "observed_prefix_cache_hit_count": len(prefix_cache_hit_matches),
+        "observed_prefix_cache_hit_tokens_total": sum(
+            int(token_count) for token_count, _ in prefix_cache_hit_matches
+        ),
+    }
+
+    prefill_summary = _summarize_triplet_matches(prefill_matches)
+    if prefill_summary is not None:
+        attribution.update(
+            {
+                "observed_prefill_event_count": prefill_summary["count"],
+                "observed_prefill_tokens_total": prefill_summary["tokens_total"],
+                "observed_prefill_seconds_total": prefill_summary["seconds_total"],
+                "observed_prefill_seconds_mean": prefill_summary["seconds_mean"],
+                "observed_prefill_tps_mean": prefill_summary[
+                    "tokens_per_second_mean"
+                ],
+            }
+        )
+
+    prompt_summary = _summarize_triplet_matches(prompt_matches)
+    if prompt_summary is not None:
+        attribution.update(
+            {
+                "observed_prompt_metric_event_count": prompt_summary["count"],
+                "observed_prompt_tokens_total": prompt_summary["tokens_total"],
+                "observed_prompt_seconds_total": prompt_summary["seconds_total"],
+                "observed_prompt_seconds_mean": prompt_summary["seconds_mean"],
+                "observed_prompt_tps_mean": prompt_summary[
+                    "tokens_per_second_mean"
+                ],
+            }
+        )
+
+    decode_summary = _summarize_triplet_matches(decode_matches)
+    if decode_summary is not None:
+        attribution.update(
+            {
+                "observed_decode_metric_event_count": decode_summary["count"],
+                "observed_decode_tokens_total": decode_summary["tokens_total"],
+                "observed_decode_seconds_total": decode_summary["seconds_total"],
+                "observed_decode_seconds_mean": decode_summary["seconds_mean"],
+                "observed_decode_tps_mean": decode_summary[
+                    "tokens_per_second_mean"
+                ],
+            }
+        )
+
+    case["observed_server_path_attribution"] = attribution
+
+
+def _merge_case_observed_fields_into_summary(case: dict[str, object]) -> None:
+    summary = case.get("summary")
+    if not isinstance(summary, dict):
+        return
+
+    observed_cache_pressure = case.get("observed_cache_pressure")
+    if isinstance(observed_cache_pressure, dict):
+        summary["observed_cache_pressure"] = observed_cache_pressure
+
+    observed_benchmark_outcome = case.get("observed_benchmark_outcome")
+    if isinstance(observed_benchmark_outcome, dict):
+        summary["observed_benchmark_outcome"] = observed_benchmark_outcome
+
+    observed_server_path_attribution = case.get("observed_server_path_attribution")
+    if isinstance(observed_server_path_attribution, dict):
+        summary["observed_server_path_attribution"] = observed_server_path_attribution
+
+
 def _backfill_case_observed_cache_pressure(
     case: dict[str, object],
     default_requested_profile: str | None = None,
@@ -966,6 +1176,8 @@ def normalize_report(report: dict[str, object]) -> dict[str, object]:
             _backfill_case_summary_from_benchmark_log(case)
             _backfill_case_observed_cache_pressure(case, default_requested_profile)
             _backfill_case_benchmark_outcome_from_benchmark_log(case)
+            _backfill_case_server_path_attribution(case)
+            _merge_case_observed_fields_into_summary(case)
     normalized["benchmark_contract"] = contract
     normalized["machine_profile"] = infer_machine_profile(report)
     normalized["model_capability"] = infer_model_capability(report)
@@ -1013,6 +1225,19 @@ def build_side_by_side_rows(report: dict[str, object]) -> list[dict[str, object]
         "observed_prefix_cache_miss_count",
         "observed_prefix_cache_insert_count",
         "observed_prefix_cache_eviction_count",
+        "observed_prefill_event_count",
+        "observed_prefill_seconds_total",
+        "observed_prefill_tps_mean",
+        "observed_prompt_metric_event_count",
+        "observed_prompt_seconds_total",
+        "observed_prompt_tps_mean",
+        "observed_decode_metric_event_count",
+        "observed_decode_seconds_total",
+        "observed_decode_tps_mean",
+        "observed_prefix_cache_hit_count",
+        "observed_swap_out_attempt_count",
+        "observed_dropped_request_count",
+        "observed_stream_generation_failed_count",
         "observed_successful_requests_total",
         "observed_failed_requests_total",
         "observed_clients_with_failures",

@@ -1,6 +1,33 @@
 # Per-Variant Side By Side
 
-| baseline_variant   | myelon_variant   | metric           |   baseline_value |   myelon_value |   delta_percent | baseline_status   | myelon_status   |
-|--------------------|------------------|------------------|------------------|----------------|-----------------|-------------------|-----------------|
-| runner             | myelon           | requests_per_sec |            1.256 |          1.27  |          1.1146 | completed         | completed       |
-| runner             | myelon           | runtime_sec      |           25.472 |         25.203 |         -1.0561 | completed         | completed       |
+| baseline_variant   | myelon_variant   | metric                                  |   baseline_value |   myelon_value |   delta_percent | baseline_status   | myelon_status   |
+|--------------------|------------------|-----------------------------------------|------------------|----------------|-----------------|-------------------|-----------------|
+| runner             | myelon           | requests_per_sec                        |            1.256 |          1.27  |          1.1146 | completed         | completed       |
+| runner             | myelon           | runtime_sec                             |           25.472 |         25.203 |         -1.0561 | completed         | completed       |
+| runner             | myelon           | ttft_ms_mean                            |          703.48  |        696.24  |         -1.0292 | completed         | completed       |
+| runner             | myelon           | tpot_ms_mean                            |           12.25  |         12.08  |         -1.3878 | completed         | completed       |
+| runner             | myelon           | latency_ms_mean                         |          789.25  |        780.79  |         -1.0719 | completed         | completed       |
+| runner             | myelon           | planned_max_seqs                        |            8     |          8     |          0      | completed         | completed       |
+| runner             | myelon           | planned_usable_kvcache_tokens           |       371136     |     371136     |          0      | completed         | completed       |
+| runner             | myelon           | observed_gpu_kv_usage_percent_max       |            1.1   |          1.1   |          0      | completed         | completed       |
+| runner             | myelon           | observed_cpu_swap_usage_percent_max     |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_prefix_cache_miss_count        |           32     |         32     |          0      | completed         | completed       |
+| runner             | myelon           | observed_prefix_cache_insert_count      |           32     |         32     |          0      | completed         | completed       |
+| runner             | myelon           | observed_prefix_cache_eviction_count    |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_prefill_event_count            |           32     |         32     |          0      | completed         | completed       |
+| runner             | myelon           | observed_prefill_seconds_total          |           22.2   |         22.09  |         -0.4955 | completed         | completed       |
+| runner             | myelon           | observed_prefill_tps_mean               |         2267.45  |       2267.11  |         -0.0146 | completed         | completed       |
+| runner             | myelon           | observed_prompt_metric_event_count      |           32     |         32     |          0      | completed         | completed       |
+| runner             | myelon           | observed_prompt_seconds_total           |           22.2   |         22.09  |         -0.4955 | completed         | completed       |
+| runner             | myelon           | observed_prompt_tps_mean                |         2265.59  |       2265.27  |         -0.0142 | completed         | completed       |
+| runner             | myelon           | observed_decode_metric_event_count      |           32     |         32     |          0      | completed         | completed       |
+| runner             | myelon           | observed_decode_seconds_total           |            2.89  |          2.66  |         -7.9585 | completed         | completed       |
+| runner             | myelon           | observed_decode_tps_mean                |           93.173 |         94.624 |          1.5573 | completed         | completed       |
+| runner             | myelon           | observed_prefix_cache_hit_count         |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_swap_out_attempt_count         |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_dropped_request_count          |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_stream_generation_failed_count |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_successful_requests_total      |           32     |         32     |          0      | completed         | completed       |
+| runner             | myelon           | observed_failed_requests_total          |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_clients_with_failures          |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_http_422_rejection_count       |            0     |          0     |                 | completed         | completed       |

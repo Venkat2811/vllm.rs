@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from myelon_report_common import write_report_bundle
+from myelon_report_common import normalize_report, write_report_bundle
 from myelon_validation_common import (
     build_benchmark_contract,
     build_machine_profile,
@@ -414,6 +414,7 @@ def main() -> int:
             repo_root=repo_root,
             capture_raw_system=capture_raw_system,
         )
+        report = normalize_report(report)
         report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
         print(report_path)
         return 0
@@ -427,6 +428,7 @@ def main() -> int:
             repo_root=repo_root,
             capture_raw_system=capture_raw_system,
         )
+        report = normalize_report(report)
         report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
         print(report_path)
         return 0
@@ -440,6 +442,7 @@ def main() -> int:
             repo_root=repo_root,
             capture_raw_system=capture_raw_system,
         )
+        report = normalize_report(report)
         report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
         print(report_path)
         return 0
@@ -702,6 +705,7 @@ def main() -> int:
             repo_root=repo_root,
             capture_raw_system=capture_raw_system,
         )
+        report = normalize_report(report)
         report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
     print(report_path)
