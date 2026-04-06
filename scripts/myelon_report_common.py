@@ -312,6 +312,83 @@ def build_transport_settings(report: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _select_baseline_and_myelon_case_rows(
+    case_rows: list[dict[str, object]],
+) -> tuple[dict[str, object] | None, dict[str, object] | None]:
+    baseline_case = next(
+        (
+            row
+            for row in case_rows
+            if "myelon" not in str(row.get("execution_variant", "")).lower()
+        ),
+        None,
+    )
+    myelon_case = next(
+        (
+            row
+            for row in case_rows
+            if "myelon" in str(row.get("execution_variant", "")).lower()
+        ),
+        None,
+    )
+    return baseline_case, myelon_case
+
+
+def _format_case_pair_field(
+    case_rows: list[dict[str, object]],
+    field_name: str,
+) -> str | None:
+    baseline_case, myelon_case = _select_baseline_and_myelon_case_rows(case_rows)
+    baseline_value = (
+        baseline_case.get(field_name) if isinstance(baseline_case, dict) else None
+    )
+    myelon_value = (
+        myelon_case.get(field_name) if isinstance(myelon_case, dict) else None
+    )
+    if baseline_value in (None, "") and myelon_value in (None, ""):
+        return None
+    return f"{baseline_value or 'none'} -> {myelon_value or 'none'}"
+
+
+def build_transport_settings_profile(report: dict[str, object]) -> str:
+    contract = report.get("benchmark_contract", {})
+    components = [str(contract.get("transport_mode") or "unspecified_transport")]
+    rpc_depth = report.get("myelon_rpc_depth")
+    response_depth = report.get("myelon_response_depth")
+    busy_spin = report.get("myelon_busy_spin")
+    prefix_cache_enabled = report.get("prefix_cache_enabled")
+    prefix_cache_max_tokens = report.get("prefix_cache_max_tokens")
+    kv_fraction = report.get("kv_fraction")
+    cpu_mem_fold = report.get("cpu_mem_fold")
+
+    if rpc_depth is not None:
+        components.append(f"rpc{rpc_depth}")
+    if response_depth is not None:
+        components.append(f"resp{response_depth}")
+    if busy_spin is not None:
+        components.append("busy_spin" if busy_spin else "blocking_wait")
+    if prefix_cache_enabled:
+        if prefix_cache_max_tokens is not None:
+            components.append(f"prefix{prefix_cache_max_tokens}")
+        else:
+            components.append("prefix_on")
+    else:
+        components.append("prefix_off")
+    if kv_fraction is not None:
+        components.append(f"kv{kv_fraction}")
+    if cpu_mem_fold is not None:
+        components.append(f"cpufold{cpu_mem_fold}")
+    return "/".join(components)
+
+
+def build_artifact_class(report: dict[str, object]) -> str:
+    contract = report.get("benchmark_contract", {})
+    run_class = contract.get("run_class") or "unspecified_run_class"
+    result_boundary = report.get("result_boundary") or "unspecified_boundary"
+    stop_point = contract.get("stop_point") or "full_completion"
+    return f"{run_class}/{result_boundary}/{stop_point}"
+
+
 def _classify_skip_boundary(skip_reason: object) -> str | None:
     if not isinstance(skip_reason, str) or not skip_reason.strip():
         return None
@@ -650,6 +727,7 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
     model_capability = report.get("model_capability", {})
     transport_capability = report.get("transport_capability", {})
     concurrency_policy = contract.get("concurrency_policy", {})
+    case_rows = build_case_rows(report)
     gpu_inventory = machine_profile.get("gpu_inventory", [])
     gpu_names = []
     if isinstance(gpu_inventory, list):
@@ -696,15 +774,25 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
             "prefix_cache_max_tokens": report.get("prefix_cache_max_tokens"),
             "kv_fraction": report.get("kv_fraction"),
             "cpu_mem_fold": report.get("cpu_mem_fold"),
+            "transport_settings_profile": build_transport_settings_profile(report),
             "run_class": contract.get("run_class"),
             "status": report.get("status"),
             "result_boundary": report.get("result_boundary"),
+            "artifact_class": build_artifact_class(report),
             "expected_case_count": report.get("expected_case_count"),
             "observed_case_count": len(
                 [case for case in report.get("cases", []) if isinstance(case, dict)]
             ),
             "stop_point": contract.get("stop_point"),
             "skip_reason": contract.get("skip_reason"),
+            "pressure_profile_outcome_pair": _format_case_pair_field(
+                case_rows,
+                "pressure_profile_outcome",
+            ),
+            "observed_cache_pressure_level_pair": _format_case_pair_field(
+                case_rows,
+                "observed_cache_pressure_level",
+            ),
             "transport_supported": transport_capability.get("pd_supported"),
             "transport_skip_reason": transport_capability.get("pd_skip_reason"),
             "host": machine_profile.get("hostname"),
@@ -1595,8 +1683,10 @@ def write_benchmark_reports(
         ("prefix_cache_max_tokens", report.get("prefix_cache_max_tokens")),
         ("kv_fraction", report.get("kv_fraction")),
         ("cpu_mem_fold", report.get("cpu_mem_fold")),
+        ("transport_settings_profile", build_transport_settings_profile(normalized_report)),
         ("run_class", contract.get("run_class")),
         ("result_boundary", normalized_report.get("result_boundary")),
+        ("artifact_class", build_artifact_class(normalized_report)),
         ("stop_point", contract.get("stop_point")),
         ("status", normalized_report.get("status")),
         ("expected_case_count", normalized_report.get("expected_case_count")),
@@ -1683,9 +1773,11 @@ def write_bundle_manifest(
         "pd_enabled": contract.get("pd_enabled"),
         "pd_role_layout": contract.get("pd_role_layout"),
         "transport_mode": contract.get("transport_mode"),
+        "transport_settings_profile": build_transport_settings_profile(normalized_report),
         "run_class": contract.get("run_class"),
         "status": normalized_report.get("status"),
         "result_boundary": normalized_report.get("result_boundary"),
+        "artifact_class": build_artifact_class(normalized_report),
         "stop_point": contract.get("stop_point"),
         "host": machine_profile.get("hostname"),
         "report_json": str(report_path),
@@ -1709,9 +1801,11 @@ def write_bundle_manifest(
         ("pd_enabled", manifest["pd_enabled"]),
         ("pd_role_layout", manifest["pd_role_layout"]),
         ("transport_mode", manifest["transport_mode"]),
+        ("transport_settings_profile", manifest["transport_settings_profile"]),
         ("run_class", manifest["run_class"]),
         ("status", manifest["status"]),
         ("result_boundary", manifest["result_boundary"]),
+        ("artifact_class", manifest["artifact_class"]),
         ("stop_point", manifest["stop_point"]),
         ("host", manifest["host"]),
         ("report_json", manifest["report_json"]),
@@ -1954,6 +2048,9 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
     by_workload_root = reports_dir / "by_workload"
     by_topology_root = reports_dir / "by_topology"
     by_run_class_root = reports_dir / "by_run_class"
+    by_result_boundary_root = reports_dir / "by_result_boundary"
+    by_artifact_class_root = reports_dir / "by_artifact_class"
+    by_pressure_outcome_root = reports_dir / "by_pressure_outcome_pair"
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     current_findings_csv = reports_dir / "current_findings.csv"
@@ -2025,6 +2122,15 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
     for row in findings_rows:
         key = str(row.get("result_boundary"))
         boundary_counts[key] = boundary_counts.get(key, 0) + 1
+    pressure_outcome_pair_counts: dict[str, int] = {}
+    for row in findings_rows:
+        pair_key = row.get("pressure_profile_outcome_pair")
+        if pair_key in (None, ""):
+            continue
+        normalized_key = str(pair_key)
+        pressure_outcome_pair_counts[normalized_key] = (
+            pressure_outcome_pair_counts.get(normalized_key, 0) + 1
+        )
 
     findings_lines = [
         "# Current Findings",
@@ -2060,6 +2166,31 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
             _markdown_table_from_rows(
                 [{"result_boundary": "none", "count": 0}],
                 ["result_boundary", "count"],
+            )
+        )
+    findings_lines.extend(
+        [
+            "",
+            "## Pressure Outcome Pair Counts",
+            "",
+        ]
+    )
+    if pressure_outcome_pair_counts:
+        pressure_pair_rows = [
+            {"pressure_profile_outcome_pair": key, "count": value}
+            for key, value in sorted(pressure_outcome_pair_counts.items())
+        ]
+        findings_lines.append(
+            _markdown_table_from_rows(
+                pressure_pair_rows,
+                ["pressure_profile_outcome_pair", "count"],
+            )
+        )
+    else:
+        findings_lines.append(
+            _markdown_table_from_rows(
+                [{"pressure_profile_outcome_pair": "none", "count": 0}],
+                ["pressure_profile_outcome_pair", "count"],
             )
         )
     findings_lines.extend(
@@ -2124,9 +2255,29 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         f"- completed_runs: `{len(completed_rows)}`",
         f"- incomplete_or_skipped_runs: `{len(incomplete_rows)}`",
         "",
-        "## Strongest Requests/sec Gains",
+        "## Pressure Outcome Pair Counts",
         "",
     ]
+    if pressure_outcome_pair_counts:
+        pressure_pair_rows = [
+            {"pressure_profile_outcome_pair": key, "count": value}
+            for key, value in sorted(pressure_outcome_pair_counts.items())
+        ]
+        summary_lines.append(
+            _markdown_table_from_rows(
+                pressure_pair_rows,
+                ["pressure_profile_outcome_pair", "count"],
+            )
+        )
+    else:
+        summary_lines.append("No pressure-outcome pair data was available.")
+    summary_lines.extend(
+        [
+            "",
+        "## Strongest Requests/sec Gains",
+        "",
+        ]
+    )
     summary_fields = [
         "model_label",
         "benchmark_family",
@@ -2309,6 +2460,8 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
                     "",
                     f"- report_json: `{report_path}`",
                     f"- status: `{run_index_row.get('status')}`",
+                    f"- artifact_class: `{run_index_row.get('artifact_class')}`",
+                    f"- transport_settings_profile: `{run_index_row.get('transport_settings_profile')}`",
                     "",
                 ]
             )
@@ -2357,6 +2510,24 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
             "root": by_run_class_root,
             "field": "run_class",
             "title_prefix": "Run Class",
+            "findings_stem": "findings",
+        },
+        {
+            "root": by_result_boundary_root,
+            "field": "result_boundary",
+            "title_prefix": "Result Boundary",
+            "findings_stem": "findings",
+        },
+        {
+            "root": by_artifact_class_root,
+            "field": "artifact_class",
+            "title_prefix": "Artifact Class",
+            "findings_stem": "findings",
+        },
+        {
+            "root": by_pressure_outcome_root,
+            "field": "pressure_profile_outcome_pair",
+            "title_prefix": "Pressure Outcome Pair",
             "findings_stem": "findings",
         },
     ]
@@ -2422,4 +2593,7 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         "by_workload_root": str(by_workload_root),
         "by_topology_root": str(by_topology_root),
         "by_run_class_root": str(by_run_class_root),
+        "by_result_boundary_root": str(by_result_boundary_root),
+        "by_artifact_class_root": str(by_artifact_class_root),
+        "by_pressure_outcome_root": str(by_pressure_outcome_root),
     }

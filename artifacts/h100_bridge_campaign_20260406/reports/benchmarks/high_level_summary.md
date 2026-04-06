@@ -1,9 +1,22 @@
 # High-Level Summary
 
 - campaign_root: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406`
-- reports_found: `36`
-- completed_runs: `32`
+- reports_found: `38`
+- completed_runs: `34`
 - incomplete_or_skipped_runs: `4`
+
+## Pressure Outcome Pair Counts
+
+| pressure_profile_outcome_pair                                          |   count |
+|------------------------------------------------------------------------|---------|
+| requested_prefix_control_observed -> requested_prefix_control_observed |       6 |
+| requested_relaxed_exceeded -> requested_relaxed_exceeded               |       3 |
+| requested_relaxed_observed -> requested_relaxed_observed               |      16 |
+| requested_swap_not_observed -> none                                    |       1 |
+| requested_swap_not_observed -> requested_swap_not_observed             |       1 |
+| requested_thrash_not_observed -> none                                  |       1 |
+| requested_thrash_not_observed -> requested_thrash_not_observed         |       5 |
+| requested_thrash_observed -> requested_thrash_observed                 |       4 |
 
 ## Strongest Requests/sec Gains
 
@@ -42,7 +55,8 @@
 | Qwen/Qwen3-4B      | server_prefill_stress | shared_prefix_round_robin_control | tp2                |                             -12.4713 |                              4603.23 |                            4029.14 | requested_prefix_control_observed   | requested_prefix_control_observed |
 | Qwen/Qwen3-30B-A3B | server_prefill_stress | low_decode                        | tp2                |                              -9.513  |                             21934.8  |                           19848.2  | requested_relaxed_exceeded          | requested_relaxed_exceeded        |
 | Qwen/Qwen3-4B      | server_prefill_stress | low_decode                        | tp2                |                              -1.8813 |                              7779.18 |                            7632.83 | requested_relaxed_exceeded          | requested_relaxed_exceeded        |
-| Qwen/Qwen3-4B      | server_prefill_stress | cache_thrash_round_robin          | tp2                |                               2.8545 |                              3478.05 |                            3577.33 | requested_thrash_observed           | requested_thrash_observed         |
+| Qwen/Qwen3-30B-A3B | server_prefill_stress | fixed_prompt_burst                | tp2                |                              -0.4878 |                             66850.6  |                           66524.5  | requested_relaxed_exceeded          | requested_relaxed_exceeded        |
+| Qwen/Qwen3-30B-A3B | server_prefill_stress | fixed_prompt_burst                | tp2                |                              -0.411  |                              5926.97 |                            5902.61 | requested_relaxed_observed          | requested_relaxed_observed        |
 
 ## Strongest First-Prefill Wins
 
