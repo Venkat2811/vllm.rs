@@ -61,13 +61,26 @@ pub static GLOBAL_RT: Lazy<Runtime> = Lazy::new(|| {
         .expect("Failed to build global Tokio runtime")
 });
 
+fn current_time_ms() -> usize {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_millis() as usize
+}
+
 #[derive(Debug, Clone)]
 pub enum StreamItem {
+    PhaseTrace(ServerPathTrace),
     Token(String, u32), //streaming: (text, token_id)
     TokenID(u32),       //completion
     Completion((usize, usize, usize, Vec<u32>, Option<String>)), //completion
     Done((usize, usize, usize, usize, Option<String>)), //streaming end
     Error(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct ServerPathTrace {
+    pub first_token_emitted_at_ms: usize,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -92,6 +105,8 @@ pub struct LLMEngine {
     request_types: HashMap<usize, RequestType>,
     decode_start_times: HashMap<usize, usize>,
     decode_length: HashMap<usize, usize>,
+    first_prefill_dispatch_times: HashMap<usize, usize>,
+    first_prefill_response_times: HashMap<usize, usize>,
     seq_prefilled_reasoning_end: HashMap<usize, String>,
     seq_prompt_replays: HashMap<usize, Vec<u32>>,
     last_check_throughput_time: usize,
@@ -509,6 +524,8 @@ impl LLMEngine {
             request_types: HashMap::new(),
             decode_start_times: HashMap::new(),
             decode_length: HashMap::new(),
+            first_prefill_dispatch_times: HashMap::new(),
+            first_prefill_response_times: HashMap::new(),
             seq_prefilled_reasoning_end: HashMap::new(),
             seq_prompt_replays: HashMap::new(),
             last_check_throughput_time: 0,
@@ -816,6 +833,19 @@ impl LLMEngine {
 
             // Get immutable references to scheduled sequences for model_runner
             let seqs = self.scheduler.get_sequences(&scheduled_ids);
+            let prefill_dispatch_started_ms = if is_prefill {
+                let now = current_time_ms();
+                for seq in &seqs {
+                    if !self.decode_start_times.contains_key(&seq.id)
+                        && !self.first_prefill_dispatch_times.contains_key(&seq.id)
+                    {
+                        self.first_prefill_dispatch_times.insert(seq.id, now);
+                    }
+                }
+                Some(now)
+            } else {
+                None
+            };
             #[cfg(feature = "myelon")]
             let output_ids = match &mut *self.runners.write() {
                 RunnerType::Thread(model_runner) => {
@@ -882,6 +912,16 @@ impl LLMEngine {
                     }
                 }
             };
+            #[cfg(feature = "myelon")]
+            if let Some(response_ms) = prefill_dispatch_started_ms.map(|_| current_time_ms()) {
+                for seq in &seqs {
+                    if self.first_prefill_dispatch_times.contains_key(&seq.id)
+                        && !self.first_prefill_response_times.contains_key(&seq.id)
+                    {
+                        self.first_prefill_response_times.insert(seq.id, response_ms);
+                    }
+                }
+            }
             #[cfg(not(feature = "myelon"))]
             let output_ids = match &mut *self.runners.write() {
                 RunnerType::Thread(model_runner) => {
@@ -936,6 +976,16 @@ impl LLMEngine {
                     }
                 }
             };
+            #[cfg(not(feature = "myelon"))]
+            if let Some(response_ms) = prefill_dispatch_started_ms.map(|_| current_time_ms()) {
+                for seq in &seqs {
+                    if self.first_prefill_dispatch_times.contains_key(&seq.id)
+                        && !self.first_prefill_response_times.contains_key(&seq.id)
+                    {
+                        self.first_prefill_response_times.insert(seq.id, response_ms);
+                    }
+                }
+            }
             // Postprocess sequences by modifying them inside the scheduler
             if is_prefill {
                 let (indices, finished_indices) =
@@ -1030,6 +1080,8 @@ impl LLMEngine {
                         self.active_requests.remove(&seq_id);
                     }
                     self.decode_start_times.remove(&seq_id);
+                    self.first_prefill_dispatch_times.remove(&seq_id);
+                    self.first_prefill_response_times.remove(&seq_id);
                     self.decode_length.remove(&seq_id);
                     self.seq_prefilled_reasoning_end.remove(&seq_id);
                     self.seq_prompt_replays.remove(&seq_id);
@@ -1039,10 +1091,7 @@ impl LLMEngine {
                     }
                 } else {
                     if !self.decode_start_times.contains_key(&seq_id) {
-                        let cur_time = SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Time went backwards")
-                            .as_millis() as usize;
+                        let cur_time = current_time_ms();
                         self.decode_start_times.insert(seq_id, cur_time);
                         self.decode_length.insert(seq_id, 1);
 
@@ -1060,6 +1109,23 @@ impl LLMEngine {
                                     ""
                                 },
                             )
+                        }
+
+                        if let Some(dispatch_started_ms) =
+                            self.first_prefill_dispatch_times.remove(&seq_id)
+                        {
+                            let response_received_ms = self
+                                .first_prefill_response_times
+                                .remove(&seq_id)
+                                .unwrap_or(cur_time);
+                            crate::log_info!(
+                                "[Seq {}] ⏱️ FirstTokenPath: scheduler_wait_ms={} prefill_roundtrip_ms={} response_to_emit_ms={} ingress_to_emit_ms={}",
+                                seq_id,
+                                dispatch_started_ms.saturating_sub(s.created_time()),
+                                response_received_ms.saturating_sub(dispatch_started_ms),
+                                cur_time.saturating_sub(response_received_ms),
+                                cur_time.saturating_sub(s.created_time()),
+                            );
                         }
                     }
 
@@ -1082,6 +1148,9 @@ impl LLMEngine {
                     if let Some(sender) = self.stream_senders.get_mut(&seq_id) {
                         if let Some(request_type) = self.request_types.get(&seq_id) {
                             if *request_type == RequestType::Stream {
+                                let _ = sender.try_send(StreamItem::PhaseTrace(ServerPathTrace {
+                                    first_token_emitted_at_ms: current_time_ms(),
+                                }));
                                 if let Some(decoder) = self.stream_decoders.get_mut(&seq_id) {
                                     for token_id in token_ids {
                                         if let Some(tok) = decoder.step(token_id)? {
@@ -1210,6 +1279,8 @@ impl LLMEngine {
             }
             self.stream_decoders.remove(&seq_id);
             self.decode_start_times.remove(&seq_id);
+            self.first_prefill_dispatch_times.remove(&seq_id);
+            self.first_prefill_response_times.remove(&seq_id);
             self.seq_prefilled_reasoning_end.remove(&seq_id);
             self.seq_prompt_replays.remove(&seq_id);
             if let Some(r) = &reason {
@@ -1409,6 +1480,7 @@ impl LLMEngine {
 
                     while let Some(msg) = rx.recv().await {
                         match msg {
+                            StreamItem::PhaseTrace(_) => {}
                             StreamItem::Completion((
                                 prompt_start,
                                 decode_start,
