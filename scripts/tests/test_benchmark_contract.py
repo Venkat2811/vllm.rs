@@ -544,6 +544,70 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 )
             )
 
+    def test_server_prefill_fixed_prompt_burst_selects_builtin_workload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_dir = tmp_path / "server_prefill_fixed_prompt_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_SERVER_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_SERVER_BENCHMARK_MODE": "single_gpu",
+                "VLLM_SERVER_BENCHMARK_FAMILY": "server_prefill_stress",
+                "VLLM_SERVER_BENCHMARK_SUBMODE": "fixed_prompt_burst",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] == "cargo":
+                    return CompletedProcess(command, 0, "", "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    server_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    server_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    server_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ):
+                    rc = server_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                report["benchmark_contract"]["benchmark_submode"],
+                "fixed_prompt_burst",
+            )
+            self.assertEqual(report["benchmark_contract"]["cache_pressure_profile"], "relaxed")
+            self.assertTrue(
+                report["workload_file"].endswith(
+                    "synthetic_server_prefill_fixed_prompt_burst.json"
+                )
+            )
+            self.assertEqual(report["limit_min_tokens"], 1)
+            self.assertEqual(report["limit_max_tokens"], 1)
+            self.assertFalse(report["prefix_cache_enabled"])
+
     def test_pd_benchmark_report_includes_contract_and_case_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
