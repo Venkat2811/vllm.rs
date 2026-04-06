@@ -13,9 +13,13 @@ from myelon_benchmark_common import (
     summarize_numeric_runs,
 )
 from myelon_validation_common import (
+    build_benchmark_contract,
+    build_machine_profile,
     default_build_features,
     env_str,
+    infer_cli_run_class,
     parse_device_ids,
+    resolve_run_class,
     validate_requested_topology,
 )
 
@@ -78,6 +82,16 @@ def resolve_workload() -> tuple[str, str, str]:
     raise ValueError(f"unsupported VLLM_WORKLOAD_PROFILE '{profile}'")
 
 
+def workload_class_for_profile(workload_profile: str, prompt_source: str) -> str:
+    if prompt_source == "custom_env":
+        return "custom_prompt_env"
+    if workload_profile == "synthetic_short":
+        return "synthetic_prompt_short"
+    if workload_profile == "synthetic_long_stress":
+        return "synthetic_prompt_long_stress"
+    return "prompt_profile_defined"
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parent.parent
     model_path = env_str(
@@ -109,6 +123,10 @@ def main() -> int:
         "true",
         "yes",
     }
+    run_class = resolve_run_class(
+        os.environ.get("VLLM_RUN_CLASS"),
+        infer_cli_run_class(measured_runs),
+    )
     output_path = Path(
         env_str(
             "VLLM_BENCHMARK_OUT",
@@ -158,6 +176,53 @@ def main() -> int:
     binary_path = repo_root / "target" / build_profile / "vllm-rs"
     cases = prepare_cases(mode, device_ids)
     report_cases = []
+    benchmark_contract = build_benchmark_contract(
+        benchmark_family="prefill_stress",
+        question_answered="Does Myelon reduce transport-sensitive prompt and prefill cost?",
+        workload_class=workload_class_for_profile(workload_profile, prompt_source),
+        warmup_policy=f"cli_warmup_runs:{warmup_runs}",
+        first_turn_measured=True,
+        arrival_pattern="prompt_burst_serial_runs",
+        concurrency_policy={
+            "driver": "cli_repeated_invocation",
+            "max_num_seqs": 1,
+            "warmup_runs": warmup_runs,
+            "measured_runs": measured_runs,
+            "max_attempts": max_attempts,
+            "mode": mode,
+            "expected_num_shards": expected_num_shards,
+        },
+        run_class=run_class,
+        stop_point="full_completion",
+        skip_reason=None,
+    )
+    machine_profile = build_machine_profile(
+        detected_cuda_device_count=detected_cuda_device_count,
+        effective_device_ids=parsed_device_ids,
+    )
+
+    def write_failure_report(status: str, failed_case: str, failed_run: dict, stop_point: str) -> int:
+        failure_contract = dict(benchmark_contract)
+        failure_contract["stop_point"] = stop_point
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(
+                {
+                    "benchmark_contract": failure_contract,
+                    "machine_profile": machine_profile,
+                    "mode": mode,
+                    "workload_profile": workload_profile,
+                    "prompt_source": prompt_source,
+                    "status": status,
+                    "failed_case": failed_case,
+                    "failed_run": failed_run,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return 2 if status.startswith("warmup") else 3
 
     for label, extra_args in cases:
         case_command = build_command(
@@ -188,42 +253,15 @@ def main() -> int:
             warmups.append(warmup)
             if warmup["exit_code"] != 0:
                 print(f"warmup failed for case {label}", file=sys.stderr)
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                output_path.write_text(
-                    json.dumps(
-                        {
-                            "mode": mode,
-                            "workload_profile": workload_profile,
-                            "prompt_source": prompt_source,
-                            "status": "warmup_failed",
-                            "failed_case": label,
-                            "failed_run": warmup,
-                        },
-                        indent=2,
-                    )
-                    + "\n",
-                    encoding="utf-8",
-                )
-                return 2
+                return write_failure_report("warmup_failed", label, warmup, "warmup_failure")
             if not metrics_are_complete(warmup["metrics"]):
                 print(f"warmup produced incomplete metrics for case {label}", file=sys.stderr)
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                output_path.write_text(
-                    json.dumps(
-                        {
-                            "mode": mode,
-                            "workload_profile": workload_profile,
-                            "prompt_source": prompt_source,
-                            "status": "warmup_incomplete_metrics",
-                            "failed_case": label,
-                            "failed_run": warmup,
-                        },
-                        indent=2,
-                    )
-                    + "\n",
-                    encoding="utf-8",
+                return write_failure_report(
+                    "warmup_incomplete_metrics",
+                    label,
+                    warmup,
+                    "warmup_incomplete_metrics",
                 )
-                return 2
 
         measured = []
         for index in range(measured_runs):
@@ -238,42 +276,20 @@ def main() -> int:
             measured.append(run)
             if run["exit_code"] != 0:
                 print(f"measured run failed for case {label}", file=sys.stderr)
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                output_path.write_text(
-                    json.dumps(
-                        {
-                            "mode": mode,
-                            "workload_profile": workload_profile,
-                            "prompt_source": prompt_source,
-                            "status": "measured_failed",
-                            "failed_case": label,
-                            "failed_run": run,
-                        },
-                        indent=2,
-                    )
-                    + "\n",
-                    encoding="utf-8",
+                return write_failure_report(
+                    "measured_failed",
+                    label,
+                    run,
+                    "measured_failure",
                 )
-                return 3
             if not metrics_are_complete(run["metrics"]):
                 print(f"measured run produced incomplete metrics for case {label}", file=sys.stderr)
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                output_path.write_text(
-                    json.dumps(
-                        {
-                            "mode": mode,
-                            "workload_profile": workload_profile,
-                            "prompt_source": prompt_source,
-                            "status": "measured_incomplete_metrics",
-                            "failed_case": label,
-                            "failed_run": run,
-                        },
-                        indent=2,
-                    )
-                    + "\n",
-                    encoding="utf-8",
+                return write_failure_report(
+                    "measured_incomplete_metrics",
+                    label,
+                    run,
+                    "measured_incomplete_metrics",
                 )
-                return 3
 
         baseline_response = measured[0]["metrics"]["response"]
         all_responses_match = all(
@@ -297,6 +313,8 @@ def main() -> int:
         cases_by_label["runner"]["sample_response"] == cases_by_label["myelon"]["sample_response"]
     )
     report = {
+        "benchmark_contract": benchmark_contract,
+        "machine_profile": machine_profile,
         "mode": mode,
         "workload_profile": workload_profile,
         "prompt_source": prompt_source,
