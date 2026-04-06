@@ -194,6 +194,16 @@ class BenchmarkContractHelperTests(unittest.TestCase):
         )
         self.assertEqual(label, "Qwen/Qwen3-4B")
 
+    def test_infer_report_status_marks_missing_expected_cases_partial(self) -> None:
+        status = report_common.infer_report_status(
+            {
+                "status": "completed",
+                "expected_case_count": 2,
+                "cases": [{"label": "runner", "benchmark_exit_code": 0}],
+            }
+        )
+        self.assertEqual(status, "partial")
+
 
 class BenchmarkScriptReportTests(unittest.TestCase):
     def test_cli_benchmark_report_includes_contract_and_machine_profile(self) -> None:
@@ -320,7 +330,17 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             )
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
             self.assertEqual(report["status"], "completed")
+            self.assertEqual(report["expected_case_count"], 2)
+            self.assertEqual(report["expected_case_labels"], ["runner", "myelon"])
+            self.assertEqual(report["myelon_rpc_depth"], 8192)
+            self.assertEqual(report["myelon_response_depth"], 8192)
+            self.assertTrue(report["myelon_busy_spin"])
             self.assertEqual(report["cases"][0]["stop_point"], "full_completion")
+            myelon_server_command = report["cases"][1]["server_command"]
+            self.assertIn("--myelon-rpc-depth", myelon_server_command)
+            self.assertIn("8192", myelon_server_command)
+            self.assertIn("--myelon-response-depth", myelon_server_command)
+            self.assertIn("--myelon-busy-spin", myelon_server_command)
             self.assertIn("machine_profile", report)
             self.assertIn("model_capability", report)
             self.assertIn("report_bundle", report)
@@ -329,6 +349,106 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["run_index_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["side_by_side_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["system_info"]["md"]).is_file())
+
+    def test_server_serving_qos_cold_turn_mode_disables_warmup_step(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            workload_file = tmp_path / "synthetic_multi_turn_smoke.json"
+            workload_file.write_text("{}\n", encoding="utf-8")
+            output_dir = tmp_path / "server_cold_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_INPUT_FILE": str(workload_file),
+                "VLLM_SERVER_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_SERVER_BENCHMARK_MODE": "single_gpu",
+                "VLLM_SERVER_BENCHMARK_SUBMODE": "cold_turn",
+                "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] == "cargo":
+                    return CompletedProcess(command, 0, "", "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    server_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    server_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    server_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ):
+                    rc = server_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "cold_turn")
+            self.assertFalse(report["warmup_step"])
+            self.assertTrue(report["benchmark_contract"]["first_turn_measured"])
+            self.assertEqual(report["benchmark_contract"]["warmup_policy"], "measure_first_turn")
+            self.assertNotIn("--warmup-step", report["cases"][0]["benchmark_command"])
+
+    def test_server_serving_qos_rejects_conflicting_warmup_step(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            workload_file = tmp_path / "synthetic_multi_turn_smoke.json"
+            workload_file.write_text("{}\n", encoding="utf-8")
+            output_dir = tmp_path / "server_conflict_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_INPUT_FILE": str(workload_file),
+                "VLLM_SERVER_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_SERVER_BENCHMARK_MODE": "single_gpu",
+                "VLLM_SERVER_BENCHMARK_SUBMODE": "cold_turn",
+                "VLLM_SERVER_BENCH_WARMUP_STEP": "1",
+                "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    server_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "run",
+                ) as run_mock, mock.patch.object(
+                    server_matrix.subprocess,
+                    "Popen",
+                ) as popen_mock:
+                    rc = server_matrix.main()
+
+            self.assertEqual(rc, 1)
+            run_mock.assert_not_called()
+            popen_mock.assert_not_called()
+            self.assertFalse((output_dir / "report.json").exists())
 
     def test_server_prefill_stress_report_includes_cache_pressure_profile_and_flags(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -618,6 +738,11 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             server_command = report["cases"][0]["server_command"]
             self.assertIn("--kv-fraction", server_command)
             self.assertNotIn("--max-model-len", server_command)
+            benchmark_command = report["cases"][0]["benchmark_command"]
+            self.assertIn("benchmark_server_fixed_prompt_burst.py", " ".join(benchmark_command))
+            self.assertIn("--prompt-text", benchmark_command)
+            self.assertIn("Please talk about China in more details.", benchmark_command)
+            self.assertNotIn("--input-file", benchmark_command)
 
     def test_server_prefill_explicit_max_model_len_drops_default_kv_fraction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -794,7 +919,19 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["benchmark_contract"]["transport_mode"], "pd_localipc_default")
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
             self.assertEqual(report["status"], "completed")
+            self.assertEqual(report["expected_case_count"], 2)
+            self.assertEqual(report["expected_case_labels"], ["runner_pd", "myelon_pd"])
+            self.assertEqual(report["myelon_rpc_depth"], 8192)
+            self.assertEqual(report["myelon_response_depth"], 8192)
+            self.assertTrue(report["myelon_busy_spin"])
             self.assertEqual(report["cases"][0]["stop_point"], "full_completion")
+            myelon_case = report["cases"][1]
+            self.assertIn("--myelon-rpc-depth", myelon_case["pd_server_command"])
+            self.assertIn("--myelon-response-depth", myelon_case["pd_server_command"])
+            self.assertIn("--myelon-busy-spin", myelon_case["pd_server_command"])
+            self.assertIn("--myelon-rpc-depth", myelon_case["client_server_command"])
+            self.assertIn("--myelon-response-depth", myelon_case["client_server_command"])
+            self.assertIn("--myelon-busy-spin", myelon_case["client_server_command"])
             self.assertIn("machine_profile", report)
             self.assertIn("model_capability", report)
             self.assertIn("topology_capability", report)
@@ -804,6 +941,139 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["run_index_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["side_by_side_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["system_info"]["md"]).is_file())
+
+    def test_pd_cold_turn_mode_disables_warmup_step(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            workload_file = tmp_path / "synthetic_multi_turn_smoke.json"
+            workload_file.write_text("{}\n", encoding="utf-8")
+            output_dir = tmp_path / "pd_cold_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_INPUT_FILE": str(workload_file),
+                "VLLM_PD_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_PD_SERVER_DEVICE_IDS": "0",
+                "VLLM_PD_CLIENT_DEVICE_IDS": "1",
+                "VLLM_PD_BENCHMARK_SUBMODE": "cold_turn",
+                "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] == "cargo":
+                    return CompletedProcess(command, 0, "", "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    pd_matrix,
+                    "validate_device_roles",
+                    return_value=None,
+                ), mock.patch.object(
+                    pd_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    pd_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    pd_matrix,
+                    "wait_for_pd_server_ready",
+                    return_value=None,
+                ), mock.patch.object(
+                    pd_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    pd_matrix,
+                    "classify_pd_transport_capability",
+                    return_value={
+                        "transport_mode": "pd_localipc_default",
+                        "server_device_ids": [0],
+                        "client_device_ids": [1],
+                        "peer_read_status": "OK",
+                        "peer_write_status": "OK",
+                        "pd_supported": True,
+                        "pd_skip_reason": None,
+                    },
+                ), mock.patch.object(
+                    pd_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ), mock.patch.object(
+                    pd_matrix,
+                    "detect_cuda_device_count",
+                    return_value=2,
+                ):
+                    rc = pd_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "cold_turn")
+            self.assertFalse(report["warmup_step"])
+            self.assertTrue(report["benchmark_contract"]["first_turn_measured"])
+            self.assertNotIn("--warmup-step", report["cases"][0]["benchmark_command"])
+
+    def test_pd_rejects_conflicting_warmup_step(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            workload_file = tmp_path / "synthetic_multi_turn_smoke.json"
+            workload_file.write_text("{}\n", encoding="utf-8")
+            output_dir = tmp_path / "pd_conflict_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_INPUT_FILE": str(workload_file),
+                "VLLM_PD_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_PD_SERVER_DEVICE_IDS": "0",
+                "VLLM_PD_CLIENT_DEVICE_IDS": "1",
+                "VLLM_PD_BENCHMARK_SUBMODE": "cold_turn",
+                "VLLM_SERVER_BENCH_WARMUP_STEP": "1",
+                "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    pd_matrix,
+                    "classify_pd_transport_capability",
+                    return_value={
+                        "transport_mode": "pd_localipc_default",
+                        "server_device_ids": [0],
+                        "client_device_ids": [1],
+                        "peer_read_status": "OK",
+                        "peer_write_status": "OK",
+                        "pd_supported": True,
+                        "pd_skip_reason": None,
+                    },
+                ), mock.patch.object(
+                    pd_matrix,
+                    "detect_cuda_device_count",
+                    return_value=2,
+                ), mock.patch.object(
+                    pd_matrix.subprocess,
+                    "run",
+                ) as run_mock, mock.patch.object(
+                    pd_matrix.subprocess,
+                    "Popen",
+                ) as popen_mock:
+                    rc = pd_matrix.main()
+
+            self.assertEqual(rc, 1)
+            run_mock.assert_not_called()
+            popen_mock.assert_not_called()
+            self.assertFalse((output_dir / "report.json").exists())
 
     def test_pd_benchmark_unsupported_model_writes_skip_report(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
