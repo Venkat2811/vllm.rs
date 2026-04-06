@@ -1824,36 +1824,59 @@ def build_rollup_rows(report_path: Path, report: dict[str, object]) -> tuple[dic
         for row in side_by_side_rows
         if isinstance(row, dict)
     }
+
+    def metric_row(*metric_names: str) -> dict[str, object]:
+        for metric_name in metric_names:
+            row = metric_map.get(metric_name)
+            if isinstance(row, dict):
+                return row
+        return {}
+
     findings_row = dict(run_index_row)
     findings_row.update(
         {
-            "baseline_first_prefill_seconds_mean": metric_map.get(
-                "first_prefill_seconds_mean", {}
+            "baseline_first_prefill_seconds_mean": metric_row(
+                "first_prefill_seconds_mean"
             ).get("baseline_value"),
-            "myelon_first_prefill_seconds_mean": metric_map.get(
-                "first_prefill_seconds_mean", {}
+            "myelon_first_prefill_seconds_mean": metric_row(
+                "first_prefill_seconds_mean"
             ).get("myelon_value"),
-            "first_prefill_seconds_delta_percent": metric_map.get(
-                "first_prefill_seconds_mean", {}
+            "first_prefill_seconds_delta_percent": metric_row(
+                "first_prefill_seconds_mean"
             ).get("delta_percent"),
-            "baseline_first_prefill_tps_mean": metric_map.get(
-                "first_prefill_tps_mean", {}
+            "baseline_first_prefill_tps_mean": metric_row(
+                "first_prefill_tps_mean"
             ).get("baseline_value"),
-            "myelon_first_prefill_tps_mean": metric_map.get(
-                "first_prefill_tps_mean", {}
+            "myelon_first_prefill_tps_mean": metric_row(
+                "first_prefill_tps_mean"
             ).get("myelon_value"),
-            "first_prefill_tps_delta_percent": metric_map.get(
-                "first_prefill_tps_mean", {}
+            "first_prefill_tps_delta_percent": metric_row(
+                "first_prefill_tps_mean"
             ).get("delta_percent"),
-            "baseline_prompt_tps_mean": metric_map.get("prompt_tps_mean", {}).get(
-                "baseline_value"
-            ),
-            "myelon_prompt_tps_mean": metric_map.get("prompt_tps_mean", {}).get(
-                "myelon_value"
-            ),
-            "prompt_tps_delta_percent": metric_map.get("prompt_tps_mean", {}).get(
-                "delta_percent"
-            ),
+            "baseline_prompt_tps_mean": metric_row(
+                "prompt_tps_mean",
+                "observed_prompt_tps_mean",
+                "observed_prefill_tps_mean",
+            ).get("baseline_value"),
+            "myelon_prompt_tps_mean": metric_row(
+                "prompt_tps_mean",
+                "observed_prompt_tps_mean",
+                "observed_prefill_tps_mean",
+            ).get("myelon_value"),
+            "prompt_tps_delta_percent": metric_row(
+                "prompt_tps_mean",
+                "observed_prompt_tps_mean",
+                "observed_prefill_tps_mean",
+            ).get("delta_percent"),
+            "baseline_prefill_roundtrip_ms_mean": metric_row(
+                "observed_prefill_roundtrip_ms_mean"
+            ).get("baseline_value"),
+            "myelon_prefill_roundtrip_ms_mean": metric_row(
+                "observed_prefill_roundtrip_ms_mean"
+            ).get("myelon_value"),
+            "prefill_roundtrip_ms_delta_percent": metric_row(
+                "observed_prefill_roundtrip_ms_mean"
+            ).get("delta_percent"),
             "baseline_requests_per_sec": metric_map.get("requests_per_sec", {}).get("baseline_value"),
             "myelon_requests_per_sec": metric_map.get("requests_per_sec", {}).get("myelon_value"),
             "requests_per_sec_delta_percent": metric_map.get("requests_per_sec", {}).get("delta_percent"),
@@ -2069,6 +2092,11 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         "prompt_tps_delta_percent",
         reverse=True,
     )
+    strongest_prefill_roundtrip = _sorted_top_rows(
+        completed_rows,
+        "prefill_roundtrip_ms_delta_percent",
+        reverse=False,
+    )
     strongest_first_prefill = _sorted_top_rows(
         completed_rows,
         "first_prefill_seconds_delta_percent",
@@ -2155,6 +2183,33 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         summary_lines.append(_markdown_table_from_rows(strongest_prompt_tps, prompt_fields))
     else:
         summary_lines.append("No prompt-throughput deltas were available.")
+    summary_lines.extend(
+        [
+            "",
+            "## Strongest Prefill-Roundtrip Wins",
+            "",
+        ]
+    )
+    prefill_roundtrip_fields = [
+        "model_label",
+        "benchmark_family",
+        "benchmark_submode",
+        "topology_overlay",
+        "prefill_roundtrip_ms_delta_percent",
+        "baseline_prefill_roundtrip_ms_mean",
+        "myelon_prefill_roundtrip_ms_mean",
+        "baseline_pressure_profile_outcome",
+        "myelon_pressure_profile_outcome",
+    ]
+    if strongest_prefill_roundtrip:
+        summary_lines.append(
+            _markdown_table_from_rows(
+                strongest_prefill_roundtrip,
+                prefill_roundtrip_fields,
+            )
+        )
+    else:
+        summary_lines.append("No prefill-roundtrip deltas were available.")
     summary_lines.extend(
         [
             "",
