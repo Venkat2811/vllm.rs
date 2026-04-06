@@ -808,6 +808,33 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 ## Qwen/Qwen3-4B / server_prefill_stress / tp2
 
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_cache_thrash_rr_v2/report.json`
+- status: `completed`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18080 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --max-num-seqs 64 --dtype bf16 --seed 123 --num-shards 2 --force-runner --device-ids 0,1 --prefix-cache --prefix-cache-max-tokens 1024 --kv-fraction 0.08 --cpu-mem-fold 0.05
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm python3 /root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py --input-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_stress_round_robin.json --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_cache_thrash_rr_v2/runner/conversations.json --model /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --url http://127.0.0.1:18080 --num-clients 32 --max-active-conversations 64 --max-turns 6 --max-retries 1 --request-timeout-sec 240 --request-rate 0.0 --conversation-sampling round_robin --max-num-requests 384 --limit-min-tokens 8 --limit-max-tokens 8 --served-model-name 1cfa9a7208912126459214e8b04321603b3df60c
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18081 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --max-num-seqs 64 --dtype bf16 --seed 123 --num-shards 2 --myelon-ipc --device-ids 0,1 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --myelon-busy-spin --prefix-cache --prefix-cache-max-tokens 1024 --kv-fraction 0.08 --cpu-mem-fold 0.05
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm python3 /root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py --input-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_stress_round_robin.json --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_cache_thrash_rr_v2/myelon/conversations.json --model /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --url http://127.0.0.1:18081 --num-clients 32 --max-active-conversations 64 --max-turns 6 --max-retries 1 --request-timeout-sec 240 --request-rate 0.0 --conversation-sampling round_robin --max-num-requests 384 --limit-min-tokens 8 --limit-max-tokens 8 --served-model-name 1cfa9a7208912126459214e8b04321603b3df60c
+```
+
+## Qwen/Qwen3-4B / server_prefill_stress / tp2
+
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_shared_prefix_rr_control_v1/report.json`
 - status: `completed`
 
@@ -831,5 +858,32 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 - benchmark_command:
 ```bash
 uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm python3 /root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py --input-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_shared_prefix_round_robin.json --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_shared_prefix_rr_control_v1/myelon/conversations.json --model /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --url http://127.0.0.1:18081 --num-clients 32 --max-active-conversations 64 --max-turns 6 --max-retries 1 --request-timeout-sec 180 --request-rate 0.0 --conversation-sampling round_robin --max-num-requests 384 --limit-min-tokens 8 --limit-max-tokens 8 --served-model-name 1cfa9a7208912126459214e8b04321603b3df60c
+```
+
+## Qwen/Qwen3-4B / server_prefill_stress / tp2
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_shared_prefix_rr_control_v2/report.json`
+- status: `completed`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18080 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --max-num-seqs 64 --dtype bf16 --seed 123 --num-shards 2 --force-runner --device-ids 0,1 --prefix-cache --prefix-cache-max-tokens 32768 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm python3 /root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py --input-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_shared_prefix_round_robin.json --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_shared_prefix_rr_control_v2/runner/conversations.json --model /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --url http://127.0.0.1:18080 --num-clients 32 --max-active-conversations 64 --max-turns 6 --max-retries 1 --request-timeout-sec 240 --request-rate 0.0 --conversation-sampling round_robin --max-num-requests 384 --limit-min-tokens 8 --limit-max-tokens 8 --served-model-name 1cfa9a7208912126459214e8b04321603b3df60c
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18081 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --max-num-seqs 64 --dtype bf16 --seed 123 --num-shards 2 --myelon-ipc --device-ids 0,1 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --myelon-busy-spin --prefix-cache --prefix-cache-max-tokens 32768 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm python3 /root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py --input-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_shared_prefix_round_robin.json --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_shared_prefix_rr_control_v2/myelon/conversations.json --model /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --url http://127.0.0.1:18081 --num-clients 32 --max-active-conversations 64 --max-turns 6 --max-retries 1 --request-timeout-sec 240 --request-rate 0.0 --conversation-sampling round_robin --max-num-requests 384 --limit-min-tokens 8 --limit-max-tokens 8 --served-model-name 1cfa9a7208912126459214e8b04321603b3df60c
 ```
 
