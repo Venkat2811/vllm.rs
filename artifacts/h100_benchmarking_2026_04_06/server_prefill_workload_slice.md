@@ -74,3 +74,8 @@ New coverage proves:
 - default `server_prefill_stress` forwards round-robin and low-decode controls to the upstream benchmark
 - default `server_prefill_stress` forwards KV-pressure knobs to `vllm-rs`
 - `shared_prefix_round_robin_control` picks the shared-prefix built-in workload
+- retained `run_index` and summary reports now surface:
+  - `conversation_sampling`
+  - `limit_min_tokens`
+  - `limit_max_tokens`
+  - `cache_pressure_profile`

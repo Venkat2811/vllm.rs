@@ -471,6 +471,12 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("--limit-min-tokens", benchmark_command)
             self.assertIn("--limit-max-tokens", benchmark_command)
             self.assertNotIn("--warmup-step", benchmark_command)
+            run_index_csv = Path(report["report_bundle"]["benchmarks"]["run_index_csv"])
+            run_index_text = run_index_csv.read_text(encoding="utf-8")
+            self.assertIn("conversation_sampling", run_index_text)
+            self.assertIn("round_robin", run_index_text)
+            self.assertIn("limit_min_tokens", run_index_text)
+            self.assertIn("limit_max_tokens", run_index_text)
             server_command = report["cases"][0]["server_command"]
             self.assertIn("--prefix-cache", server_command)
             self.assertIn("--prefix-cache-max-tokens", server_command)
