@@ -1,0 +1,32 @@
+{
+  "filetype": "generate_conversations",
+  "num_conversations": 512,
+  "text_files": [
+    "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_long_source.txt"
+  ],
+  "print_stats": true,
+  "prompt_input": {
+    "num_turns": {
+      "distribution": "constant",
+      "value": 2
+    },
+    "common_prefix_num_tokens": {
+      "distribution": "constant",
+      "value": 0
+    },
+    "prefix_num_tokens": {
+      "distribution": "constant",
+      "value": 0
+    },
+    "num_tokens": {
+      "distribution": "constant",
+      "value": 1024
+    }
+  },
+  "prompt_output": {
+    "num_tokens": {
+      "distribution": "constant",
+      "value": 16
+    }
+  }
+}
