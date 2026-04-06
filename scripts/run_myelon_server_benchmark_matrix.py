@@ -39,6 +39,15 @@ AVG_LINE_RE = re.compile(
     re.MULTILINE,
 )
 
+VALID_SERVER_SUBMODES = {
+    "serving_qos": {"cold_turn", "warm_steady_state"},
+    "server_prefill_stress": {
+        "fixed_prompt_burst",
+        "cache_thrash_round_robin",
+        "shared_prefix_round_robin_control",
+    },
+}
+
 SUMMARY_COLUMNS = [
     "count",
     "mean",
@@ -132,14 +141,30 @@ def resolve_server_benchmark_family(explicit: str | None) -> str:
 
 def infer_server_benchmark_submode(
     benchmark_family: str,
-    warmup_step: bool,
     explicit: str | None,
 ) -> str:
     if explicit is not None and explicit.strip():
-        return explicit.strip()
+        candidate = explicit.strip()
+    elif benchmark_family == "serving_qos":
+        candidate = "warm_steady_state"
+    else:
+        candidate = "cache_thrash_round_robin"
+    valid_submodes = VALID_SERVER_SUBMODES[benchmark_family]
+    if candidate not in valid_submodes:
+        raise ValueError(
+            f"unsupported {benchmark_family} submode {candidate!r}; "
+            f"expected one of {sorted(valid_submodes)}"
+        )
+    return candidate
+
+
+def expected_warmup_step(
+    benchmark_family: str,
+    benchmark_submode: str,
+) -> bool:
     if benchmark_family == "serving_qos":
-        return "warm_steady_state" if warmup_step else "cold_turn"
-    return "cache_thrash_round_robin"
+        return benchmark_submode == "warm_steady_state"
+    return False
 
 
 def default_server_workload_path(
@@ -348,15 +373,20 @@ def main() -> int:
     upstream_benchmark_script = (
         upstream_repo_root / "benchmarks" / "multi_turn" / "benchmark_serving_multi_turn.py"
     )
+    fixed_prompt_burst_script = (
+        repo_root / "scripts" / "benchmark_server_fixed_prompt_burst.py"
+    )
     benchmark_family = resolve_server_benchmark_family(
         os.environ.get("VLLM_SERVER_BENCHMARK_FAMILY")
     )
-    warmup_step_default = benchmark_family != "server_prefill_stress"
-    benchmark_submode = infer_server_benchmark_submode(
-        benchmark_family,
-        warmup_step_default,
-        os.environ.get("VLLM_SERVER_BENCHMARK_SUBMODE"),
-    )
+    try:
+        benchmark_submode = infer_server_benchmark_submode(
+            benchmark_family,
+            os.environ.get("VLLM_SERVER_BENCHMARK_SUBMODE"),
+        )
+    except ValueError as error:
+        print(str(error), file=sys.stderr)
+        return 1
     prefill_defaults = (
         resolve_server_prefill_defaults(benchmark_submode)
         if benchmark_family == "server_prefill_stress"
@@ -387,6 +417,13 @@ def main() -> int:
     server_ready_timeout_seconds = env_int("VLLM_SERVER_READY_TIMEOUT_SECONDS", 300)
     benchmark_timeout_seconds = env_int("VLLM_SERVER_BENCH_TIMEOUT_SECONDS", 900)
     request_timeout_seconds = env_int("VLLM_SERVER_REQUEST_TIMEOUT_SECONDS", 180)
+    myelon_rpc_depth = env_str("VLLM_MYELON_RPC_DEPTH", "8192")
+    myelon_response_depth = env_str("VLLM_MYELON_RESPONSE_DEPTH", "8192")
+    myelon_busy_spin = env_str("VLLM_MYELON_BUSY_SPIN", "1").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
     num_clients = env_or_default_int(
         "VLLM_SERVER_BENCH_NUM_CLIENTS",
         int(prefill_defaults.get("num_clients", 2)),
@@ -409,10 +446,22 @@ def main() -> int:
         float(prefill_defaults.get("request_rate", 0.0)),
     )
     port_base = env_int("VLLM_SERVER_BENCH_PORT_BASE", 18080)
-    warmup_step = env_bool(
-        "VLLM_SERVER_BENCH_WARMUP_STEP",
-        bool(prefill_defaults.get("warmup_step", warmup_step_default)),
+    explicit_warmup_step = env_optional_bool("VLLM_SERVER_BENCH_WARMUP_STEP")
+    default_warmup_step = (
+        expected_warmup_step(benchmark_family, benchmark_submode)
+        if benchmark_family == "serving_qos"
+        else bool(prefill_defaults.get("warmup_step", False))
     )
+    if explicit_warmup_step is not None:
+        expected = expected_warmup_step(benchmark_family, benchmark_submode)
+        if explicit_warmup_step != expected:
+            print(
+                "VLLM_SERVER_BENCH_WARMUP_STEP conflicts with "
+                f"{benchmark_family}.{benchmark_submode}",
+                file=sys.stderr,
+            )
+            return 1
+    warmup_step = explicit_warmup_step if explicit_warmup_step is not None else default_warmup_step
     no_stream = env_bool("VLLM_SERVER_BENCH_NO_STREAM", False)
     conversation_sampling = env_str(
         "VLLM_SERVER_BENCH_CONVERSATION_SAMPLING",
@@ -465,6 +514,10 @@ def main() -> int:
         cpu_mem_fold=cpu_mem_fold,
     )
     capture_raw_system = env_bool("VLLM_CAPTURE_RAW_SYSTEM_INFO", True)
+    fixed_prompt_text = env_str(
+        "VLLM_SERVER_FIXED_PROMPT_TEXT",
+        "Please talk about China in more details.",
+    )
     run_class = resolve_run_class(
         os.environ.get("VLLM_RUN_CLASS"),
         infer_request_run_class(max_num_requests if max_num_requests > 0 else None),
@@ -480,6 +533,9 @@ def main() -> int:
         return 1
     if not upstream_benchmark_script.is_file():
         print(f"upstream benchmark script does not exist: {upstream_benchmark_script}", file=sys.stderr)
+        return 1
+    if not fixed_prompt_burst_script.is_file():
+        print(f"fixed prompt burst benchmark script does not exist: {fixed_prompt_burst_script}", file=sys.stderr)
         return 1
 
     expected_num_shards = 1 if mode == "single_gpu" else 2
@@ -552,6 +608,11 @@ def main() -> int:
         "server_ready_timeout_seconds": server_ready_timeout_seconds,
         "benchmark_timeout_seconds": benchmark_timeout_seconds,
         "request_timeout_seconds": request_timeout_seconds,
+        "myelon_rpc_depth": int(myelon_rpc_depth) if myelon_rpc_depth else None,
+        "myelon_response_depth": (
+            int(myelon_response_depth) if myelon_response_depth else None
+        ),
+        "myelon_busy_spin": myelon_busy_spin,
         "benchmark_family": benchmark_family,
         "benchmark_submode": benchmark_submode,
         "prefix_cache_enabled": prefix_cache_enabled,
@@ -559,6 +620,8 @@ def main() -> int:
         "kv_fraction": kv_fraction,
         "cpu_mem_fold": cpu_mem_fold,
         "cache_pressure_profile": cache_pressure_profile,
+        "expected_case_count": 0,
+        "expected_case_labels": [],
         "cases": [],
     }
 
@@ -576,6 +639,8 @@ def main() -> int:
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 1
+    report["expected_case_count"] = len(cases)
+    report["expected_case_labels"] = [label for label, _ in cases]
 
     try:
         effective_device_ids = derive_device_ids(
@@ -672,6 +737,15 @@ def main() -> int:
             server_command.extend(["--max-model-len", max_model_len])
         if effective_device_ids_str:
             server_command.extend(["--device-ids", effective_device_ids_str])
+        if label == "myelon":
+            if myelon_rpc_depth:
+                server_command.extend(["--myelon-rpc-depth", myelon_rpc_depth])
+            if myelon_response_depth:
+                server_command.extend(
+                    ["--myelon-response-depth", myelon_response_depth]
+                )
+            if myelon_busy_spin:
+                server_command.append("--myelon-busy-spin")
         if prefix_cache_enabled:
             server_command.append("--prefix-cache")
         if prefix_cache_max_tokens is not None:
@@ -683,59 +757,85 @@ def main() -> int:
         if cpu_mem_fold is not None:
             server_command.extend(["--cpu-mem-fold", str(cpu_mem_fold)])
 
-        benchmark_command = [
-            "uv",
-            "run",
-            "--with",
-            "aiohttp",
-            "--with",
-            "numpy",
-            "--with",
-            "pandas",
-            "--with",
-            "transformers",
-            "--with",
-            "tqdm",
-            "python3",
-            str(upstream_benchmark_script),
-            "--input-file",
-            str(workload_file),
-            "--output-file",
-            str(benchmark_output_path),
-            "--model",
-            model_path,
-            "--url",
-            base_url,
-            "--num-clients",
-            str(num_clients),
-            "--max-active-conversations",
-            str(max_active_conversations),
-            "--max-turns",
-            str(max_turns),
-            "--max-retries",
-            str(max_retries),
-            "--request-timeout-sec",
-            str(request_timeout_seconds),
-            "--request-rate",
-            request_rate,
-            "--conversation-sampling",
-            conversation_sampling,
-        ]
-        if max_num_requests > 0:
-            benchmark_command.extend(
-                [
-                    "--max-num-requests",
-                    str(max_num_requests),
-                ]
-            )
-        if limit_min_tokens > 0:
-            benchmark_command.extend(["--limit-min-tokens", str(limit_min_tokens)])
-        if limit_max_tokens > 0:
-            benchmark_command.extend(["--limit-max-tokens", str(limit_max_tokens)])
-        if warmup_step:
-            benchmark_command.append("--warmup-step")
-        if no_stream:
-            benchmark_command.append("--no-stream")
+        if benchmark_family == "server_prefill_stress" and benchmark_submode == "fixed_prompt_burst":
+            benchmark_command = [
+                "uv",
+                "run",
+                "--with",
+                "aiohttp",
+                "python3",
+                str(fixed_prompt_burst_script),
+                "--url",
+                base_url,
+                "--output-file",
+                str(benchmark_output_path),
+                "--prompt-text",
+                fixed_prompt_text,
+                "--num-requests",
+                str(max_num_requests if max_num_requests > 0 else max_active_conversations),
+                "--concurrency",
+                str(max_active_conversations),
+                "--max-tokens",
+                str(limit_max_tokens if limit_max_tokens > 0 else 1),
+                "--request-timeout-sec",
+                str(request_timeout_seconds),
+            ]
+            if no_stream:
+                benchmark_command.append("--no-stream")
+        else:
+            benchmark_command = [
+                "uv",
+                "run",
+                "--with",
+                "aiohttp",
+                "--with",
+                "numpy",
+                "--with",
+                "pandas",
+                "--with",
+                "transformers",
+                "--with",
+                "tqdm",
+                "python3",
+                str(upstream_benchmark_script),
+                "--input-file",
+                str(workload_file),
+                "--output-file",
+                str(benchmark_output_path),
+                "--model",
+                model_path,
+                "--url",
+                base_url,
+                "--num-clients",
+                str(num_clients),
+                "--max-active-conversations",
+                str(max_active_conversations),
+                "--max-turns",
+                str(max_turns),
+                "--max-retries",
+                str(max_retries),
+                "--request-timeout-sec",
+                str(request_timeout_seconds),
+                "--request-rate",
+                request_rate,
+                "--conversation-sampling",
+                conversation_sampling,
+            ]
+            if max_num_requests > 0:
+                benchmark_command.extend(
+                    [
+                        "--max-num-requests",
+                        str(max_num_requests),
+                    ]
+                )
+            if limit_min_tokens > 0:
+                benchmark_command.extend(["--limit-min-tokens", str(limit_min_tokens)])
+            if limit_max_tokens > 0:
+                benchmark_command.extend(["--limit-max-tokens", str(limit_max_tokens)])
+            if warmup_step:
+                benchmark_command.append("--warmup-step")
+            if no_stream:
+                benchmark_command.append("--no-stream")
 
         case_report: dict[str, object] = {
             "label": label,

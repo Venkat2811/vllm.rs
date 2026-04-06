@@ -1,0 +1,15 @@
+[
+    {
+        "id": "CONV_ID_31",
+        "messages": [
+            {
+                "role": "user",
+                "content": "31 is a nice number... 31,  unless thou get a son.\nMusic to hear, why hear'st thou music sadly?\nSweets with sweets war not, joy delights in joy.\nWhy loPlease rewrite the following text and add more content: vest thou that which thou receivest not gladly,\nOr else receivest with pleasure thine annoy?\nIf the true concord of well-tuned sounds,\nBy unions married, do offend thine ear,\nThey do"
+            },
+            {
+                "role": "assistant",
+                "content": "<think>"
+            }
+        ]
+    }
+]
