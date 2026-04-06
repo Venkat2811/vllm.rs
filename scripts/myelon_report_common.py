@@ -193,6 +193,21 @@ def write_system_snapshot(
     }
 
 
+def build_transport_settings(report: dict[str, object]) -> dict[str, object]:
+    return {
+        "build_features": report.get("build_features"),
+        "effective_device_ids": report.get("effective_device_ids"),
+        "myelon_rpc_depth": report.get("myelon_rpc_depth"),
+        "myelon_response_depth": report.get("myelon_response_depth"),
+        "myelon_busy_spin": report.get("myelon_busy_spin"),
+        "prefix_cache_enabled": report.get("prefix_cache_enabled"),
+        "prefix_cache_max_tokens": report.get("prefix_cache_max_tokens"),
+        "kv_fraction": report.get("kv_fraction"),
+        "cpu_mem_fold": report.get("cpu_mem_fold"),
+        "no_stream": report.get("no_stream"),
+    }
+
+
 def build_case_rows(report: dict[str, object]) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for case in report.get("cases", []):
@@ -393,6 +408,15 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
             ),
             "topology_overlay": contract.get("topology_overlay"),
             "transport_mode": contract.get("transport_mode"),
+            "build_features": report.get("build_features"),
+            "effective_device_ids": report.get("effective_device_ids"),
+            "myelon_rpc_depth": report.get("myelon_rpc_depth"),
+            "myelon_response_depth": report.get("myelon_response_depth"),
+            "myelon_busy_spin": report.get("myelon_busy_spin"),
+            "prefix_cache_enabled": report.get("prefix_cache_enabled"),
+            "prefix_cache_max_tokens": report.get("prefix_cache_max_tokens"),
+            "kv_fraction": report.get("kv_fraction"),
+            "cpu_mem_fold": report.get("cpu_mem_fold"),
             "run_class": contract.get("run_class"),
             "status": report.get("status"),
             "expected_case_count": report.get("expected_case_count"),
@@ -931,6 +955,15 @@ def write_benchmark_reports(
         ),
         ("topology_overlay", contract.get("topology_overlay")),
         ("transport_mode", contract.get("transport_mode")),
+        ("build_features", report.get("build_features")),
+        ("effective_device_ids", report.get("effective_device_ids")),
+        ("myelon_rpc_depth", report.get("myelon_rpc_depth")),
+        ("myelon_response_depth", report.get("myelon_response_depth")),
+        ("myelon_busy_spin", report.get("myelon_busy_spin")),
+        ("prefix_cache_enabled", report.get("prefix_cache_enabled")),
+        ("prefix_cache_max_tokens", report.get("prefix_cache_max_tokens")),
+        ("kv_fraction", report.get("kv_fraction")),
+        ("cpu_mem_fold", report.get("cpu_mem_fold")),
         ("run_class", contract.get("run_class")),
         ("stop_point", contract.get("stop_point")),
         ("status", report.get("status")),
@@ -985,6 +1018,83 @@ def write_benchmark_reports(
     }
 
 
+def write_bundle_manifest(
+    output_root: Path,
+    report: dict[str, object],
+    report_path: Path,
+    system_info: dict[str, str],
+    benchmarks: dict[str, str],
+) -> dict[str, str]:
+    reports_dir = output_root / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    contract = report.get("benchmark_contract", {})
+    machine_profile = report.get("machine_profile", {})
+    model_capability = report.get("model_capability", {})
+    transport_settings = build_transport_settings(report)
+
+    manifest = {
+        "benchmark_family": contract.get("benchmark_family"),
+        "benchmark_submode": contract.get("benchmark_submode"),
+        "model_label": model_capability.get("model_label"),
+        "topology_overlay": contract.get("topology_overlay"),
+        "transport_mode": contract.get("transport_mode"),
+        "run_class": contract.get("run_class"),
+        "status": report.get("status"),
+        "stop_point": contract.get("stop_point"),
+        "host": machine_profile.get("hostname"),
+        "report_json": str(report_path),
+        "transport_settings": transport_settings,
+        "system_info": system_info,
+        "benchmarks": benchmarks,
+    }
+
+    manifest_json_path = reports_dir / "manifest.json"
+    manifest_md_path = reports_dir / "manifest.md"
+    _write_json(manifest_json_path, manifest)
+
+    manifest_pairs = [
+        ("benchmark_family", manifest["benchmark_family"]),
+        ("benchmark_submode", manifest["benchmark_submode"]),
+        ("model_label", manifest["model_label"]),
+        ("topology_overlay", manifest["topology_overlay"]),
+        ("transport_mode", manifest["transport_mode"]),
+        ("run_class", manifest["run_class"]),
+        ("status", manifest["status"]),
+        ("stop_point", manifest["stop_point"]),
+        ("host", manifest["host"]),
+        ("report_json", manifest["report_json"]),
+    ]
+    transport_pairs = list(transport_settings.items())
+    path_pairs = [
+        ("system_snapshot_md", system_info.get("md")),
+        ("benchmark_summary_md", benchmarks.get("summary_md")),
+        ("run_index_md", benchmarks.get("run_index_md")),
+        ("side_by_side_md", benchmarks.get("side_by_side_md")),
+    ]
+    lines = [
+        "# Report Manifest",
+        "",
+        "## Identity",
+        "",
+        _markdown_table_from_pairs(manifest_pairs),
+        "",
+        "## Transport Settings",
+        "",
+        _markdown_table_from_pairs(transport_pairs),
+        "",
+        "## Bundle Paths",
+        "",
+        _markdown_table_from_pairs(path_pairs, headers=("Artifact", "Path")),
+    ]
+    manifest_md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    return {
+        "json": str(manifest_json_path),
+        "md": str(manifest_md_path),
+    }
+
+
 def write_report_bundle(
     output_root: Path,
     report: dict[str, object],
@@ -1005,7 +1115,15 @@ def write_report_bundle(
         report=report,
         report_path=report_path,
     )
+    manifest = write_bundle_manifest(
+        output_root=output_root,
+        report=report,
+        report_path=report_path,
+        system_info=system_info,
+        benchmarks=benchmarks,
+    )
     return {
+        "manifest": manifest,
         "system_info": system_info,
         "benchmarks": benchmarks,
         "repo_state": repo_state,
