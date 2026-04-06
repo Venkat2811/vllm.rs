@@ -8,10 +8,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from myelon_validation_common import (
+    build_benchmark_contract,
+    build_machine_profile,
+    classify_arrival_pattern,
     default_build_features,
     detect_cuda_device_count,
     env_str,
+    infer_request_run_class,
+    infer_workload_class_from_path,
     parse_device_ids,
+    resolve_run_class,
 )
 from run_myelon_server_benchmark_matrix import (
     parse_summary,
@@ -145,6 +151,10 @@ def main() -> int:
     no_stream = env_bool("VLLM_SERVER_BENCH_NO_STREAM", False)
     prefix_cache = env_bool("VLLM_PD_PREFIX_CACHE", True)
     pd_url = os.environ.get("VLLM_PD_URL")
+    run_class = resolve_run_class(
+        os.environ.get("VLLM_RUN_CLASS"),
+        infer_request_run_class(max_num_requests if max_num_requests > 0 else None),
+    )
 
     server_device_ids_raw = env_str("VLLM_PD_SERVER_DEVICE_IDS", "0")
     client_device_ids_raw = env_str("VLLM_PD_CLIENT_DEVICE_IDS", "1")
@@ -203,8 +213,48 @@ def main() -> int:
     )
     output_root.mkdir(parents=True, exist_ok=True)
     report_path = output_root / "report.json"
+    workload_class = infer_workload_class_from_path(str(workload_file))
+    if workload_class == "file_defined" and "first_transfer" in str(workload_file).lower():
+        workload_class = "pd_first_transfer_control"
+    warmup_policy = (
+        "warmup_step_skips_first_turn" if warmup_step else "measure_first_turn"
+    )
+    effective_device_ids = []
+    if server_device_ids is not None:
+        effective_device_ids.extend(server_device_ids)
+    if client_device_ids is not None:
+        effective_device_ids.extend(client_device_ids)
+    benchmark_contract = build_benchmark_contract(
+        benchmark_family="pd_qos",
+        question_answered="How does Myelon affect PD-capable serving paths on supported transports and models?",
+        workload_class=workload_class,
+        warmup_policy=warmup_policy,
+        first_turn_measured=not warmup_step,
+        arrival_pattern=classify_arrival_pattern(request_rate),
+        concurrency_policy={
+            "driver": "pd_server_client_http",
+            "max_num_seqs": max_num_seqs,
+            "num_clients": num_clients,
+            "max_active_conversations": max_active_conversations,
+            "max_num_requests": max_num_requests if max_num_requests > 0 else None,
+            "max_turns": max_turns,
+            "request_rate": float(request_rate),
+            "server_device_ids": server_device_ids,
+            "client_device_ids": client_device_ids,
+            "pd_url": pd_url,
+        },
+        run_class=run_class,
+        stop_point="full_completion",
+        skip_reason=None,
+    )
+    machine_profile = build_machine_profile(
+        detected_cuda_device_count=detect_cuda_device_count(),
+        effective_device_ids=effective_device_ids,
+    )
 
     report: dict[str, object] = {
+        "benchmark_contract": benchmark_contract,
+        "machine_profile": machine_profile,
         "model_path": model_path,
         "workload_file": str(workload_file),
         "build_profile": build_profile,
@@ -349,6 +399,9 @@ def main() -> int:
 
         case_report: dict[str, object] = {
             "label": label,
+            "execution_variant": label,
+            "stop_point": "full_completion",
+            "skip_reason": None,
             "pd_server_command": pd_server_command,
             "client_server_command": client_server_command,
             "benchmark_command": benchmark_command,
@@ -412,12 +465,14 @@ def main() -> int:
         except subprocess.TimeoutExpired as error:
             case_report["benchmark_timeout"] = benchmark_timeout_seconds
             case_report["benchmark_exit_code"] = None
+            case_report["stop_point"] = "benchmark_timeout"
             benchmark_log_path.write_text(
                 f"benchmark timed out after {benchmark_timeout_seconds}s\n{error}\n",
                 encoding="utf-8",
             )
         except Exception as error:  # noqa: BLE001
             case_report["benchmark_exit_code"] = None
+            case_report["stop_point"] = "runtime_error_boundary"
             case_report["error"] = str(error)
         finally:
             if client_server is not None:
