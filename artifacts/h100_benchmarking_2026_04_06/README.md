@@ -95,3 +95,4 @@ The first `VR01` contract slice is now landed and validated:
 See:
 
 - `artifacts/h100_benchmarking_2026_04_06/benchmark_contract_slice.md`
+- `artifacts/h100_benchmarking_2026_04_06/report_bundle_slice.md`

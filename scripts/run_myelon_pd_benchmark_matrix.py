@@ -7,6 +7,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from myelon_report_common import write_report_bundle
 from myelon_validation_common import (
     build_benchmark_contract,
     build_machine_profile,
@@ -150,6 +151,7 @@ def main() -> int:
     warmup_step = env_bool("VLLM_SERVER_BENCH_WARMUP_STEP", True)
     no_stream = env_bool("VLLM_SERVER_BENCH_NO_STREAM", False)
     prefix_cache = env_bool("VLLM_PD_PREFIX_CACHE", True)
+    capture_raw_system = env_bool("VLLM_CAPTURE_RAW_SYSTEM_INFO", True)
     pd_url = os.environ.get("VLLM_PD_URL")
     run_class = resolve_run_class(
         os.environ.get("VLLM_RUN_CLASS"),
@@ -491,6 +493,13 @@ def main() -> int:
             case_report["pd_server_exit_code"] = terminate_process(pd_server, 10)
 
         report["cases"].append(case_report)
+        report["report_bundle"] = write_report_bundle(
+            output_root=output_root,
+            report=report,
+            report_path=report_path,
+            repo_root=repo_root,
+            capture_raw_system=capture_raw_system,
+        )
         report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
     print(report_path)

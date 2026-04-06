@@ -133,6 +133,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 "VLLM_BENCHMARK_WARMUP_RUNS": "1",
                 "VLLM_BENCHMARK_MEASURED_RUNS": "2",
                 "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
             }
 
             with mock.patch.dict(os.environ, env, clear=False):
@@ -165,6 +166,13 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["benchmark_contract"]["topology_overlay"], "tp2")
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
             self.assertIn("machine_profile", report)
+            self.assertIn("report_bundle", report)
+            summary_md = Path(report["report_bundle"]["benchmarks"]["summary_md"])
+            details_csv = Path(report["report_bundle"]["benchmarks"]["details_csv"])
+            system_md = Path(report["report_bundle"]["system_info"]["md"])
+            self.assertTrue(summary_md.is_file())
+            self.assertTrue(details_csv.is_file())
+            self.assertTrue(system_md.is_file())
 
     def test_server_benchmark_report_includes_contract_and_case_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -183,6 +191,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 "VLLM_SERVER_BENCHMARK_MODE": "single_gpu",
                 "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
                 "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
             }
 
             def fake_run(*args, **kwargs):
@@ -227,6 +236,10 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
             self.assertEqual(report["cases"][0]["stop_point"], "full_completion")
             self.assertIn("machine_profile", report)
+            self.assertIn("report_bundle", report)
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["details_csv"]).is_file())
+            self.assertTrue(Path(report["report_bundle"]["system_info"]["md"]).is_file())
 
     def test_pd_benchmark_report_includes_contract_and_case_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -246,6 +259,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 "VLLM_PD_CLIENT_DEVICE_IDS": "1",
                 "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
                 "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
             }
 
             def fake_run(*args, **kwargs):
@@ -295,6 +309,10 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
             self.assertEqual(report["cases"][0]["stop_point"], "full_completion")
             self.assertIn("machine_profile", report)
+            self.assertIn("report_bundle", report)
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["details_csv"]).is_file())
+            self.assertTrue(Path(report["report_bundle"]["system_info"]["md"]).is_file())
 
 
 if __name__ == "__main__":
