@@ -2,6 +2,8 @@ import os
 import platform
 import socket
 import subprocess
+import json
+from pathlib import Path
 
 
 def env_str(name: str, default: str) -> str:
@@ -68,6 +70,57 @@ def infer_workload_class_from_path(path: str) -> str:
     if "first_transfer" in lowered or "transfer_first" in lowered:
         return "pd_first_transfer_control"
     return "file_defined"
+
+
+def load_model_config(model_path: str | Path) -> dict[str, object] | None:
+    config_path = Path(model_path) / "config.json"
+    if not config_path.is_file():
+        return None
+    try:
+        return json.loads(config_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def classify_model_capability(model_path: str | Path) -> dict[str, object]:
+    config = load_model_config(model_path)
+    architectures = config.get("architectures", []) if isinstance(config, dict) else []
+    architecture = architectures[0] if architectures else None
+    model_type = config.get("model_type") if isinstance(config, dict) else None
+
+    layer_types = []
+    if isinstance(config, dict):
+        text_config = config.get("text_config")
+        if isinstance(text_config, dict):
+            raw_layer_types = text_config.get("layer_types")
+            if isinstance(raw_layer_types, list):
+                layer_types = [str(item) for item in raw_layer_types]
+        raw_layer_types = config.get("layer_types")
+        if isinstance(raw_layer_types, list) and not layer_types:
+            layer_types = [str(item) for item in raw_layer_types]
+
+    searchable = []
+    if architecture:
+        searchable.append(str(architecture).lower())
+    if model_type:
+        searchable.append(str(model_type).lower())
+    searchable.extend(item.lower() for item in layer_types)
+
+    has_linear_attention = any("linear_attention" in item for item in searchable)
+    has_mamba = any("mamba" in item for item in searchable)
+    pd_supported = not (has_linear_attention or has_mamba)
+    pd_skip_reason = (
+        None if pd_supported else "unsupported_architecture_pd_state_transfer"
+    )
+
+    return {
+        "architecture": architecture,
+        "architectures": architectures,
+        "model_type": model_type,
+        "layer_types": layer_types,
+        "pd_supported": pd_supported,
+        "pd_skip_reason": pd_skip_reason,
+    }
 
 
 def detect_gpu_inventory() -> list[dict[str, object]] | None:
