@@ -1,0 +1,4098 @@
+[
+  {
+    "ttft_ms": 304.545,
+    "latency_ms": 1361.27,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2413.261,
+    "latency_ms": 2417.973,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2413.277,
+    "latency_ms": 2441.131,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2413.123,
+    "latency_ms": 2423.486,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2413.011,
+    "latency_ms": 2446.683,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2412.895,
+    "latency_ms": 2429.033,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2412.825,
+    "latency_ms": 2452.281,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2097.045,
+    "latency_ms": 2113.196,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2096.978,
+    "latency_ms": 2136.334,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2096.846,
+    "latency_ms": 2118.803,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2096.762,
+    "latency_ms": 2141.953,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2096.495,
+    "latency_ms": 2106.966,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2096.58,
+    "latency_ms": 2130.138,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2096.391,
+    "latency_ms": 2124.168,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2411.856,
+    "latency_ms": 2433.863,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1423.098,
+    "latency_ms": 1439.721,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1758.824,
+    "latency_ms": 1769.193,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1758.756,
+    "latency_ms": 1798.441,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1758.676,
+    "latency_ms": 1792.455,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1422.695,
+    "latency_ms": 1463.003,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1758.391,
+    "latency_ms": 1786.302,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1758.295,
+    "latency_ms": 1780.267,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1758.217,
+    "latency_ms": 1803.754,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1757.901,
+    "latency_ms": 1762.591,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1422.131,
+    "latency_ms": 1450.706,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1757.851,
+    "latency_ms": 1774.045,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1421.945,
+    "latency_ms": 1456.376,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1421.79,
+    "latency_ms": 1444.423,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1421.495,
+    "latency_ms": 1432.407,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 2094.468,
+    "latency_ms": 2099.186,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1421.517,
+    "latency_ms": 1467.658,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1421.177,
+    "latency_ms": 1426.328,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1052.507,
+    "latency_ms": 1097.823,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1208.129,
+    "latency_ms": 1212.874,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1202.445,
+    "latency_ms": 1218.72,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1196.554,
+    "latency_ms": 1206.988,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1190.711,
+    "latency_ms": 1212.634,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1184.723,
+    "latency_ms": 1224.268,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1178.746,
+    "latency_ms": 1206.688,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1173.001,
+    "latency_ms": 1206.687,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1167.128,
+    "latency_ms": 1212.477,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1090.692,
+    "latency_ms": 1095.396,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1085.013,
+    "latency_ms": 1101.166,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1079.211,
+    "latency_ms": 1113.539,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1073.211,
+    "latency_ms": 1083.746,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1067.45,
+    "latency_ms": 1107.495,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1061.523,
+    "latency_ms": 1083.508,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1055.648,
+    "latency_ms": 1083.477,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 1049.824,
+    "latency_ms": 1095.423,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 971.439,
+    "latency_ms": 976.791,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 966.414,
+    "latency_ms": 982.513,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 960.428,
+    "latency_ms": 970.954,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 954.79,
+    "latency_ms": 1000.418,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 948.825,
+    "latency_ms": 970.811,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 943.16,
+    "latency_ms": 970.754,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 937.339,
+    "latency_ms": 970.595,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 931.554,
+    "latency_ms": 970.585,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 871.509,
+    "latency_ms": 876.182,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 865.923,
+    "latency_ms": 881.837,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 860.091,
+    "latency_ms": 881.734,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 854.243,
+    "latency_ms": 881.67,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 848.23,
+    "latency_ms": 858.634,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 842.609,
+    "latency_ms": 875.737,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 836.746,
+    "latency_ms": 875.617,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 830.931,
+    "latency_ms": 875.54,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 843.973,
+    "latency_ms": 848.794,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 838.374,
+    "latency_ms": 860.474,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 832.589,
+    "latency_ms": 848.835,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 826.591,
+    "latency_ms": 837.173,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 820.865,
+    "latency_ms": 854.466,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 814.988,
+    "latency_ms": 842.889,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 809.198,
+    "latency_ms": 848.501,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 803.372,
+    "latency_ms": 848.47,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 822.576,
+    "latency_ms": 827.306,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 816.935,
+    "latency_ms": 827.228,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 811.166,
+    "latency_ms": 845.171,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 805.395,
+    "latency_ms": 832.857,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 799.498,
+    "latency_ms": 821.253,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 792.994,
+    "latency_ms": 809.023,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 787.306,
+    "latency_ms": 827.026,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 781.741,
+    "latency_ms": 827.161,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 817.833,
+    "latency_ms": 822.185,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 812.109,
+    "latency_ms": 827.907,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 806.397,
+    "latency_ms": 833.666,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 800.619,
+    "latency_ms": 810.686,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 794.894,
+    "latency_ms": 816.341,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 789.294,
+    "latency_ms": 822.29,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 783.443,
+    "latency_ms": 822.205,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 776.889,
+    "latency_ms": 821.331,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 800.872,
+    "latency_ms": 817.008,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 794.992,
+    "latency_ms": 799.779,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 789.457,
+    "latency_ms": 799.842,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 783.814,
+    "latency_ms": 817.154,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 777.989,
+    "latency_ms": 805.647,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 772.224,
+    "latency_ms": 794.05,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 766.524,
+    "latency_ms": 805.691,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 760.783,
+    "latency_ms": 805.706,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 799.494,
+    "latency_ms": 804.26,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 793.833,
+    "latency_ms": 804.242,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 788.073,
+    "latency_ms": 821.481,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 782.13,
+    "latency_ms": 798.342,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 776.464,
+    "latency_ms": 815.666,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 770.631,
+    "latency_ms": 798.365,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 765.007,
+    "latency_ms": 786.85,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 759.248,
+    "latency_ms": 804.183,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 799.909,
+    "latency_ms": 804.568,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 794.343,
+    "latency_ms": 822.647,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 788.404,
+    "latency_ms": 799.554,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 782.856,
+    "latency_ms": 799.647,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 777.13,
+    "latency_ms": 816.95,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 770.587,
+    "latency_ms": 793.148,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 764.9,
+    "latency_ms": 798.927,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 759.171,
+    "latency_ms": 804.773,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 778.526,
+    "latency_ms": 788.918,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 772.677,
+    "latency_ms": 777.385,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 767.174,
+    "latency_ms": 783.201,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 761.414,
+    "latency_ms": 800.707,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 755.685,
+    "latency_ms": 783.257,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 749.802,
+    "latency_ms": 771.664,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 744.079,
+    "latency_ms": 777.503,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 738.489,
+    "latency_ms": 783.442,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 793.952,
+    "latency_ms": 798.679,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 788.332,
+    "latency_ms": 798.658,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 782.642,
+    "latency_ms": 798.624,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 776.905,
+    "latency_ms": 810.202,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 771.152,
+    "latency_ms": 815.809,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 765.317,
+    "latency_ms": 787.09,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 759.621,
+    "latency_ms": 798.552,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 753.787,
+    "latency_ms": 781.334,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 795.9,
+    "latency_ms": 800.628,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 790.387,
+    "latency_ms": 817.918,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 784.494,
+    "latency_ms": 794.851,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 778.873,
+    "latency_ms": 794.867,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 772.972,
+    "latency_ms": 794.778,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 767.189,
+    "latency_ms": 800.558,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 761.523,
+    "latency_ms": 801.303,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 755.764,
+    "latency_ms": 801.277,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 799.733,
+    "latency_ms": 810.226,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 793.168,
+    "latency_ms": 797.951,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 787.565,
+    "latency_ms": 809.491,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 781.696,
+    "latency_ms": 797.947,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 776.074,
+    "latency_ms": 810.258,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 770.203,
+    "latency_ms": 798.752,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 764.539,
+    "latency_ms": 810.293,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 758.738,
+    "latency_ms": 798.722,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 805.79,
+    "latency_ms": 810.52,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 800.109,
+    "latency_ms": 810.536,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 794.468,
+    "latency_ms": 810.498,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 788.757,
+    "latency_ms": 827.872,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 782.806,
+    "latency_ms": 816.306,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 777.041,
+    "latency_ms": 799.044,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 771.285,
+    "latency_ms": 798.94,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 765.542,
+    "latency_ms": 810.387,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 786.039,
+    "latency_ms": 790.752,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 780.345,
+    "latency_ms": 790.778,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 774.808,
+    "latency_ms": 802.484,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 769.061,
+    "latency_ms": 809.431,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 763.233,
+    "latency_ms": 785.166,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 757.482,
+    "latency_ms": 773.619,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 751.836,
+    "latency_ms": 786.384,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 746.091,
+    "latency_ms": 792.211,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 789.086,
+    "latency_ms": 793.714,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 783.521,
+    "latency_ms": 799.582,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 777.606,
+    "latency_ms": 788.023,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 772.106,
+    "latency_ms": 811.973,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 766.292,
+    "latency_ms": 793.891,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 760.475,
+    "latency_ms": 794.643,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 753.933,
+    "latency_ms": 775.792,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 748.267,
+    "latency_ms": 793.863,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 784.796,
+    "latency_ms": 789.536,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 779.081,
+    "latency_ms": 789.466,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 773.477,
+    "latency_ms": 803.701,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 767.563,
+    "latency_ms": 785.276,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 761.126,
+    "latency_ms": 797.093,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 755.285,
+    "latency_ms": 779.782,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 749.604,
+    "latency_ms": 792.513,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 743.833,
+    "latency_ms": 792.448,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 780.201,
+    "latency_ms": 796.299,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 774.43,
+    "latency_ms": 784.792,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 768.593,
+    "latency_ms": 773.324,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 762.958,
+    "latency_ms": 784.681,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 757.102,
+    "latency_ms": 784.726,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 751.368,
+    "latency_ms": 784.763,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 745.694,
+    "latency_ms": 784.756,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 739.921,
+    "latency_ms": 785.774,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 785.451,
+    "latency_ms": 790.182,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 779.9,
+    "latency_ms": 790.258,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 774.034,
+    "latency_ms": 791.263,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 768.24,
+    "latency_ms": 792.32,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 762.542,
+    "latency_ms": 798.098,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 755.602,
+    "latency_ms": 796.975,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 749.778,
+    "latency_ms": 779.673,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 744.048,
+    "latency_ms": 791.136,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 784.213,
+    "latency_ms": 789.655,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 778.536,
+    "latency_ms": 788.991,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 772.759,
+    "latency_ms": 800.492,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 766.948,
+    "latency_ms": 783.224,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 761.155,
+    "latency_ms": 783.126,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 754.744,
+    "latency_ms": 788.1,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 748.978,
+    "latency_ms": 789.13,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 743.281,
+    "latency_ms": 789.848,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 784.71,
+    "latency_ms": 795.817,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 778.85,
+    "latency_ms": 783.585,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 771.662,
+    "latency_ms": 788.51,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 764.896,
+    "latency_ms": 804.793,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 759.093,
+    "latency_ms": 787.414,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 753.32,
+    "latency_ms": 775.93,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 746.395,
+    "latency_ms": 792.017,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 740.66,
+    "latency_ms": 774.776,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 786.046,
+    "latency_ms": 790.78,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 780.412,
+    "latency_ms": 790.779,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 774.703,
+    "latency_ms": 790.788,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 769.013,
+    "latency_ms": 809.17,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 763.163,
+    "latency_ms": 784.95,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 757.475,
+    "latency_ms": 784.937,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 751.736,
+    "latency_ms": 797.617,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 744.935,
+    "latency_ms": 779.287,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 786.504,
+    "latency_ms": 791.277,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 780.798,
+    "latency_ms": 797.021,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 773.971,
+    "latency_ms": 784.433,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 767.237,
+    "latency_ms": 807.341,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 761.394,
+    "latency_ms": 784.134,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 755.571,
+    "latency_ms": 784.211,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 749.925,
+    "latency_ms": 784.21,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 744.164,
+    "latency_ms": 790.099,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 778.733,
+    "latency_ms": 783.441,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 773.856,
+    "latency_ms": 807.857,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 767.948,
+    "latency_ms": 778.37,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 762.242,
+    "latency_ms": 784.087,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 756.483,
+    "latency_ms": 772.611,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 750.785,
+    "latency_ms": 779.085,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 744.009,
+    "latency_ms": 783.819,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 737.641,
+    "latency_ms": 783.181,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 782.312,
+    "latency_ms": 787.059,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 775.949,
+    "latency_ms": 797.855,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 770.184,
+    "latency_ms": 780.598,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 764.443,
+    "latency_ms": 780.566,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 758.664,
+    "latency_ms": 786.368,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 752.938,
+    "latency_ms": 792.921,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 747.21,
+    "latency_ms": 781.386,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 741.465,
+    "latency_ms": 787.174,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 783.147,
+    "latency_ms": 787.925,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 777.529,
+    "latency_ms": 806.372,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 771.788,
+    "latency_ms": 782.219,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 766.188,
+    "latency_ms": 806.42,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 760.296,
+    "latency_ms": 776.511,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 753.583,
+    "latency_ms": 775.48,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 747.7,
+    "latency_ms": 782.29,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 742.005,
+    "latency_ms": 788.041,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 781.323,
+    "latency_ms": 786.055,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 775.771,
+    "latency_ms": 820.669,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 770.011,
+    "latency_ms": 797.545,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 763.278,
+    "latency_ms": 785.124,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 757.49,
+    "latency_ms": 767.831,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 751.727,
+    "latency_ms": 767.829,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 745.926,
+    "latency_ms": 779.331,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 740.134,
+    "latency_ms": 779.329,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 784.549,
+    "latency_ms": 802.641,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 778.526,
+    "latency_ms": 783.304,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 772.992,
+    "latency_ms": 802.616,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 767.253,
+    "latency_ms": 779.552,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 760.802,
+    "latency_ms": 784.675,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 755.056,
+    "latency_ms": 790.476,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 749.344,
+    "latency_ms": 790.568,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 743.514,
+    "latency_ms": 790.54,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 782.333,
+    "latency_ms": 787.043,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 776.643,
+    "latency_ms": 792.786,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 770.891,
+    "latency_ms": 781.287,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 765.272,
+    "latency_ms": 787.006,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 759.455,
+    "latency_ms": 798.45,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 752.791,
+    "latency_ms": 780.38,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 747.148,
+    "latency_ms": 780.388,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 741.358,
+    "latency_ms": 785.982,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 780.018,
+    "latency_ms": 784.75,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 774.452,
+    "latency_ms": 791.251,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 768.648,
+    "latency_ms": 779.689,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 762.875,
+    "latency_ms": 785.459,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 756.049,
+    "latency_ms": 784.343,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 750.249,
+    "latency_ms": 784.303,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 744.55,
+    "latency_ms": 784.337,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 738.772,
+    "latency_ms": 784.266,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 777.136,
+    "latency_ms": 799.059,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 771.498,
+    "latency_ms": 805.18,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 765.511,
+    "latency_ms": 770.216,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 759.922,
+    "latency_ms": 770.265,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 754.151,
+    "latency_ms": 770.277,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 748.352,
+    "latency_ms": 787.921,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 742.625,
+    "latency_ms": 770.276,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 736.797,
+    "latency_ms": 782.07,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 778.894,
+    "latency_ms": 789.341,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 771.102,
+    "latency_ms": 775.83,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 765.434,
+    "latency_ms": 793.172,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 759.632,
+    "latency_ms": 775.833,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 753.849,
+    "latency_ms": 775.79,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 748.146,
+    "latency_ms": 787.317,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 742.32,
+    "latency_ms": 775.743,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 736.541,
+    "latency_ms": 781.527,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 791.196,
+    "latency_ms": 795.924,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 785.55,
+    "latency_ms": 798.575,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 779.893,
+    "latency_ms": 816.66,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 774.057,
+    "latency_ms": 798.56,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 768.427,
+    "latency_ms": 787.079,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 762.593,
+    "latency_ms": 792.853,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 756.928,
+    "latency_ms": 805.304,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 751.23,
+    "latency_ms": 793.901,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 800.88,
+    "latency_ms": 805.65,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 794.545,
+    "latency_ms": 804.984,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 788.848,
+    "latency_ms": 816.614,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 783.021,
+    "latency_ms": 823.844,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 777.253,
+    "latency_ms": 799.289,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 771.551,
+    "latency_ms": 787.756,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 765.777,
+    "latency_ms": 799.421,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 760.135,
+    "latency_ms": 806.627,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 803.48,
+    "latency_ms": 808.203,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 797.823,
+    "latency_ms": 814.003,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 792.042,
+    "latency_ms": 820.914,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 786.297,
+    "latency_ms": 796.649,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 780.452,
+    "latency_ms": 803.509,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 774.526,
+    "latency_ms": 809.12,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 768.693,
+    "latency_ms": 809.038,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 762.997,
+    "latency_ms": 809.084,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 805.355,
+    "latency_ms": 810.068,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 799.663,
+    "latency_ms": 810.419,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 793.91,
+    "latency_ms": 810.495,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 788.265,
+    "latency_ms": 827.865,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 782.34,
+    "latency_ms": 804.675,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 776.599,
+    "latency_ms": 810.54,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 770.879,
+    "latency_ms": 798.943,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 765.118,
+    "latency_ms": 810.46,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 796.814,
+    "latency_ms": 807.107,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 788.256,
+    "latency_ms": 792.936,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 782.683,
+    "latency_ms": 798.816,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 777.027,
+    "latency_ms": 816.966,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 771.144,
+    "latency_ms": 793.069,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 764.65,
+    "latency_ms": 792.96,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 758.754,
+    "latency_ms": 792.943,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 753.05,
+    "latency_ms": 798.781,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 791.351,
+    "latency_ms": 801.705,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 785.43,
+    "latency_ms": 790.093,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 779.788,
+    "latency_ms": 795.879,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 773.978,
+    "latency_ms": 795.842,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 768.206,
+    "latency_ms": 814.537,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 762.372,
+    "latency_ms": 796.677,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 755.246,
+    "latency_ms": 782.807,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 749.46,
+    "latency_ms": 790.003,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 796.996,
+    "latency_ms": 801.706,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 791.335,
+    "latency_ms": 813.258,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 785.561,
+    "latency_ms": 795.957,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 778.759,
+    "latency_ms": 794.833,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 772.971,
+    "latency_ms": 806.424,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 767.116,
+    "latency_ms": 813.128,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 761.294,
+    "latency_ms": 789.008,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 755.543,
+    "latency_ms": 794.873,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 669.722,
+    "latency_ms": 805.08,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 663.572,
+    "latency_ms": 805.409,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 657.867,
+    "latency_ms": 811.184,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 652.162,
+    "latency_ms": 817.002,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 646.402,
+    "latency_ms": 817.064,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 640.545,
+    "latency_ms": 788.077,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 634.793,
+    "latency_ms": 793.895,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 629.081,
+    "latency_ms": 805.515,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 795.782,
+    "latency_ms": 800.546,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 790.216,
+    "latency_ms": 812.189,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 784.418,
+    "latency_ms": 824.811,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 778.543,
+    "latency_ms": 788.975,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 772.07,
+    "latency_ms": 788.288,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 766.282,
+    "latency_ms": 794.116,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 760.471,
+    "latency_ms": 795.142,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 754.668,
+    "latency_ms": 800.885,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 802.316,
+    "latency_ms": 807.039,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 796.718,
+    "latency_ms": 831.146,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 790.835,
+    "latency_ms": 813.796,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 785.085,
+    "latency_ms": 802.286,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 779.323,
+    "latency_ms": 789.814,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 772.644,
+    "latency_ms": 801.379,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 766.477,
+    "latency_ms": 812.978,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 760.666,
+    "latency_ms": 800.949,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 817.169,
+    "latency_ms": 827.623,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 811.468,
+    "latency_ms": 852.269,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 805.619,
+    "latency_ms": 834.043,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 799.878,
+    "latency_ms": 821.842,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 794.107,
+    "latency_ms": 840.707,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 788.242,
+    "latency_ms": 804.404,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 782.469,
+    "latency_ms": 816.675,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 775.507,
+    "latency_ms": 780.263,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 831.782,
+    "latency_ms": 836.55,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 825.404,
+    "latency_ms": 854.736,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 819.534,
+    "latency_ms": 835.716,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 813.803,
+    "latency_ms": 824.171,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 808.027,
+    "latency_ms": 830.984,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 802.37,
+    "latency_ms": 849.028,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 796.514,
+    "latency_ms": 837.44,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 790.724,
+    "latency_ms": 825.789,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 837.304,
+    "latency_ms": 842.026,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 831.707,
+    "latency_ms": 853.64,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 825.826,
+    "latency_ms": 836.256,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 820.143,
+    "latency_ms": 859.471,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 814.221,
+    "latency_ms": 847.9,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 807.339,
+    "latency_ms": 823.559,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 801.592,
+    "latency_ms": 829.48,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 795.891,
+    "latency_ms": 840.979,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 861.583,
+    "latency_ms": 897.097,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 855.5,
+    "latency_ms": 860.242,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 848.977,
+    "latency_ms": 860.849,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 843.241,
+    "latency_ms": 872.939,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 837.467,
+    "latency_ms": 860.905,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 831.626,
+    "latency_ms": 849.333,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 825.836,
+    "latency_ms": 867.087,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 819.655,
+    "latency_ms": 866.657,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 854.227,
+    "latency_ms": 870.275,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 848.198,
+    "latency_ms": 852.848,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 842.472,
+    "latency_ms": 852.903,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 836.883,
+    "latency_ms": 882.399,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 830.361,
+    "latency_ms": 863.713,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 824.545,
+    "latency_ms": 852.142,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 817.895,
+    "latency_ms": 839.787,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 812.165,
+    "latency_ms": 852.003,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 833.512,
+    "latency_ms": 838.213,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 827.949,
+    "latency_ms": 849.851,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 822.171,
+    "latency_ms": 838.306,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 815.373,
+    "latency_ms": 842.997,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 808.988,
+    "latency_ms": 819.416,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 803.256,
+    "latency_ms": 848.18,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 797.334,
+    "latency_ms": 836.571,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 791.651,
+    "latency_ms": 825.064,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 832.32,
+    "latency_ms": 837.027,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 826.621,
+    "latency_ms": 837.342,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 820.833,
+    "latency_ms": 837.34,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 815.127,
+    "latency_ms": 854.602,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 809.174,
+    "latency_ms": 842.99,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 803.364,
+    "latency_ms": 831.402,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 797.716,
+    "latency_ms": 819.824,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 791.964,
+    "latency_ms": 837.27,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 803.362,
+    "latency_ms": 808.12,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 796.221,
+    "latency_ms": 831.295,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 790.365,
+    "latency_ms": 800.826,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 784.685,
+    "latency_ms": 831.278,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 778.364,
+    "latency_ms": 795.638,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 772.641,
+    "latency_ms": 795.441,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 766.904,
+    "latency_ms": 807.681,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 761.003,
+    "latency_ms": 790.265,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 797.338,
+    "latency_ms": 807.721,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 791.442,
+    "latency_ms": 796.146,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 785.903,
+    "latency_ms": 826.442,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 780.01,
+    "latency_ms": 814.868,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 774.378,
+    "latency_ms": 790.436,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 768.503,
+    "latency_ms": 791.675,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 762.02,
+    "latency_ms": 791.067,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 756.386,
+    "latency_ms": 802.721,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 802.316,
+    "latency_ms": 807.037,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 796.563,
+    "latency_ms": 812.757,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 790.871,
+    "latency_ms": 819.441,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 785.135,
+    "latency_ms": 795.557,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 779.36,
+    "latency_ms": 802.071,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 773.592,
+    "latency_ms": 813.606,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 767.837,
+    "latency_ms": 813.575,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 762.109,
+    "latency_ms": 796.312,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 803.381,
+    "latency_ms": 808.126,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 797.485,
+    "latency_ms": 832.753,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 791.581,
+    "latency_ms": 803.418,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 785.977,
+    "latency_ms": 826.982,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 780.016,
+    "latency_ms": 797.989,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 774.339,
+    "latency_ms": 797.942,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 768.503,
+    "latency_ms": 798.029,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 762.799,
+    "latency_ms": 809.616,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 802.181,
+    "latency_ms": 824.161,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 796.236,
+    "latency_ms": 800.968,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 789.53,
+    "latency_ms": 799.911,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 784.047,
+    "latency_ms": 823.82,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 777.517,
+    "latency_ms": 793.689,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 771.835,
+    "latency_ms": 805.834,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 765.933,
+    "latency_ms": 793.675,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 760.256,
+    "latency_ms": 805.845,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 795.376,
+    "latency_ms": 800.062,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 789.788,
+    "latency_ms": 805.864,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 783.952,
+    "latency_ms": 806.949,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 776.966,
+    "latency_ms": 817.95,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 771.09,
+    "latency_ms": 806.349,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 765.105,
+    "latency_ms": 775.608,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 759.473,
+    "latency_ms": 788.307,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 753.735,
+    "latency_ms": 800.473,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 778.705,
+    "latency_ms": 783.423,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 773.011,
+    "latency_ms": 795.711,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 767.295,
+    "latency_ms": 801.596,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 760.817,
+    "latency_ms": 800.827,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 754.76,
+    "latency_ms": 765.257,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 749.172,
+    "latency_ms": 766.098,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 743.363,
+    "latency_ms": 771.812,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 737.657,
+    "latency_ms": 783.521,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 648.27,
+    "latency_ms": 652.952,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 641.207,
+    "latency_ms": 663.327,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 635.177,
+    "latency_ms": 663.038,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 629.355,
+    "latency_ms": 639.737,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 623.498,
+    "latency_ms": 639.767,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 617.669,
+    "latency_ms": 651.543,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 612.043,
+    "latency_ms": 651.539,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 606.211,
+    "latency_ms": 651.834,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 521.73,
+    "latency_ms": 532.024,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 515.803,
+    "latency_ms": 520.471,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 510.214,
+    "latency_ms": 543.755,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 504.427,
+    "latency_ms": 543.706,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 498.58,
+    "latency_ms": 514.683,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 492.203,
+    "latency_ms": 514.189,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 486.443,
+    "latency_ms": 514.196,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 480.656,
+    "latency_ms": 525.932,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 396.378,
+    "latency_ms": 401.713,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 390.73,
+    "latency_ms": 414.072,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 384.956,
+    "latency_ms": 414.293,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 377.948,
+    "latency_ms": 389.75,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 372.215,
+    "latency_ms": 389.712,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 365.794,
+    "latency_ms": 406.847,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  },
+  {
+    "ttft_ms": 360.089,
+    "latency_ms": 395.24,
+    "output_chunks": 1,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>"
+  }
+]

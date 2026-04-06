@@ -106,6 +106,7 @@ See:
 
 - `artifacts/h100_benchmarking_2026_04_06/benchmark_contract_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/report_bundle_slice.md`
+- `artifacts/h100_benchmarking_2026_04_06/report_manifest_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/tabulate_report_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/unsupported_skip_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/side_by_side_report_slice.md`
@@ -119,5 +120,6 @@ See:
 - `artifacts/h100_benchmarking_2026_04_06/server_prefill_cache_pressure_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/server_prefill_kv_fraction_guard_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/server_prefill_bridge_results_slice.md`
+- `artifacts/h100_benchmarking_2026_04_06/server_prefill_06b_attribution_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/model_workload_policy.md`
 - `artifacts/h100_benchmarking_2026_04_06/blocker_registry.md`
