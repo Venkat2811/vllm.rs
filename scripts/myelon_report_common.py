@@ -215,6 +215,7 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
     machine_profile = report.get("machine_profile", {})
     model_capability = report.get("model_capability", {})
     transport_capability = report.get("transport_capability", {})
+    concurrency_policy = contract.get("concurrency_policy", {})
     gpu_inventory = machine_profile.get("gpu_inventory", [])
     gpu_names = []
     if isinstance(gpu_inventory, list):
@@ -229,6 +230,21 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
             "first_turn_measured": contract.get("first_turn_measured"),
             "arrival_pattern": contract.get("arrival_pattern"),
             "cache_pressure_profile": contract.get("cache_pressure_profile"),
+            "conversation_sampling": (
+                concurrency_policy.get("conversation_sampling")
+                if isinstance(concurrency_policy, dict)
+                else None
+            ),
+            "limit_min_tokens": (
+                concurrency_policy.get("limit_min_tokens")
+                if isinstance(concurrency_policy, dict)
+                else None
+            ),
+            "limit_max_tokens": (
+                concurrency_policy.get("limit_max_tokens")
+                if isinstance(concurrency_policy, dict)
+                else None
+            ),
             "topology_overlay": contract.get("topology_overlay"),
             "transport_mode": contract.get("transport_mode"),
             "run_class": contract.get("run_class"),
@@ -320,11 +336,11 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
             )
         )
         return {
-            "benchmark_family": benchmark_family,
-            "benchmark_submode": benchmark_submode,
-            "question_answered": (
-                "What user-facing QoS difference does Myelon produce in persistent serving?"
-                if benchmark_family == "serving_qos"
+        "benchmark_family": benchmark_family,
+        "benchmark_submode": benchmark_submode,
+        "question_answered": (
+            "What user-facing QoS difference does Myelon produce in persistent serving?"
+            if benchmark_family == "serving_qos"
                 else "How much shared-memory gain survives when the full server path stays in the loop under cache-hostile, prefill-dominant conditions?"
             ),
             "workload_class": workload_class,
@@ -339,6 +355,9 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
                 "max_num_requests": max_num_requests,
                 "max_turns": report.get("max_turns"),
                 "request_rate": request_rate,
+                "conversation_sampling": report.get("conversation_sampling"),
+                "limit_min_tokens": report.get("limit_min_tokens"),
+                "limit_max_tokens": report.get("limit_max_tokens"),
                 "mode": mode,
             },
             "cache_pressure_profile": report.get("cache_pressure_profile", "unspecified"),
@@ -517,6 +536,24 @@ def write_benchmark_reports(
         ("first_turn_measured", contract.get("first_turn_measured")),
         ("arrival_pattern", contract.get("arrival_pattern")),
         ("cache_pressure_profile", contract.get("cache_pressure_profile")),
+        (
+            "conversation_sampling",
+            contract.get("concurrency_policy", {}).get("conversation_sampling")
+            if isinstance(contract.get("concurrency_policy"), dict)
+            else None,
+        ),
+        (
+            "limit_min_tokens",
+            contract.get("concurrency_policy", {}).get("limit_min_tokens")
+            if isinstance(contract.get("concurrency_policy"), dict)
+            else None,
+        ),
+        (
+            "limit_max_tokens",
+            contract.get("concurrency_policy", {}).get("limit_max_tokens")
+            if isinstance(contract.get("concurrency_policy"), dict)
+            else None,
+        ),
         ("topology_overlay", contract.get("topology_overlay")),
         ("transport_mode", contract.get("transport_mode")),
         ("run_class", contract.get("run_class")),
