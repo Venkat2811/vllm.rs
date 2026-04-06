@@ -143,6 +143,18 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             "unsupported_architecture_pd_state_transfer",
         )
 
+    def test_pd_topology_capability_detects_missing_visible_gpu(self) -> None:
+        capability = validation_common.classify_pd_topology_capability(
+            server_device_ids=[0],
+            client_device_ids=[1],
+            detected_cuda_device_count=1,
+        )
+        self.assertFalse(capability["pd_supported"])
+        self.assertEqual(
+            capability["pd_skip_reason"],
+            "unsupported_topology_insufficient_visible_cuda_devices",
+        )
+
 
 class BenchmarkScriptReportTests(unittest.TestCase):
     def test_cli_benchmark_report_includes_contract_and_machine_profile(self) -> None:
@@ -348,6 +360,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["cases"][0]["stop_point"], "full_completion")
             self.assertIn("machine_profile", report)
             self.assertIn("model_capability", report)
+            self.assertIn("topology_capability", report)
             self.assertIn("report_bundle", report)
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["details_csv"]).is_file())
@@ -421,6 +434,66 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["run_index_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["side_by_side_md"]).is_file())
+
+    def test_pd_benchmark_unsupported_topology_writes_skip_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            (model_dir / "config.json").write_text(
+                json.dumps(
+                    {
+                        "architectures": ["Qwen3ForCausalLM"],
+                        "model_type": "qwen3",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            workload_file = tmp_path / "pd_transfer_first_request.json"
+            workload_file.write_text("{}\n", encoding="utf-8")
+            output_dir = tmp_path / "pd_topology_skip_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_INPUT_FILE": str(workload_file),
+                "VLLM_PD_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_PD_SERVER_DEVICE_IDS": "0",
+                "VLLM_PD_CLIENT_DEVICE_IDS": "1",
+                "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    pd_matrix.subprocess,
+                    "run",
+                ) as mocked_run, mock.patch.object(
+                    pd_matrix,
+                    "detect_cuda_device_count",
+                    return_value=1,
+                ):
+                    rc = pd_matrix.main()
+
+            self.assertEqual(rc, 0)
+            cargo_build_calls = [
+                call_args
+                for call_args in mocked_run.call_args_list
+                if call_args.args
+                and call_args.args[0]
+                and call_args.args[0][0:2] == ["cargo", "build"]
+            ]
+            self.assertEqual(cargo_build_calls, [])
+            report_path = output_dir / "report.json"
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "skipped_unsupported_topology")
+            self.assertEqual(
+                report["benchmark_contract"]["skip_reason"],
+                "unsupported_topology_insufficient_visible_cuda_devices",
+            )
+            self.assertFalse(report["topology_capability"]["pd_supported"])
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
 
 
 if __name__ == "__main__":
