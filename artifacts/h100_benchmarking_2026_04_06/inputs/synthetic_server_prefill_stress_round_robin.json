@@ -1,0 +1,35 @@
+{
+  "filetype": "generate_conversations",
+  "num_conversations": 32,
+  "text_files": [
+    "/root/Documents/myelon-launch/vllm/benchmarks/sonnet.txt"
+  ],
+  "print_stats": true,
+  "prompt_input": {
+    "num_turns": {
+      "distribution": "constant",
+      "value": 6
+    },
+    "common_prefix_num_tokens": {
+      "distribution": "constant",
+      "value": 0
+    },
+    "prefix_num_tokens": {
+      "distribution": "uniform",
+      "min": 256,
+      "max": 512
+    },
+    "num_tokens": {
+      "distribution": "lognormal",
+      "average": 768,
+      "median_ratio": 0.7,
+      "max": 1536
+    }
+  },
+  "prompt_output": {
+    "num_tokens": {
+      "distribution": "constant",
+      "value": 8
+    }
+  }
+}
