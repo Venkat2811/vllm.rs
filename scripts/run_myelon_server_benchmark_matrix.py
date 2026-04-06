@@ -245,8 +245,8 @@ def resolve_server_prefill_defaults(benchmark_submode: str) -> dict[str, object]
             "conversation_sampling": "round_robin",
             "limit_min_tokens": 1,
             "limit_max_tokens": 1,
+            "max_model_len": 4096,
             "prefix_cache_enabled": False,
-            "kv_fraction": 0.55,
             "cpu_mem_fold": 0.5,
         }
     if benchmark_submode == "low_decode":
@@ -606,9 +606,14 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+    default_max_model_len = prefill_defaults.get("max_model_len")
     if explicit_max_model_len is not None:
         max_model_len: str | None = explicit_max_model_len
         if benchmark_family == "server_prefill_stress" and explicit_kv_fraction is None:
+            kv_fraction = None
+    elif benchmark_family == "server_prefill_stress" and default_max_model_len is not None:
+        max_model_len = str(default_max_model_len)
+        if explicit_kv_fraction is None:
             kv_fraction = None
     elif benchmark_family == "server_prefill_stress" and kv_fraction is not None:
         max_model_len = None
