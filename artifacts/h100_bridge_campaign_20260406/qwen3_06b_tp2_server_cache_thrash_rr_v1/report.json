@@ -140,9 +140,126 @@
         "requests_per_sec": 2.447,
         "warmup_runtime_sec": null,
         "total_runtime_incl_warmup_sec": null,
-        "table": {}
+        "table": {
+          "ttft_ms": {
+            "mean": 7095.0,
+            "max": 13487.78
+          },
+          "tpot_ms": {
+            "mean": 704.89,
+            "max": 1109.4
+          },
+          "latency_ms": {
+            "mean": 12029.23,
+            "max": 15847.28
+          }
+        },
+        "observed_cache_pressure": {
+          "requested_cache_pressure_profile": "hard_thrash",
+          "planned_gpu_blocks": 1794,
+          "planned_usable_kvcache_tokens": 114816,
+          "planned_max_seqs": 2,
+          "planned_tokens_per_seq_limit": 40960,
+          "configured_prefix_cache_blocks": 16,
+          "configured_prefix_cache_tokens": 1024,
+          "observed_gpu_kv_usage_percent_max": 78.2,
+          "observed_gpu_kv_usage_gb_max": 4.8,
+          "observed_gpu_kv_budget_gb": 6.13,
+          "observed_cpu_swap_usage_percent_max": 0.0,
+          "observed_cpu_swap_usage_gb_max": 0.0,
+          "observed_cpu_swap_budget_gb": 0.31,
+          "observed_prefix_cache_miss_count": 39,
+          "observed_prefix_cache_insert_count": 39,
+          "observed_prefix_cache_eviction_count": 0,
+          "observed_cache_pressure_level": "high_gpu_pressure",
+          "pressure_profile_outcome": "requested_thrash_observed"
+        },
+        "observed_benchmark_outcome": {
+          "observed_client_done_count": 32,
+          "observed_successful_requests_total": 39,
+          "observed_failed_requests_total": 3,
+          "observed_clients_with_failures": 3,
+          "observed_client_no_more_work_count": 1,
+          "observed_client_termination_signal_count": 31,
+          "observed_http_422_rejection_count": 9,
+          "observed_request_rejections": true
+        },
+        "observed_server_path_attribution": {
+          "observed_swap_out_attempt_count": 0,
+          "observed_dropped_request_count": 0,
+          "observed_stream_generation_failed_count": 9,
+          "observed_prefix_cache_hit_count": 0,
+          "observed_prefix_cache_hit_tokens_total": 0,
+          "observed_prefill_event_count": 39,
+          "observed_prefill_tokens_total": 185141,
+          "observed_prefill_seconds_total": 209.89,
+          "observed_prefill_seconds_mean": 5.382,
+          "observed_prefill_tps_mean": 1190.928,
+          "observed_prompt_metric_event_count": 39,
+          "observed_prompt_tokens_total": 185102,
+          "observed_prompt_seconds_total": 209.89,
+          "observed_prompt_seconds_mean": 5.382,
+          "observed_prompt_tps_mean": 1190.664,
+          "observed_decode_metric_event_count": 39,
+          "observed_decode_tokens_total": 312,
+          "observed_decode_seconds_total": 192.46,
+          "observed_decode_seconds_mean": 4.935,
+          "observed_decode_tps_mean": 4.088
+        }
       },
-      "server_exit_code": -2
+      "server_exit_code": -2,
+      "observed_cache_pressure": {
+        "requested_cache_pressure_profile": "hard_thrash",
+        "planned_gpu_blocks": 1794,
+        "planned_usable_kvcache_tokens": 114816,
+        "planned_max_seqs": 2,
+        "planned_tokens_per_seq_limit": 40960,
+        "configured_prefix_cache_blocks": 16,
+        "configured_prefix_cache_tokens": 1024,
+        "observed_gpu_kv_usage_percent_max": 78.2,
+        "observed_gpu_kv_usage_gb_max": 4.8,
+        "observed_gpu_kv_budget_gb": 6.13,
+        "observed_cpu_swap_usage_percent_max": 0.0,
+        "observed_cpu_swap_usage_gb_max": 0.0,
+        "observed_cpu_swap_budget_gb": 0.31,
+        "observed_prefix_cache_miss_count": 39,
+        "observed_prefix_cache_insert_count": 39,
+        "observed_prefix_cache_eviction_count": 0,
+        "observed_cache_pressure_level": "high_gpu_pressure",
+        "pressure_profile_outcome": "requested_thrash_observed"
+      },
+      "observed_benchmark_outcome": {
+        "observed_client_done_count": 32,
+        "observed_successful_requests_total": 39,
+        "observed_failed_requests_total": 3,
+        "observed_clients_with_failures": 3,
+        "observed_client_no_more_work_count": 1,
+        "observed_client_termination_signal_count": 31,
+        "observed_http_422_rejection_count": 9,
+        "observed_request_rejections": true
+      },
+      "observed_server_path_attribution": {
+        "observed_swap_out_attempt_count": 0,
+        "observed_dropped_request_count": 0,
+        "observed_stream_generation_failed_count": 9,
+        "observed_prefix_cache_hit_count": 0,
+        "observed_prefix_cache_hit_tokens_total": 0,
+        "observed_prefill_event_count": 39,
+        "observed_prefill_tokens_total": 185141,
+        "observed_prefill_seconds_total": 209.89,
+        "observed_prefill_seconds_mean": 5.382,
+        "observed_prefill_tps_mean": 1190.928,
+        "observed_prompt_metric_event_count": 39,
+        "observed_prompt_tokens_total": 185102,
+        "observed_prompt_seconds_total": 209.89,
+        "observed_prompt_seconds_mean": 5.382,
+        "observed_prompt_tps_mean": 1190.664,
+        "observed_decode_metric_event_count": 39,
+        "observed_decode_tokens_total": 312,
+        "observed_decode_seconds_total": 192.46,
+        "observed_decode_seconds_mean": 4.935,
+        "observed_decode_tps_mean": 4.088
+      }
     },
     {
       "label": "myelon",
@@ -248,9 +365,126 @@
         "requests_per_sec": 2.335,
         "warmup_runtime_sec": null,
         "total_runtime_incl_warmup_sec": null,
-        "table": {}
+        "table": {
+          "ttft_ms": {
+            "mean": 6413.26,
+            "max": 13666.28
+          },
+          "tpot_ms": {
+            "mean": 923.61,
+            "max": 2689.0
+          },
+          "latency_ms": {
+            "mean": 12878.55,
+            "max": 23065.79
+          }
+        },
+        "observed_cache_pressure": {
+          "requested_cache_pressure_profile": "hard_thrash",
+          "planned_gpu_blocks": 1794,
+          "planned_usable_kvcache_tokens": 114816,
+          "planned_max_seqs": 2,
+          "planned_tokens_per_seq_limit": 40960,
+          "configured_prefix_cache_blocks": 16,
+          "configured_prefix_cache_tokens": 1024,
+          "observed_gpu_kv_usage_percent_max": 95.8,
+          "observed_gpu_kv_usage_gb_max": 5.88,
+          "observed_gpu_kv_budget_gb": 6.13,
+          "observed_cpu_swap_usage_percent_max": 89.9,
+          "observed_cpu_swap_usage_gb_max": 0.28,
+          "observed_cpu_swap_budget_gb": 0.31,
+          "observed_prefix_cache_miss_count": 54,
+          "observed_prefix_cache_insert_count": 54,
+          "observed_prefix_cache_eviction_count": 0,
+          "observed_cache_pressure_level": "swap_engaged",
+          "pressure_profile_outcome": "requested_thrash_observed"
+        },
+        "observed_benchmark_outcome": {
+          "observed_client_done_count": 32,
+          "observed_successful_requests_total": 54,
+          "observed_failed_requests_total": 2,
+          "observed_clients_with_failures": 2,
+          "observed_client_no_more_work_count": 1,
+          "observed_client_termination_signal_count": 31,
+          "observed_http_422_rejection_count": 8,
+          "observed_request_rejections": true
+        },
+        "observed_server_path_attribution": {
+          "observed_swap_out_attempt_count": 1,
+          "observed_dropped_request_count": 0,
+          "observed_stream_generation_failed_count": 8,
+          "observed_prefix_cache_hit_count": 0,
+          "observed_prefix_cache_hit_tokens_total": 0,
+          "observed_prefill_event_count": 54,
+          "observed_prefill_tokens_total": 262582,
+          "observed_prefill_seconds_total": 300.53,
+          "observed_prefill_seconds_mean": 5.565,
+          "observed_prefill_tps_mean": 1523.584,
+          "observed_prompt_metric_event_count": 54,
+          "observed_prompt_tokens_total": 262528,
+          "observed_prompt_seconds_total": 300.53,
+          "observed_prompt_seconds_mean": 5.565,
+          "observed_prompt_tps_mean": 1523.24,
+          "observed_decode_metric_event_count": 54,
+          "observed_decode_tokens_total": 432,
+          "observed_decode_seconds_total": 349.14,
+          "observed_decode_seconds_mean": 6.466,
+          "observed_decode_tps_mean": 2.254
+        }
       },
-      "server_exit_code": -2
+      "server_exit_code": -2,
+      "observed_cache_pressure": {
+        "requested_cache_pressure_profile": "hard_thrash",
+        "planned_gpu_blocks": 1794,
+        "planned_usable_kvcache_tokens": 114816,
+        "planned_max_seqs": 2,
+        "planned_tokens_per_seq_limit": 40960,
+        "configured_prefix_cache_blocks": 16,
+        "configured_prefix_cache_tokens": 1024,
+        "observed_gpu_kv_usage_percent_max": 95.8,
+        "observed_gpu_kv_usage_gb_max": 5.88,
+        "observed_gpu_kv_budget_gb": 6.13,
+        "observed_cpu_swap_usage_percent_max": 89.9,
+        "observed_cpu_swap_usage_gb_max": 0.28,
+        "observed_cpu_swap_budget_gb": 0.31,
+        "observed_prefix_cache_miss_count": 54,
+        "observed_prefix_cache_insert_count": 54,
+        "observed_prefix_cache_eviction_count": 0,
+        "observed_cache_pressure_level": "swap_engaged",
+        "pressure_profile_outcome": "requested_thrash_observed"
+      },
+      "observed_benchmark_outcome": {
+        "observed_client_done_count": 32,
+        "observed_successful_requests_total": 54,
+        "observed_failed_requests_total": 2,
+        "observed_clients_with_failures": 2,
+        "observed_client_no_more_work_count": 1,
+        "observed_client_termination_signal_count": 31,
+        "observed_http_422_rejection_count": 8,
+        "observed_request_rejections": true
+      },
+      "observed_server_path_attribution": {
+        "observed_swap_out_attempt_count": 1,
+        "observed_dropped_request_count": 0,
+        "observed_stream_generation_failed_count": 8,
+        "observed_prefix_cache_hit_count": 0,
+        "observed_prefix_cache_hit_tokens_total": 0,
+        "observed_prefill_event_count": 54,
+        "observed_prefill_tokens_total": 262582,
+        "observed_prefill_seconds_total": 300.53,
+        "observed_prefill_seconds_mean": 5.565,
+        "observed_prefill_tps_mean": 1523.584,
+        "observed_prompt_metric_event_count": 54,
+        "observed_prompt_tokens_total": 262528,
+        "observed_prompt_seconds_total": 300.53,
+        "observed_prompt_seconds_mean": 5.565,
+        "observed_prompt_tps_mean": 1523.24,
+        "observed_decode_metric_event_count": 54,
+        "observed_decode_tokens_total": 432,
+        "observed_decode_seconds_total": 349.14,
+        "observed_decode_seconds_mean": 6.466,
+        "observed_decode_tps_mean": 2.254
+      }
     }
   ],
   "effective_device_ids": [
@@ -352,9 +586,10 @@
     "repo_state": {
       "repo_path": "/root/Documents/myelon-launch/vllm.rs",
       "branch": "myelon-integration-1",
-      "commit": "338818b7bac4fb3b007c63c2a9aa048174f80466",
-      "status": "?? artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_server_cache_thrash_rr_v1/"
+      "commit": "5d2400d757e9cbfe0f653d8b4be10c2481559d72",
+      "status": "M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v6/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v6/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v6/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v6/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v6/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v6/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v6/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v6/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/reports/manifest.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/reports/manifest.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/reports/manifest.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/reports/manifest.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/reports/manifest.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/reports/manifest.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/reports/manifest.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/reports/manifest.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/reports/manifest.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/reports/manifest.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/manifest.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/manifest.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/reports/manifest.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/reports/manifest.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/reports/manifest.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/reports/manifest.md\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/all_run_commands.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/current_findings.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/current_findings.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/high_level_summary.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/per_model_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/per_model_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/rollup_run_index.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/rollup_run_index.md\n M scripts/myelon_report_common.py\n M scripts/run_myelon_benchmark_matrix.py\n M scripts/run_myelon_pd_benchmark_matrix.py\n M scripts/run_myelon_server_benchmark_matrix.py\n M scripts/tests/test_benchmark_contract.py\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v6/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v6/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_cache_thrash_rr_v1/\n?? artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_shared_prefix_rr_control_v1/"
     },
     "raw_captures": {}
-  }
+  },
+  "result_boundary": "benchmark_complete"
 }
