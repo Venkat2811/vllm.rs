@@ -1,0 +1,14 @@
+ Static hostname: weak-time-laughs-fin-03
+       Icon name: computer-vm
+         Chassis: vm 🖴
+      Machine ID: 807e6563b1614b31a27cec5f4d7843fc
+         Boot ID: d51fc17f3f4a4f528672272cb2359af5
+  Virtualization: kvm
+Operating System: Ubuntu 24.04.4 LTS
+          Kernel: Linux 6.8.0-100-generic
+    Architecture: x86-64
+ Hardware Vendor: QEMU
+  Hardware Model: Ubuntu 24.04 PC _Q35 + ICH9, 2009_
+Firmware Version: 2024.02-2ubuntu0.7
+   Firmware Date: Thu 2025-11-27
+    Firmware Age: 4month 1w 2d
