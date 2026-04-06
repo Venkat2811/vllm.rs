@@ -2799,6 +2799,11 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                                 "latency_ms": {"mean": 1500.0},
                             },
                         },
+                        "observed_cache_pressure": {
+                            "requested_cache_pressure_profile": "relaxed",
+                            "pressure_profile_outcome": "requested_relaxed_observed",
+                            "observed_cache_pressure_level": "minimal_pressure",
+                        },
                         "observed_server_path_attribution": {
                             "observed_prefill_tps_mean": 520.0,
                             "observed_prompt_tps_mean": 510.0,
@@ -2820,6 +2825,11 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                                 "tpot_ms": {"mean": 9.5},
                                 "latency_ms": {"mean": 1400.0},
                             },
+                        },
+                        "observed_cache_pressure": {
+                            "requested_cache_pressure_profile": "relaxed",
+                            "pressure_profile_outcome": "requested_relaxed_observed",
+                            "observed_cache_pressure_level": "minimal_pressure",
                         },
                         "observed_server_path_attribution": {
                             "observed_prefill_tps_mean": 690.0,
@@ -2847,6 +2857,15 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             workload_root = tmp_path / "reports" / "benchmarks" / "by_workload"
             topology_root = tmp_path / "reports" / "benchmarks" / "by_topology"
             run_class_root = tmp_path / "reports" / "benchmarks" / "by_run_class"
+            result_boundary_root = (
+                tmp_path / "reports" / "benchmarks" / "by_result_boundary"
+            )
+            artifact_class_root = (
+                tmp_path / "reports" / "benchmarks" / "by_artifact_class"
+            )
+            pressure_outcome_root = (
+                tmp_path / "reports" / "benchmarks" / "by_pressure_outcome_pair"
+            )
             self.assertTrue(current_findings_md.is_file())
             self.assertTrue(high_level_summary_md.is_file())
             self.assertTrue(rollup_run_index_md.is_file())
@@ -2872,12 +2891,33 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             )
             self.assertTrue((topology_root / "tp2" / "findings.md").is_file())
             self.assertTrue((run_class_root / "fullpass" / "findings.md").is_file())
+            self.assertTrue(
+                (result_boundary_root / "benchmark_complete" / "findings.md").is_file()
+            )
+            self.assertTrue(
+                any(
+                    path.is_file()
+                    for path in artifact_class_root.glob(
+                        "quickpass_benchmark_complete_full_completion/findings.md"
+                    )
+                )
+            )
+            self.assertTrue(
+                any(
+                    path.is_file()
+                    for path in pressure_outcome_root.glob(
+                        "requested_relaxed_observed_requested_relaxed_observed/findings.md"
+                    )
+                )
+            )
 
             findings_text = current_findings_md.read_text(encoding="utf-8")
             self.assertIn("Qwen/Qwen3-4B", findings_text)
             self.assertIn("skipped_unsupported_topology", findings_text)
+            self.assertIn("Pressure Outcome Pair Counts", findings_text)
 
             high_level_text = high_level_summary_md.read_text(encoding="utf-8")
+            self.assertIn("Pressure Outcome Pair Counts", high_level_text)
             self.assertIn("Strongest Requests/sec Gains", high_level_text)
             self.assertIn("Strongest Prompt Throughput Gains", high_level_text)
             self.assertIn("Strongest First-Prefill Wins", high_level_text)
@@ -2927,6 +2967,30 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             ).read_text(encoding="utf-8")
             self.assertIn("fullpass", run_class_text)
             self.assertIn("Qwen/Qwen3-30B-A3B", run_class_text)
+
+            result_boundary_text = (
+                result_boundary_root / "benchmark_complete" / "findings.md"
+            ).read_text(encoding="utf-8")
+            self.assertIn("benchmark_complete", result_boundary_text)
+
+            artifact_class_path = next(
+                artifact_class_root.glob(
+                    "quickpass_benchmark_complete_full_completion/findings.md"
+                )
+            )
+            artifact_class_text = artifact_class_path.read_text(encoding="utf-8")
+            self.assertIn("quickpass/benchmark_complete/full_completion", artifact_class_text)
+
+            pressure_outcome_path = next(
+                pressure_outcome_root.glob(
+                    "requested_relaxed_observed_requested_relaxed_observed/findings.md"
+                )
+            )
+            pressure_outcome_text = pressure_outcome_path.read_text(encoding="utf-8")
+            self.assertIn(
+                "requested_relaxed_observed -> requested_relaxed_observed",
+                pressure_outcome_text,
+            )
 
     def test_normalize_report_backfills_summary_means_from_benchmark_log(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
