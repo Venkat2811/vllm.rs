@@ -116,6 +116,33 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             "smoke",
         )
 
+    def test_model_capability_detects_pd_unsupported_hybrid_linear_attention(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            (tmp_path / "config.json").write_text(
+                json.dumps(
+                    {
+                        "architectures": ["Qwen3_5ForConditionalGeneration"],
+                        "model_type": "qwen3_5",
+                        "text_config": {
+                            "layer_types": [
+                                "linear_attention",
+                                "full_attention",
+                            ]
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            capability = validation_common.classify_model_capability(tmp_path)
+
+        self.assertEqual(capability["architecture"], "Qwen3_5ForConditionalGeneration")
+        self.assertFalse(capability["pd_supported"])
+        self.assertEqual(
+            capability["pd_skip_reason"],
+            "unsupported_architecture_pd_state_transfer",
+        )
+
 
 class BenchmarkScriptReportTests(unittest.TestCase):
     def test_cli_benchmark_report_includes_contract_and_machine_profile(self) -> None:
@@ -165,7 +192,9 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "fixed_prompt_burst")
             self.assertEqual(report["benchmark_contract"]["topology_overlay"], "tp2")
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
+            self.assertEqual(report["status"], "completed")
             self.assertIn("machine_profile", report)
+            self.assertIn("model_capability", report)
             self.assertIn("report_bundle", report)
             summary_md = Path(report["report_bundle"]["benchmarks"]["summary_md"])
             details_csv = Path(report["report_bundle"]["benchmarks"]["details_csv"])
@@ -234,8 +263,10 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 "socket_vs_myelon_process_runner",
             )
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
+            self.assertEqual(report["status"], "completed")
             self.assertEqual(report["cases"][0]["stop_point"], "full_completion")
             self.assertIn("machine_profile", report)
+            self.assertIn("model_capability", report)
             self.assertIn("report_bundle", report)
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["details_csv"]).is_file())
@@ -307,12 +338,79 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "first_transfer_control")
             self.assertEqual(report["benchmark_contract"]["transport_mode"], "pd_localipc_default")
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
+            self.assertEqual(report["status"], "completed")
             self.assertEqual(report["cases"][0]["stop_point"], "full_completion")
             self.assertIn("machine_profile", report)
+            self.assertIn("model_capability", report)
             self.assertIn("report_bundle", report)
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["details_csv"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["system_info"]["md"]).is_file())
+
+    def test_pd_benchmark_unsupported_model_writes_skip_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            (model_dir / "config.json").write_text(
+                json.dumps(
+                    {
+                        "architectures": ["Qwen3_5ForConditionalGeneration"],
+                        "model_type": "qwen3_5",
+                        "text_config": {"layer_types": ["linear_attention", "full_attention"]},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            workload_file = tmp_path / "pd_transfer_first_request.json"
+            workload_file.write_text("{}\n", encoding="utf-8")
+            output_dir = tmp_path / "pd_skip_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_INPUT_FILE": str(workload_file),
+                "VLLM_PD_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_PD_SERVER_DEVICE_IDS": "0",
+                "VLLM_PD_CLIENT_DEVICE_IDS": "1",
+                "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    pd_matrix,
+                    "validate_device_roles",
+                    return_value=None,
+                ), mock.patch.object(
+                    pd_matrix.subprocess,
+                    "run",
+                ) as mocked_run, mock.patch.object(
+                    pd_matrix,
+                    "detect_cuda_device_count",
+                    return_value=2,
+                    ):
+                    rc = pd_matrix.main()
+
+            self.assertEqual(rc, 0)
+            cargo_build_calls = [
+                call_args
+                for call_args in mocked_run.call_args_list
+                if call_args.args
+                and call_args.args[0]
+                and call_args.args[0][0:2] == ["cargo", "build"]
+            ]
+            self.assertEqual(cargo_build_calls, [])
+            report_path = output_dir / "report.json"
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "skipped_unsupported_architecture")
+            self.assertEqual(
+                report["benchmark_contract"]["skip_reason"],
+                "unsupported_architecture_pd_state_transfer",
+            )
+            self.assertFalse(report["model_capability"]["pd_supported"])
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
 
 
 if __name__ == "__main__":
