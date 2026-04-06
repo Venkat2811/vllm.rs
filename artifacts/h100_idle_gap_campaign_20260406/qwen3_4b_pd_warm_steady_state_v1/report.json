@@ -1,0 +1,483 @@
+{
+  "benchmark_contract": {
+    "benchmark_family": "pd_qos",
+    "benchmark_submode": "warm_steady_state",
+    "question_answered": "How does Myelon affect PD-capable serving paths on supported transports and models?",
+    "workload_class": "synthetic_multi_turn",
+    "warmup_policy": "warmup_step_skips_first_turn",
+    "first_turn_measured": false,
+    "arrival_pattern": "saturation_zero_gap",
+    "concurrency_policy": {
+      "driver": "pd_server_client_http",
+      "max_num_seqs": 8,
+      "num_clients": 1,
+      "max_active_conversations": 2,
+      "max_num_requests": 16,
+      "max_turns": 2,
+      "request_rate": 0.0,
+      "server_device_ids": [
+        0
+      ],
+      "client_device_ids": [
+        1
+      ],
+      "pd_url": "tcp://127.0.0.1:18100"
+    },
+    "cache_pressure_profile": "unspecified",
+    "equivalence_group": null,
+    "topology_overlay": "pd_tp1",
+    "tp_scale_overlay": "pd(tp1/tp1)",
+    "prefill_tp_size": 1,
+    "decode_tp_size": 1,
+    "pd_enabled": true,
+    "pd_role_layout": "same_host_split_roles",
+    "transport_mode": "pd_tcp",
+    "run_class": "fullpass",
+    "stop_point": "full_completion",
+    "skip_reason": null
+  },
+  "machine_profile": {
+    "hostname": "hazy-instance-completes-fin-02",
+    "system": "Linux",
+    "release": "6.8.0-100-generic",
+    "platform": "Linux-6.8.0-100-generic-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "python_version": "3.12.3",
+    "cpu_count": 80,
+    "cuda_visible_devices": null,
+    "cuda_compute_cap_override": "90",
+    "detected_cuda_device_count": 2,
+    "effective_device_ids": [
+      0,
+      1
+    ],
+    "gpu_inventory": [
+      {
+        "index": 0,
+        "name": "NVIDIA H100 80GB HBM3",
+        "uuid": "GPU-4679f8ab-6634-0857-9596-656a31d20d55",
+        "pci_bus_id": "00000000:04:00.0",
+        "memory_total_mib": 81559,
+        "driver_version": "580.126.09"
+      },
+      {
+        "index": 1,
+        "name": "NVIDIA H100 80GB HBM3",
+        "uuid": "GPU-8ab41b77-bdd9-ec7c-f8e6-28b00e146ae0",
+        "pci_bus_id": "00000000:05:00.0",
+        "memory_total_mib": 81559,
+        "driver_version": "580.126.09"
+      }
+    ]
+  },
+  "model_capability": {
+    "model_label": "Qwen/Qwen3-4B",
+    "architecture": "Qwen3ForCausalLM",
+    "architectures": [
+      "Qwen3ForCausalLM"
+    ],
+    "model_type": "qwen3",
+    "layer_types": [],
+    "pd_supported": true,
+    "pd_skip_reason": null
+  },
+  "topology_capability": {
+    "server_device_ids": [
+      0
+    ],
+    "client_device_ids": [
+      1
+    ],
+    "detected_cuda_device_count": 2,
+    "pd_supported": true,
+    "pd_skip_reason": null
+  },
+  "transport_capability": {
+    "transport_mode": "pd_tcp",
+    "server_device_ids": [
+      0
+    ],
+    "client_device_ids": [
+      1
+    ],
+    "peer_read_status": null,
+    "peer_write_status": null,
+    "pd_supported": true,
+    "pd_skip_reason": null
+  },
+  "model_path": "/root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c",
+  "workload_file": "/root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/synthetic_multi_turn_smoke.json",
+  "build_profile": "release",
+  "build_features": "cuda,myelon,nccl",
+  "server_device_ids": [
+    0
+  ],
+  "client_device_ids": [
+    1
+  ],
+  "pd_url": "tcp://127.0.0.1:18100",
+  "max_model_len": 4096,
+  "max_num_seqs": 8,
+  "seed": 123,
+  "num_clients": 1,
+  "max_active_conversations": 2,
+  "max_num_requests": 16,
+  "max_turns": 2,
+  "max_retries": 1,
+  "request_rate": 0.0,
+  "warmup_step": true,
+  "no_stream": false,
+  "prefix_cache": true,
+  "server_ready_timeout_seconds": 300,
+  "pd_ready_timeout_seconds": 300,
+  "benchmark_timeout_seconds": 1800,
+  "request_timeout_seconds": 300,
+  "myelon_rpc_depth": 8192,
+  "myelon_response_depth": 8192,
+  "myelon_busy_spin": true,
+  "expected_case_count": 2,
+  "expected_case_labels": [
+    "runner_pd",
+    "myelon_pd"
+  ],
+  "cases": [
+    {
+      "label": "runner_pd",
+      "execution_variant": "runner_pd",
+      "stop_point": "full_completion",
+      "skip_reason": null,
+      "pd_server_command": [
+        "/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs",
+        "--pd-server",
+        "--w",
+        "/root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c",
+        "--max-model-len",
+        "4096",
+        "--max-num-seqs",
+        "8",
+        "--dtype",
+        "bf16",
+        "--seed",
+        "123",
+        "--num-shards",
+        "1",
+        "--device-ids",
+        "0",
+        "--force-runner",
+        "--prefix-cache",
+        "--pd-url",
+        "tcp://127.0.0.1:18100"
+      ],
+      "client_server_command": [
+        "/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs",
+        "--server",
+        "--port",
+        "18080",
+        "--pd-client",
+        "--w",
+        "/root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c",
+        "--max-model-len",
+        "4096",
+        "--max-num-seqs",
+        "8",
+        "--dtype",
+        "bf16",
+        "--seed",
+        "123",
+        "--num-shards",
+        "1",
+        "--device-ids",
+        "1",
+        "--force-runner",
+        "--prefix-cache",
+        "--pd-url",
+        "tcp://127.0.0.1:18100"
+      ],
+      "benchmark_command": [
+        "uv",
+        "run",
+        "--with",
+        "aiohttp",
+        "--with",
+        "numpy",
+        "--with",
+        "pandas",
+        "--with",
+        "transformers",
+        "--with",
+        "tqdm",
+        "python3",
+        "/root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py",
+        "--input-file",
+        "/root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/synthetic_multi_turn_smoke.json",
+        "--output-file",
+        "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/runner_pd/conversations.json",
+        "--model",
+        "/root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c",
+        "--url",
+        "http://127.0.0.1:18080",
+        "--num-clients",
+        "1",
+        "--max-active-conversations",
+        "2",
+        "--max-turns",
+        "2",
+        "--max-retries",
+        "1",
+        "--request-timeout-sec",
+        "300",
+        "--request-rate",
+        "0",
+        "--max-num-requests",
+        "16",
+        "--warmup-step",
+        "--served-model-name",
+        "1cfa9a7208912126459214e8b04321603b3df60c"
+      ],
+      "pd_server_log_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/runner_pd/pd_server.log",
+      "client_server_log_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/runner_pd/client_server.log",
+      "benchmark_log_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/runner_pd/benchmark.log",
+      "benchmark_output_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/runner_pd/conversations.json",
+      "served_model_name": "1cfa9a7208912126459214e8b04321603b3df60c",
+      "benchmark_exit_code": 0,
+      "benchmark_elapsed_seconds": 7.614,
+      "summary": {
+        "runtime_sec": 1.897,
+        "requests_per_sec": 3.163,
+        "warmup_runtime_sec": 4.064,
+        "total_runtime_incl_warmup_sec": 5.961,
+        "table": {
+          "ttft_ms": {
+            "mean": 257.375,
+            "min": 161.804,
+            "max": 355.493
+          },
+          "tpot_ms": {
+            "mean": 6.907,
+            "min": 6.534,
+            "max": 7.243
+          },
+          "latency_ms": {
+            "mean": 497.185,
+            "min": 425.748,
+            "max": 629.916
+          }
+        },
+        "observed_benchmark_outcome": {
+          "observed_client_done_count": 2,
+          "observed_successful_requests_total": 14,
+          "observed_failed_requests_total": 0,
+          "observed_clients_with_failures": 0,
+          "observed_client_no_more_work_count": 2,
+          "observed_client_termination_signal_count": 0,
+          "observed_http_422_rejection_count": 0,
+          "observed_request_rejections": false
+        }
+      },
+      "client_server_exit_code": -2,
+      "pd_server_exit_code": -2,
+      "observed_benchmark_outcome": {
+        "observed_client_done_count": 2,
+        "observed_successful_requests_total": 14,
+        "observed_failed_requests_total": 0,
+        "observed_clients_with_failures": 0,
+        "observed_client_no_more_work_count": 2,
+        "observed_client_termination_signal_count": 0,
+        "observed_http_422_rejection_count": 0,
+        "observed_request_rejections": false
+      }
+    },
+    {
+      "label": "myelon_pd",
+      "execution_variant": "myelon_pd",
+      "stop_point": "full_completion",
+      "skip_reason": null,
+      "pd_server_command": [
+        "/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs",
+        "--pd-server",
+        "--w",
+        "/root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c",
+        "--max-model-len",
+        "4096",
+        "--max-num-seqs",
+        "8",
+        "--dtype",
+        "bf16",
+        "--seed",
+        "123",
+        "--num-shards",
+        "1",
+        "--device-ids",
+        "0",
+        "--myelon-ipc",
+        "--prefix-cache",
+        "--pd-url",
+        "tcp://127.0.0.1:18100",
+        "--myelon-rpc-depth",
+        "8192",
+        "--myelon-response-depth",
+        "8192",
+        "--myelon-busy-spin"
+      ],
+      "client_server_command": [
+        "/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs",
+        "--server",
+        "--port",
+        "18080",
+        "--pd-client",
+        "--w",
+        "/root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c",
+        "--max-model-len",
+        "4096",
+        "--max-num-seqs",
+        "8",
+        "--dtype",
+        "bf16",
+        "--seed",
+        "123",
+        "--num-shards",
+        "1",
+        "--device-ids",
+        "1",
+        "--myelon-ipc",
+        "--prefix-cache",
+        "--pd-url",
+        "tcp://127.0.0.1:18100",
+        "--myelon-rpc-depth",
+        "8192",
+        "--myelon-response-depth",
+        "8192",
+        "--myelon-busy-spin"
+      ],
+      "benchmark_command": [
+        "uv",
+        "run",
+        "--with",
+        "aiohttp",
+        "--with",
+        "numpy",
+        "--with",
+        "pandas",
+        "--with",
+        "transformers",
+        "--with",
+        "tqdm",
+        "python3",
+        "/root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py",
+        "--input-file",
+        "/root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/synthetic_multi_turn_smoke.json",
+        "--output-file",
+        "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/myelon_pd/conversations.json",
+        "--model",
+        "/root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c",
+        "--url",
+        "http://127.0.0.1:18080",
+        "--num-clients",
+        "1",
+        "--max-active-conversations",
+        "2",
+        "--max-turns",
+        "2",
+        "--max-retries",
+        "1",
+        "--request-timeout-sec",
+        "300",
+        "--request-rate",
+        "0",
+        "--max-num-requests",
+        "16",
+        "--warmup-step",
+        "--served-model-name",
+        "1cfa9a7208912126459214e8b04321603b3df60c"
+      ],
+      "pd_server_log_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/myelon_pd/pd_server.log",
+      "client_server_log_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/myelon_pd/client_server.log",
+      "benchmark_log_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/myelon_pd/benchmark.log",
+      "benchmark_output_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/myelon_pd/conversations.json",
+      "served_model_name": "1cfa9a7208912126459214e8b04321603b3df60c",
+      "benchmark_exit_code": 0,
+      "benchmark_elapsed_seconds": 7.592,
+      "summary": {
+        "runtime_sec": 1.866,
+        "requests_per_sec": 3.215,
+        "warmup_runtime_sec": 4.069,
+        "total_runtime_incl_warmup_sec": 5.935,
+        "table": {
+          "ttft_ms": {
+            "mean": 265.975,
+            "min": 159.466,
+            "max": 334.671
+          },
+          "tpot_ms": {
+            "mean": 6.774,
+            "min": 6.404,
+            "max": 7.107
+          },
+          "latency_ms": {
+            "mean": 501.132,
+            "min": 418.294,
+            "max": 603.634
+          }
+        },
+        "observed_benchmark_outcome": {
+          "observed_client_done_count": 2,
+          "observed_successful_requests_total": 14,
+          "observed_failed_requests_total": 0,
+          "observed_clients_with_failures": 0,
+          "observed_client_no_more_work_count": 2,
+          "observed_client_termination_signal_count": 0,
+          "observed_http_422_rejection_count": 0,
+          "observed_request_rejections": false
+        }
+      },
+      "client_server_exit_code": -2,
+      "pd_server_exit_code": -2,
+      "observed_benchmark_outcome": {
+        "observed_client_done_count": 2,
+        "observed_successful_requests_total": 14,
+        "observed_failed_requests_total": 0,
+        "observed_clients_with_failures": 0,
+        "observed_client_no_more_work_count": 2,
+        "observed_client_termination_signal_count": 0,
+        "observed_http_422_rejection_count": 0,
+        "observed_request_rejections": false
+      }
+    }
+  ],
+  "status": "completed",
+  "report_bundle": {
+    "manifest": {
+      "json": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/reports/manifest.json",
+      "md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/reports/manifest.md"
+    },
+    "system_info": {
+      "json": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/reports/system_info/system_snapshot.json",
+      "csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/reports/system_info/system_snapshot.csv",
+      "md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/reports/system_info/system_snapshot.md"
+    },
+    "benchmarks": {
+      "summary_md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/reports/benchmarks/run_summary.md",
+      "details_csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/reports/benchmarks/run_details.csv",
+      "run_index_csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/reports/benchmarks/run_index.csv",
+      "run_index_md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/reports/benchmarks/run_index.md",
+      "side_by_side_csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/reports/benchmarks/per_variant_side_by_side.csv",
+      "side_by_side_md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/reports/benchmarks/per_variant_side_by_side.md"
+    },
+    "repo_state": {
+      "repo_path": "/root/Documents/myelon-launch/vllm.rs",
+      "branch": "myelon-integration-1",
+      "commit": "f6e88c7336ef5973bbd515472f94a03dc0b2f6a1",
+      "status": "M artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/all_run_commands.md\n M artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/current_findings.csv\n M artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/current_findings.md\n M artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/high_level_summary.md\n M artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/per_model_side_by_side.csv\n M artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/per_model_side_by_side.md\n M artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/rollup_run_index.csv\n M artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/rollup_run_index.md\n?? artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_cold_turn_idle_gap_v1/\n?? artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/\n?? artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/bridge_attribution_summary.csv\n?? artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/bridge_attribution_summary.md\n?? artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/by_artifact_class/\n?? artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/by_family/\n?? artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/by_pressure_outcome_pair/\n?? artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/by_result_boundary/\n?? artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/by_run_class/\n?? artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/by_topology/\n?? artifacts/h100_idle_gap_campaign_20260406/reports/benchmarks/by_workload/"
+    },
+    "raw_captures": {
+      "hostnamectl.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/raw/system_info/hostnamectl.txt",
+      "lscpu.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/raw/system_info/lscpu.txt",
+      "free_h.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/raw/system_info/free_h.txt",
+      "df_h.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/raw/system_info/df_h.txt",
+      "uname.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/raw/system_info/uname.txt",
+      "nvidia_smi.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/raw/system_info/nvidia_smi.txt",
+      "nvidia_smi_topology.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/raw/system_info/nvidia_smi_topology.txt"
+    }
+  },
+  "result_boundary": "benchmark_complete"
+}
