@@ -100,3 +100,4 @@ See:
 - `artifacts/h100_benchmarking_2026_04_06/side_by_side_report_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/pd_topology_skip_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/multi_run_rollup_slice.md`
+- `artifacts/h100_benchmarking_2026_04_06/run_command_catalog_slice.md`
