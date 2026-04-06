@@ -79,6 +79,8 @@ Use capability-based model selection by benchmark family:
 
 - `prefill_stress`
   - favor a transport-sensitive large reference model such as `Qwen/Qwen3-30B-A3B`
+- `server_prefill_stress`
+  - keep the HTTP server path in the loop, but use explicit KV-pressure profiles and low-decode workloads so prompt effects can still surface
 - `serving_qos`
   - keep a stable small / medium / large serving ladder
 - `pd_qos`
@@ -103,3 +105,4 @@ See:
 - `artifacts/h100_benchmarking_2026_04_06/pd_transport_skip_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/multi_run_rollup_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/run_command_catalog_slice.md`
+- `artifacts/h100_benchmarking_2026_04_06/kvcache_pressure_server_bridge_note.md`
