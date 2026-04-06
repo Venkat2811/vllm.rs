@@ -4,9 +4,12 @@ import json
 import subprocess
 from pathlib import Path
 
+from tabulate import tabulate
+
 from myelon_validation_common import (
     classify_arrival_pattern,
     classify_model_capability,
+    infer_pd_transport_mode,
     infer_request_run_class,
     infer_workload_class_from_path,
 )
@@ -24,6 +27,21 @@ def _write_csv(path: Path, rows: list[dict[str, object]], fieldnames: list[str])
         writer.writeheader()
         for row in rows:
             writer.writerow(row)
+
+
+def _markdown_table_from_pairs(
+    pairs: list[tuple[object, object]],
+    headers: tuple[str, str] = ("Key", "Value"),
+) -> str:
+    return tabulate(pairs, headers=headers, tablefmt="github")
+
+
+def _markdown_table_from_rows(
+    rows: list[dict[str, object]],
+    fieldnames: list[str],
+) -> str:
+    values = [[row.get(name, "") for name in fieldnames] for row in rows]
+    return tabulate(values, headers=fieldnames, tablefmt="github")
 
 
 def _run_capture(command: list[str]) -> str | None:
@@ -109,41 +127,33 @@ def write_system_snapshot(
         csv_rows.append({"section": "repo_state", "key": key, "value": value})
     _write_csv(csv_path, csv_rows, ["section", "key", "value"])
 
+    machine_pairs = [
+        (key, value)
+        for key, value in machine_profile.items()
+        if key != "gpu_inventory"
+    ]
+    repo_pairs = list(repo_state.items())
     lines = [
         "# System Snapshot",
         "",
         "## Key Facts",
         "",
-        "| Key | Value |",
-        "| --- | --- |",
+        _markdown_table_from_pairs(machine_pairs),
+        "",
+        "## Repo State",
+        "",
+        _markdown_table_from_pairs(repo_pairs),
     ]
-    for key, value in machine_profile.items():
-        if key == "gpu_inventory":
-            continue
-        lines.append(f"| {key} | {value} |")
-    lines.extend(
-        [
-            "",
-            "## Repo State",
-            "",
-            "| Key | Value |",
-            "| --- | --- |",
-        ]
-    )
-    for key, value in repo_state.items():
-        lines.append(f"| {key} | {value} |")
     if raw_captures:
+        capture_pairs = [(key, value) for key, value in sorted(raw_captures.items())]
         lines.extend(
             [
                 "",
                 "## Raw Command Captures",
                 "",
-                "| Capture | Path |",
-                "| --- | --- |",
+                _markdown_table_from_pairs(capture_pairs, headers=("Capture", "Path")),
             ]
         )
-        for key, value in sorted(raw_captures.items()):
-            lines.append(f"| {key} | {value} |")
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     return {
@@ -204,6 +214,7 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
     contract = report.get("benchmark_contract", {})
     machine_profile = report.get("machine_profile", {})
     model_capability = report.get("model_capability", {})
+    transport_capability = report.get("transport_capability", {})
     gpu_inventory = machine_profile.get("gpu_inventory", [])
     gpu_names = []
     if isinstance(gpu_inventory, list):
@@ -214,12 +225,17 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
             "benchmark_family": contract.get("benchmark_family"),
             "benchmark_submode": contract.get("benchmark_submode"),
             "workload_class": contract.get("workload_class"),
+            "warmup_policy": contract.get("warmup_policy"),
+            "first_turn_measured": contract.get("first_turn_measured"),
+            "arrival_pattern": contract.get("arrival_pattern"),
             "topology_overlay": contract.get("topology_overlay"),
             "transport_mode": contract.get("transport_mode"),
             "run_class": contract.get("run_class"),
             "status": report.get("status"),
             "stop_point": contract.get("stop_point"),
             "skip_reason": contract.get("skip_reason"),
+            "transport_supported": transport_capability.get("pd_supported"),
+            "transport_skip_reason": transport_capability.get("pd_skip_reason"),
             "host": machine_profile.get("hostname"),
             "gpu_names": ",".join(str(item) for item in gpu_names if item),
             "model_label": model_capability.get("model_label"),
@@ -286,11 +302,7 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
                 "request_rate": request_rate,
             },
             "topology_overlay": "pd_tp1",
-            "transport_mode": (
-                "pd_tcp"
-                if isinstance(report.get("pd_url"), str) and str(report.get("pd_url")).startswith("tcp://")
-                else ("pd_localipc_default" if not report.get("pd_url") else "pd_custom_url")
-            ),
+            "transport_mode": infer_pd_transport_mode(report.get("pd_url")),
             "run_class": run_class,
             "stop_point": "full_completion",
             "skip_reason": None,
@@ -482,31 +494,31 @@ def write_benchmark_reports(
     )
     _write_csv(side_by_side_csv_path, side_by_side_rows, side_by_side_fieldnames)
 
+    summary_pairs = [
+        ("benchmark_family", contract.get("benchmark_family")),
+        ("benchmark_submode", contract.get("benchmark_submode")),
+        ("workload_class", contract.get("workload_class")),
+        ("warmup_policy", contract.get("warmup_policy")),
+        ("first_turn_measured", contract.get("first_turn_measured")),
+        ("arrival_pattern", contract.get("arrival_pattern")),
+        ("topology_overlay", contract.get("topology_overlay")),
+        ("transport_mode", contract.get("transport_mode")),
+        ("run_class", contract.get("run_class")),
+        ("stop_point", contract.get("stop_point")),
+        ("status", report.get("status")),
+        ("report_json", report_path),
+    ]
     lines = [
         "# Benchmark Summary",
         "",
-        "| Key | Value |",
-        "| --- | --- |",
-        f"| benchmark_family | {contract.get('benchmark_family')} |",
-        f"| benchmark_submode | {contract.get('benchmark_submode')} |",
-        f"| workload_class | {contract.get('workload_class')} |",
-        f"| topology_overlay | {contract.get('topology_overlay')} |",
-        f"| transport_mode | {contract.get('transport_mode')} |",
-        f"| run_class | {contract.get('run_class')} |",
-        f"| stop_point | {contract.get('stop_point')} |",
-        f"| status | {report.get('status')} |",
-        f"| report_json | {report_path} |",
+        _markdown_table_from_pairs(summary_pairs),
         "",
         "## Case Summary",
         "",
     ]
 
     if case_rows:
-        header = fieldnames
-        lines.append("| " + " | ".join(header) + " |")
-        lines.append("| " + " | ".join("---" for _ in header) + " |")
-        for row in case_rows:
-            lines.append("| " + " | ".join(str(row.get(name, "")) for name in header) + " |")
+        lines.append(_markdown_table_from_rows(case_rows, fieldnames))
     else:
         lines.append("No case rows were available.")
 
@@ -514,11 +526,8 @@ def write_benchmark_reports(
     run_index_lines = [
         "# Run Index",
         "",
-        "| Key | Value |",
-        "| --- | --- |",
+        _markdown_table_from_pairs(list(run_index_rows[0].items())),
     ]
-    for key, value in run_index_rows[0].items():
-        run_index_lines.append(f"| {key} | {value} |")
     run_index_md_path.write_text("\n".join(run_index_lines) + "\n", encoding="utf-8")
 
     side_by_side_lines = [
@@ -526,13 +535,9 @@ def write_benchmark_reports(
         "",
     ]
     if side_by_side_rows:
-        side_header = side_by_side_fieldnames
-        side_by_side_lines.append("| " + " | ".join(side_header) + " |")
-        side_by_side_lines.append("| " + " | ".join("---" for _ in side_header) + " |")
-        for row in side_by_side_rows:
-            side_by_side_lines.append(
-                "| " + " | ".join(str(row.get(name, "")) for name in side_header) + " |"
-            )
+        side_by_side_lines.append(
+            _markdown_table_from_rows(side_by_side_rows, side_by_side_fieldnames)
+        )
     else:
         side_by_side_lines.append("No runner/Myelon comparison pair was available.")
     side_by_side_md_path.write_text("\n".join(side_by_side_lines) + "\n", encoding="utf-8")
@@ -700,14 +705,12 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         "",
         "## Status Counts",
         "",
-        "| status | count |",
-        "| --- | --- |",
     ]
     if status_counts:
-        for key, value in sorted(status_counts.items()):
-            findings_lines.append(f"| {key} | {value} |")
+        status_rows = [{"status": key, "count": value} for key, value in sorted(status_counts.items())]
+        findings_lines.append(_markdown_table_from_rows(status_rows, ["status", "count"]))
     else:
-        findings_lines.append("| none | 0 |")
+        findings_lines.append(_markdown_table_from_rows([{"status": "none", "count": 0}], ["status", "count"]))
     findings_lines.extend(
         [
             "",
@@ -716,12 +719,7 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         ]
     )
     if findings_rows:
-        findings_lines.append("| " + " | ".join(findings_fields) + " |")
-        findings_lines.append("| " + " | ".join("---" for _ in findings_fields) + " |")
-        for row in findings_rows:
-            findings_lines.append(
-                "| " + " | ".join(str(row.get(name, "")) for name in findings_fields) + " |"
-            )
+        findings_lines.append(_markdown_table_from_rows(findings_rows, findings_fields))
     else:
         findings_lines.append("No retained report.json files were found.")
     current_findings_md.write_text("\n".join(findings_lines) + "\n", encoding="utf-8")
@@ -731,12 +729,7 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         "",
     ]
     if run_index_rows:
-        run_index_lines.append("| " + " | ".join(run_index_fields) + " |")
-        run_index_lines.append("| " + " | ".join("---" for _ in run_index_fields) + " |")
-        for row in run_index_rows:
-            run_index_lines.append(
-                "| " + " | ".join(str(row.get(name, "")) for name in run_index_fields) + " |"
-            )
+        run_index_lines.append(_markdown_table_from_rows(run_index_rows, run_index_fields))
     else:
         run_index_lines.append("No retained report.json files were found.")
     rollup_run_index_md.write_text("\n".join(run_index_lines) + "\n", encoding="utf-8")
@@ -746,12 +739,7 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         "",
     ]
     if detailed_rows:
-        side_by_side_lines.append("| " + " | ".join(detailed_fields) + " |")
-        side_by_side_lines.append("| " + " | ".join("---" for _ in detailed_fields) + " |")
-        for row in detailed_rows:
-            side_by_side_lines.append(
-                "| " + " | ".join(str(row.get(name, "")) for name in detailed_fields) + " |"
-            )
+        side_by_side_lines.append(_markdown_table_from_rows(detailed_rows, detailed_fields))
     else:
         side_by_side_lines.append("No baseline/Myelon comparison pairs were available.")
     per_model_side_by_side_md.write_text("\n".join(side_by_side_lines) + "\n", encoding="utf-8")

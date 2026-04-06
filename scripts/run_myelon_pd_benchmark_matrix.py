@@ -13,10 +13,12 @@ from myelon_validation_common import (
     build_machine_profile,
     classify_arrival_pattern,
     classify_model_capability,
+    classify_pd_transport_capability,
     classify_pd_topology_capability,
     default_build_features,
     detect_cuda_device_count,
     env_str,
+    infer_pd_transport_mode,
     infer_request_run_class,
     infer_workload_class_from_path,
     parse_device_ids,
@@ -232,11 +234,7 @@ def main() -> int:
             "pd_url": pd_url,
         },
         topology_overlay="pd_tp1",
-        transport_mode=(
-            "pd_tcp"
-            if pd_url and pd_url.startswith("tcp://")
-            else ("pd_localipc_default" if not pd_url else "pd_custom_url")
-        ),
+        transport_mode=infer_pd_transport_mode(pd_url),
         run_class=run_class,
         stop_point="full_completion",
         skip_reason=None,
@@ -247,8 +245,15 @@ def main() -> int:
         client_device_ids,
         detected_cuda_device_count,
     )
+    transport_capability = classify_pd_transport_capability(
+        benchmark_contract["transport_mode"],
+        server_device_ids,
+        client_device_ids,
+    )
     effective_skip_reason = (
-        model_capability["pd_skip_reason"] or topology_capability["pd_skip_reason"]
+        model_capability["pd_skip_reason"]
+        or topology_capability["pd_skip_reason"]
+        or transport_capability["pd_skip_reason"]
     )
     benchmark_contract["skip_reason"] = effective_skip_reason
     machine_profile = build_machine_profile(
@@ -261,6 +266,7 @@ def main() -> int:
         "machine_profile": machine_profile,
         "model_capability": model_capability,
         "topology_capability": topology_capability,
+        "transport_capability": transport_capability,
         "model_path": model_path,
         "workload_file": str(workload_file),
         "build_profile": build_profile,
@@ -302,6 +308,19 @@ def main() -> int:
 
     if not topology_capability["pd_supported"]:
         report["status"] = "skipped_unsupported_topology"
+        report["report_bundle"] = write_report_bundle(
+            output_root=output_root,
+            report=report,
+            report_path=report_path,
+            repo_root=repo_root,
+            capture_raw_system=capture_raw_system,
+        )
+        report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        print(report_path)
+        return 0
+
+    if not transport_capability["pd_supported"]:
+        report["status"] = "skipped_unsupported_transport"
         report["report_bundle"] = write_report_bundle(
             output_root=output_root,
             report=report,

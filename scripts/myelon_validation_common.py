@@ -3,6 +3,7 @@ import platform
 import socket
 import subprocess
 import json
+import re
 from pathlib import Path
 
 
@@ -164,6 +165,126 @@ def classify_pd_topology_capability(
         "server_device_ids": server_device_ids,
         "client_device_ids": client_device_ids,
         "detected_cuda_device_count": detected_cuda_device_count,
+        "pd_supported": skip_reason is None,
+        "pd_skip_reason": skip_reason,
+    }
+
+
+def infer_pd_transport_mode(pd_url: str | None) -> str:
+    if not pd_url:
+        return "pd_localipc_default"
+    lowered = pd_url.lower()
+    if lowered.startswith("tcp://"):
+        return "pd_tcp"
+    if lowered.startswith("localipc://"):
+        return "pd_localipc_explicit"
+    return "pd_custom_url"
+
+
+def _strip_ansi(text: str) -> str:
+    return re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", text)
+
+
+def query_gpu_p2p_status(
+    capability: str,
+    source_device_id: int,
+    target_device_id: int,
+) -> str | None:
+    try:
+        completed = subprocess.run(
+            ["nvidia-smi", "topo", "-p2p", capability],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+
+    if completed.returncode != 0:
+        return None
+
+    lines = [
+        _strip_ansi(raw_line).strip()
+        for raw_line in completed.stdout.splitlines()
+        if raw_line.strip()
+    ]
+    if not lines:
+        return None
+
+    header_tokens = lines[0].split()
+    if not header_tokens:
+        return None
+
+    header_index: dict[str, int] = {}
+    for idx, token in enumerate(header_tokens):
+        if token.startswith("GPU"):
+            header_index[token] = idx
+
+    source_label = f"GPU{source_device_id}"
+    target_label = f"GPU{target_device_id}"
+    target_column = header_index.get(target_label)
+    if target_column is None:
+        return None
+
+    for line in lines[1:]:
+        tokens = line.split()
+        if not tokens or tokens[0] != source_label:
+            continue
+        if target_column >= len(tokens):
+            return None
+        return tokens[target_column]
+
+    return None
+
+
+def classify_pd_transport_capability(
+    transport_mode: str,
+    server_device_ids: list[int] | None,
+    client_device_ids: list[int] | None,
+) -> dict[str, object]:
+    skip_reason = None
+    peer_read_status = None
+    peer_write_status = None
+
+    if transport_mode == "pd_tcp":
+        skip_reason = None
+    elif transport_mode in {"pd_localipc_default", "pd_localipc_explicit"}:
+        if (
+            server_device_ids is not None
+            and client_device_ids is not None
+            and len(server_device_ids) == 1
+            and len(client_device_ids) == 1
+        ):
+            peer_read_status = query_gpu_p2p_status(
+                "r",
+                server_device_ids[0],
+                client_device_ids[0],
+            )
+            peer_write_status = query_gpu_p2p_status(
+                "w",
+                server_device_ids[0],
+                client_device_ids[0],
+            )
+            if peer_read_status is None or peer_write_status is None:
+                skip_reason = "unsupported_transport_localipc_peer_status_unavailable"
+            elif peer_read_status != "OK" and peer_write_status != "OK":
+                skip_reason = "unsupported_transport_localipc_missing_p2p_read_write"
+            elif peer_read_status != "OK":
+                skip_reason = "unsupported_transport_localipc_missing_p2p_read"
+            elif peer_write_status != "OK":
+                skip_reason = "unsupported_transport_localipc_missing_p2p_write"
+    elif transport_mode == "pd_custom_url":
+        skip_reason = "unsupported_transport_unknown_pd_url_scheme"
+    else:
+        skip_reason = "unsupported_transport_unrecognized_mode"
+
+    return {
+        "transport_mode": transport_mode,
+        "server_device_ids": server_device_ids,
+        "client_device_ids": client_device_ids,
+        "peer_read_status": peer_read_status,
+        "peer_write_status": peer_write_status,
         "pd_supported": skip_reason is None,
         "pd_skip_reason": skip_reason,
     }
