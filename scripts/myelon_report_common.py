@@ -296,6 +296,12 @@ def build_case_rows(report: dict[str, object]) -> list[dict[str, object]]:
             row["tpot_ms_mean"] = table.get("tpot_ms", {}).get("mean")
             row["latency_ms_mean"] = table.get("latency_ms", {}).get("mean")
         if isinstance(measured_summary, dict):
+            row["first_prefill_seconds_mean"] = measured_summary.get(
+                "first_prefill_seconds", {}
+            ).get("mean")
+            row["first_prefill_tps_mean"] = measured_summary.get(
+                "first_prefill_tokens_per_second", {}
+            ).get("mean")
             row["prompt_seconds_mean"] = measured_summary.get("prompt_seconds", {}).get("mean")
             row["prompt_tps_mean"] = measured_summary.get(
                 "prompt_tokens_per_second", {}
@@ -643,12 +649,20 @@ def infer_report_status(report: dict[str, object]) -> str:
     contract = report.get("benchmark_contract", {})
     if isinstance(contract, dict) and contract.get("skip_reason"):
         return "skipped"
+    contract_stop_point = None
+    if isinstance(contract, dict):
+        contract_stop_point = contract.get("stop_point")
     for case in report.get("cases", []):
         if not isinstance(case, dict):
             continue
         if case.get("skip_reason"):
             return "partial"
-        if case.get("stop_point") not in (None, "full_completion"):
+        case_stop_point = case.get("stop_point")
+        if case_stop_point not in (None, "full_completion"):
+            # Planned stop-point probes are complete evidence within their
+            # configured boundary; result_boundary carries that distinction.
+            if contract_stop_point in (None, case_stop_point):
+                continue
             return "partial"
         if case.get("benchmark_exit_code") not in (None, 0):
             return "partial"
@@ -1278,7 +1292,7 @@ def normalize_report(report: dict[str, object]) -> dict[str, object]:
     normalized["benchmark_contract"] = contract
     normalized["machine_profile"] = infer_machine_profile(report)
     normalized["model_capability"] = infer_model_capability(report)
-    normalized["status"] = infer_report_status(report)
+    normalized["status"] = infer_report_status(normalized)
     normalized["result_boundary"] = infer_report_result_boundary(normalized)
     return normalized
 
@@ -1311,6 +1325,8 @@ def build_side_by_side_rows(report: dict[str, object]) -> list[dict[str, object]
         "ttft_ms_mean",
         "tpot_ms_mean",
         "latency_ms_mean",
+        "first_prefill_seconds_mean",
+        "first_prefill_tps_mean",
         "prompt_seconds_mean",
         "prompt_tps_mean",
         "decode_seconds_mean",
@@ -1681,6 +1697,33 @@ def build_rollup_rows(report_path: Path, report: dict[str, object]) -> tuple[dic
     findings_row = dict(run_index_row)
     findings_row.update(
         {
+            "baseline_first_prefill_seconds_mean": metric_map.get(
+                "first_prefill_seconds_mean", {}
+            ).get("baseline_value"),
+            "myelon_first_prefill_seconds_mean": metric_map.get(
+                "first_prefill_seconds_mean", {}
+            ).get("myelon_value"),
+            "first_prefill_seconds_delta_percent": metric_map.get(
+                "first_prefill_seconds_mean", {}
+            ).get("delta_percent"),
+            "baseline_first_prefill_tps_mean": metric_map.get(
+                "first_prefill_tps_mean", {}
+            ).get("baseline_value"),
+            "myelon_first_prefill_tps_mean": metric_map.get(
+                "first_prefill_tps_mean", {}
+            ).get("myelon_value"),
+            "first_prefill_tps_delta_percent": metric_map.get(
+                "first_prefill_tps_mean", {}
+            ).get("delta_percent"),
+            "baseline_prompt_tps_mean": metric_map.get("prompt_tps_mean", {}).get(
+                "baseline_value"
+            ),
+            "myelon_prompt_tps_mean": metric_map.get("prompt_tps_mean", {}).get(
+                "myelon_value"
+            ),
+            "prompt_tps_delta_percent": metric_map.get("prompt_tps_mean", {}).get(
+                "delta_percent"
+            ),
             "baseline_requests_per_sec": metric_map.get("requests_per_sec", {}).get("baseline_value"),
             "myelon_requests_per_sec": metric_map.get("requests_per_sec", {}).get("myelon_value"),
             "requests_per_sec_delta_percent": metric_map.get("requests_per_sec", {}).get("delta_percent"),
@@ -1889,6 +1932,16 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         "ttft_ms_delta_percent",
         reverse=False,
     )
+    strongest_prompt_tps = _sorted_top_rows(
+        completed_rows,
+        "prompt_tps_delta_percent",
+        reverse=True,
+    )
+    strongest_first_prefill = _sorted_top_rows(
+        completed_rows,
+        "first_prefill_seconds_delta_percent",
+        reverse=False,
+    )
     notable_regressions = _sorted_top_rows(
         completed_rows,
         "requests_per_sec_delta_percent",
@@ -1948,6 +2001,52 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         summary_lines.append(_markdown_table_from_rows(strongest_ttft, ttft_fields))
     else:
         summary_lines.append("No TTFT deltas were available.")
+    summary_lines.extend(
+        [
+            "",
+            "## Strongest Prompt Throughput Gains",
+            "",
+        ]
+    )
+    prompt_fields = [
+        "model_label",
+        "benchmark_family",
+        "benchmark_submode",
+        "topology_overlay",
+        "prompt_tps_delta_percent",
+        "baseline_prompt_tps_mean",
+        "myelon_prompt_tps_mean",
+        "baseline_first_prefill_seconds_mean",
+        "myelon_first_prefill_seconds_mean",
+    ]
+    if strongest_prompt_tps:
+        summary_lines.append(_markdown_table_from_rows(strongest_prompt_tps, prompt_fields))
+    else:
+        summary_lines.append("No prompt-throughput deltas were available.")
+    summary_lines.extend(
+        [
+            "",
+            "## Strongest First-Prefill Wins",
+            "",
+        ]
+    )
+    first_prefill_fields = [
+        "model_label",
+        "benchmark_family",
+        "benchmark_submode",
+        "topology_overlay",
+        "first_prefill_seconds_delta_percent",
+        "baseline_first_prefill_seconds_mean",
+        "myelon_first_prefill_seconds_mean",
+        "baseline_first_prefill_tps_mean",
+        "myelon_first_prefill_tps_mean",
+    ]
+    if strongest_first_prefill:
+        summary_lines.append(
+            _markdown_table_from_rows(strongest_first_prefill, first_prefill_fields)
+        )
+    else:
+        summary_lines.append("No first-prefill deltas were available.")
     summary_lines.extend(
         [
             "",
