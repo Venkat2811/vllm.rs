@@ -19,6 +19,7 @@ from myelon_validation_common import (
     default_build_features,
     env_str,
     infer_cli_run_class,
+    infer_tp_scale_contract_fields,
     parse_device_ids,
     resolve_run_class,
     validate_requested_topology,
@@ -43,18 +44,30 @@ def env_int(name: str, default: int) -> int:
     return int(value)
 
 
+def resolve_mode_num_shards(mode: str, env_name: str) -> int:
+    inferred = infer_tp_scale_contract_fields(mode)
+    if inferred["pd_enabled"]:
+        raise ValueError(
+            f"unsupported {env_name} {mode!r}; expected 'single_gpu' or 'tpN'"
+        )
+    num_shards = inferred["prefill_tp_size"]
+    if not isinstance(num_shards, int) or num_shards <= 0:
+        raise ValueError(
+            f"unsupported {env_name} {mode!r}; expected 'single_gpu' or 'tpN'"
+        )
+    return num_shards
+
+
 def prepare_cases(mode: str, device_ids: str | None) -> list[tuple[str, list[str]]]:
-    if mode == "single_gpu":
-        return [
-            ("runner", ["--num-shards", "1"]),
-            ("myelon", ["--num-shards", "1", "--myelon-ipc"]),
-        ]
-    if mode == "tp2":
-        return [
-            ("runner", ["--num-shards", "2", "--force-runner"]),
-            ("myelon", ["--num-shards", "2", "--myelon-ipc"]),
-        ]
-    raise ValueError(f"unsupported VLLM_BENCHMARK_MODE '{mode}'")
+    del device_ids
+    num_shards = resolve_mode_num_shards(mode, "VLLM_BENCHMARK_MODE")
+    runner_args = ["--num-shards", str(num_shards)]
+    if num_shards > 1:
+        runner_args.append("--force-runner")
+    return [
+        ("runner", runner_args),
+        ("myelon", ["--num-shards", str(num_shards), "--myelon-ipc"]),
+    ]
 
 
 def compare_ratio(
@@ -189,8 +202,8 @@ def main() -> int:
         print("max attempts must be > 0", file=sys.stderr)
         return 1
 
-    expected_num_shards = 1 if mode == "single_gpu" else 2
     try:
+        expected_num_shards = resolve_mode_num_shards(mode, "VLLM_BENCHMARK_MODE")
         detected_cuda_device_count = validate_requested_topology(
             expected_num_shards,
             parsed_device_ids,
@@ -246,10 +259,10 @@ def main() -> int:
             else None
         ),
         topology_overlay=mode,
-        tp_scale_overlay=("tp1" if mode == "single_gpu" else "tp2"),
-        prefill_tp_size=(1 if mode == "single_gpu" else 2),
-        decode_tp_size=(1 if mode == "single_gpu" else 2),
-        pd_enabled=False,
+        tp_scale_overlay=None,
+        prefill_tp_size=None,
+        decode_tp_size=None,
+        pd_enabled=None,
         pd_role_layout=None,
         transport_mode="socket_vs_myelon_process_runner",
         run_class=run_class,

@@ -1,0 +1,7 @@
+baseline_variant,myelon_variant,metric,baseline_value,myelon_value,delta_percent,baseline_status,myelon_status
+runner,myelon,first_prefill_seconds_mean,9.103333,9.346667,2.673,completed,completed
+runner,myelon,first_prefill_tps_mean,87.516667,85.19,-2.6585,completed,completed
+runner,myelon,prompt_seconds_mean,9.103333,9.346667,2.673,completed,completed
+runner,myelon,prompt_tps_mean,22376.583333,21780.876667,-2.6622,completed,completed
+runner,myelon,decode_seconds_mean,1.846667,1.91,3.4296,completed,completed
+runner,myelon,decode_tps_mean,8868.696667,8575.006667,-3.3115,completed,completed
