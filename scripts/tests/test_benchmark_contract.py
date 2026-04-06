@@ -409,11 +409,13 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             run_index_md = Path(report["report_bundle"]["benchmarks"]["run_index_md"])
             side_by_side_md = Path(report["report_bundle"]["benchmarks"]["side_by_side_md"])
             system_md = Path(report["report_bundle"]["system_info"]["md"])
+            manifest_json = Path(report["report_bundle"]["manifest"]["json"])
             self.assertTrue(summary_md.is_file())
             self.assertTrue(details_csv.is_file())
             self.assertTrue(run_index_md.is_file())
             self.assertTrue(side_by_side_md.is_file())
             self.assertTrue(system_md.is_file())
+            self.assertTrue(manifest_json.is_file())
 
     def test_server_benchmark_report_includes_contract_and_case_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -496,6 +498,16 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["run_index_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["side_by_side_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["system_info"]["md"]).is_file())
+            manifest_json = Path(report["report_bundle"]["manifest"]["json"])
+            self.assertTrue(manifest_json.is_file())
+            manifest = json.loads(manifest_json.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["transport_settings"]["myelon_rpc_depth"], 8192)
+            self.assertTrue(manifest["transport_settings"]["myelon_busy_spin"])
+            run_index_csv = Path(report["report_bundle"]["benchmarks"]["run_index_csv"])
+            run_index_text = run_index_csv.read_text(encoding="utf-8")
+            self.assertIn("myelon_rpc_depth", run_index_text)
+            self.assertIn("myelon_response_depth", run_index_text)
+            self.assertIn("myelon_busy_spin", run_index_text)
 
     def test_server_serving_qos_cold_turn_mode_disables_warmup_step(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -754,6 +766,9 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("round_robin", run_index_text)
             self.assertIn("limit_min_tokens", run_index_text)
             self.assertIn("limit_max_tokens", run_index_text)
+            self.assertIn("prefix_cache_max_tokens", run_index_text)
+            self.assertIn("kv_fraction", run_index_text)
+            self.assertIn("cpu_mem_fold", run_index_text)
             server_command = report["cases"][0]["server_command"]
             self.assertIn("--max-num-seqs", server_command)
             self.assertIn("64", server_command)
