@@ -2294,6 +2294,114 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertAlmostEqual(case_rows[0]["tpot_ms_mean"], 12.25)
             self.assertAlmostEqual(case_rows[0]["latency_ms_mean"], 789.25)
 
+    def test_normalize_report_backfills_benchmark_outcome_signals(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            runner_log_path = tmp_path / "runner_benchmark.log"
+            myelon_log_path = tmp_path / "myelon_benchmark.log"
+            runner_log_path.write_text(
+                "\n".join(
+                    [
+                        "runtime_sec = 10.0",
+                        "requests_per_sec = 3.0",
+                        "06-04-2026 15:29:09 [INFO] - Client 1 has no more work",
+                        "06-04-2026 15:29:09 [INFO] - Client 1 is done (num_successes=5, num_failures=0)",
+                        "06-04-2026 15:29:09 [INFO] - Sending termination signal to clients",
+                        "06-04-2026 15:29:09 [INFO] - Client 2 received a termination signal",
+                        "06-04-2026 15:29:09 [INFO] - Client 2 is done (num_successes=4, num_failures=0)",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            myelon_log_path.write_text(
+                "\n".join(
+                    [
+                        "runtime_sec = 11.0",
+                        "requests_per_sec = 2.5",
+                        '06-04-2026 15:26:27 [WARNING] - Received HTTP status 422 (Unprocessable Entity): {"message":"Stream generation failed"}',
+                        "06-04-2026 15:26:27 [INFO] - Client 3 has no more work",
+                        "06-04-2026 15:26:27 [INFO] - Client 3 is done (num_successes=1, num_failures=1)",
+                        "06-04-2026 15:26:27 [INFO] - Sending termination signal to clients",
+                        "06-04-2026 15:26:27 [INFO] - Client 4 received a termination signal",
+                        "06-04-2026 15:26:27 [INFO] - Client 4 is done (num_successes=2, num_failures=0)",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            report = {
+                "status": "completed",
+                "benchmark_contract": {
+                    "benchmark_family": "server_prefill_stress",
+                    "benchmark_submode": "cache_thrash_round_robin",
+                    "workload_class": "synthetic_server_prefill_stress",
+                    "topology_overlay": "tp2",
+                    "transport_mode": "socket_vs_myelon_process_runner",
+                    "run_class": "fullpass",
+                    "stop_point": "full_completion",
+                    "skip_reason": None,
+                },
+                "machine_profile": {
+                    "hostname": "hazy-instance-completes-fin-02",
+                    "gpu_inventory": [{"name": "NVIDIA H100 80GB HBM3"}],
+                },
+                "model_capability": {
+                    "model_label": "Qwen/Qwen3-0.6B",
+                    "architecture": "Qwen3ForCausalLM",
+                    "pd_supported": True,
+                },
+                "cases": [
+                    {
+                        "label": "runner",
+                        "execution_variant": "runner",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                        "benchmark_log_path": str(runner_log_path),
+                        "summary": {"table": {}},
+                    },
+                    {
+                        "label": "myelon",
+                        "execution_variant": "myelon",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                        "benchmark_log_path": str(myelon_log_path),
+                        "summary": {"table": {}},
+                    },
+                ],
+            }
+
+            normalized = report_common.normalize_report(report)
+            case_rows = report_common.build_case_rows(normalized)
+            side_by_side_rows = report_common.build_side_by_side_rows(normalized)
+
+            self.assertEqual(case_rows[0]["observed_successful_requests_total"], 9)
+            self.assertEqual(case_rows[0]["observed_failed_requests_total"], 0)
+            self.assertEqual(case_rows[0]["observed_http_422_rejection_count"], 0)
+            self.assertFalse(case_rows[0]["observed_request_rejections"])
+
+            self.assertEqual(case_rows[1]["observed_successful_requests_total"], 3)
+            self.assertEqual(case_rows[1]["observed_failed_requests_total"], 1)
+            self.assertEqual(case_rows[1]["observed_clients_with_failures"], 1)
+            self.assertEqual(case_rows[1]["observed_http_422_rejection_count"], 1)
+            self.assertTrue(case_rows[1]["observed_request_rejections"])
+
+            metric_map = {row["metric"]: row for row in side_by_side_rows}
+            self.assertEqual(
+                metric_map["observed_successful_requests_total"]["baseline_value"], 9.0
+            )
+            self.assertEqual(
+                metric_map["observed_successful_requests_total"]["myelon_value"], 3.0
+            )
+            self.assertEqual(
+                metric_map["observed_http_422_rejection_count"]["baseline_value"], 0.0
+            )
+            self.assertEqual(
+                metric_map["observed_http_422_rejection_count"]["myelon_value"], 1.0
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
