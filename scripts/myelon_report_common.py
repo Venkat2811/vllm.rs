@@ -208,6 +208,39 @@ def build_transport_settings(report: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _classify_skip_boundary(skip_reason: object) -> str | None:
+    if not isinstance(skip_reason, str) or not skip_reason.strip():
+        return None
+    if skip_reason.startswith("unsupported_architecture_"):
+        return "architecture_limited"
+    if skip_reason.startswith("unsupported_topology_"):
+        return "topology_limited"
+    if skip_reason.startswith("unsupported_transport_"):
+        return "transport_limited"
+    if skip_reason.startswith("swap_pressure_profile_"):
+        return "configuration_limited"
+    return "skip_limited"
+
+
+def infer_case_result_boundary(case: dict[str, object]) -> str:
+    skip_boundary = _classify_skip_boundary(case.get("skip_reason"))
+    if skip_boundary is not None:
+        return skip_boundary
+
+    stop_point = case.get("stop_point")
+    if stop_point not in (None, "full_completion"):
+        if stop_point in {"benchmark_timeout", "runtime_error_boundary"}:
+            return "runtime_limited"
+        if stop_point == "allocator_seq_capacity_collapse":
+            return "configuration_limited"
+        return "stop_point_limited"
+
+    if case.get("benchmark_exit_code") not in (None, 0):
+        return "benchmark_failed"
+
+    return "benchmark_complete"
+
+
 def build_case_rows(report: dict[str, object]) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for case in report.get("cases", []):
@@ -225,6 +258,7 @@ def build_case_rows(report: dict[str, object]) -> list[dict[str, object]]:
             "label": case.get("label"),
             "execution_variant": case.get("execution_variant", case.get("label")),
             "case_status": case_status,
+            "result_boundary": infer_case_result_boundary(case),
             "stop_point": case.get("stop_point", "full_completion"),
             "skip_reason": case.get("skip_reason"),
             "benchmark_exit_code": case.get("benchmark_exit_code"),
@@ -419,6 +453,7 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
             "cpu_mem_fold": report.get("cpu_mem_fold"),
             "run_class": contract.get("run_class"),
             "status": report.get("status"),
+            "result_boundary": report.get("result_boundary"),
             "expected_case_count": report.get("expected_case_count"),
             "observed_case_count": len(
                 [case for case in report.get("cases", []) if isinstance(case, dict)]
@@ -460,6 +495,46 @@ def infer_report_status(report: dict[str, object]) -> str:
         if case.get("benchmark_exit_code") not in (None, 0):
             return "partial"
     return "completed"
+
+
+def infer_report_result_boundary(report: dict[str, object]) -> str:
+    contract = report.get("benchmark_contract", {})
+    if isinstance(contract, dict):
+        skip_boundary = _classify_skip_boundary(contract.get("skip_reason"))
+        if skip_boundary is not None:
+            return skip_boundary
+
+    status = report.get("status")
+    if status == "skipped_unsupported_architecture":
+        return "architecture_limited"
+    if status == "skipped_unsupported_topology":
+        return "topology_limited"
+    if status == "skipped_unsupported_transport":
+        return "transport_limited"
+
+    boundaries = []
+    for case in report.get("cases", []):
+        if isinstance(case, dict):
+            boundaries.append(infer_case_result_boundary(case))
+
+    if not boundaries:
+        return "benchmark_complete"
+
+    priority = [
+        "architecture_limited",
+        "topology_limited",
+        "transport_limited",
+        "configuration_limited",
+        "runtime_limited",
+        "benchmark_failed",
+        "stop_point_limited",
+        "skip_limited",
+        "benchmark_complete",
+    ]
+    for candidate in priority:
+        if candidate in boundaries:
+            return candidate
+    return "benchmark_complete"
 
 
 def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
@@ -815,6 +890,7 @@ def normalize_report(report: dict[str, object]) -> dict[str, object]:
     normalized["machine_profile"] = infer_machine_profile(report)
     normalized["model_capability"] = infer_model_capability(report)
     normalized["status"] = infer_report_status(report)
+    normalized["result_boundary"] = infer_report_result_boundary(normalized)
     return normalized
 
 
@@ -896,10 +972,11 @@ def write_benchmark_reports(
     side_by_side_csv_path = reports_dir / "per_variant_side_by_side.csv"
     side_by_side_md_path = reports_dir / "per_variant_side_by_side.md"
 
-    contract = report.get("benchmark_contract", {})
-    case_rows = build_case_rows(report)
-    run_index_rows = build_run_index_rows(report, report_path)
-    side_by_side_rows = build_side_by_side_rows(report)
+    normalized_report = normalize_report(report)
+    contract = normalized_report.get("benchmark_contract", {})
+    case_rows = build_case_rows(normalized_report)
+    run_index_rows = build_run_index_rows(normalized_report, report_path)
+    side_by_side_rows = build_side_by_side_rows(normalized_report)
     fieldnames = sorted({key for row in case_rows for key in row.keys()}) if case_rows else [
         "label",
         "execution_variant",
@@ -965,12 +1042,19 @@ def write_benchmark_reports(
         ("kv_fraction", report.get("kv_fraction")),
         ("cpu_mem_fold", report.get("cpu_mem_fold")),
         ("run_class", contract.get("run_class")),
+        ("result_boundary", normalized_report.get("result_boundary")),
         ("stop_point", contract.get("stop_point")),
-        ("status", report.get("status")),
-        ("expected_case_count", report.get("expected_case_count")),
+        ("status", normalized_report.get("status")),
+        ("expected_case_count", normalized_report.get("expected_case_count")),
         (
             "observed_case_count",
-            len([case for case in report.get("cases", []) if isinstance(case, dict)]),
+            len(
+                [
+                    case
+                    for case in normalized_report.get("cases", [])
+                    if isinstance(case, dict)
+                ]
+            ),
         ),
         ("report_json", report_path),
     ]
@@ -1028,10 +1112,11 @@ def write_bundle_manifest(
     reports_dir = output_root / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
 
-    contract = report.get("benchmark_contract", {})
-    machine_profile = report.get("machine_profile", {})
-    model_capability = report.get("model_capability", {})
-    transport_settings = build_transport_settings(report)
+    normalized_report = normalize_report(report)
+    contract = normalized_report.get("benchmark_contract", {})
+    machine_profile = normalized_report.get("machine_profile", {})
+    model_capability = normalized_report.get("model_capability", {})
+    transport_settings = build_transport_settings(normalized_report)
 
     manifest = {
         "benchmark_family": contract.get("benchmark_family"),
@@ -1040,7 +1125,8 @@ def write_bundle_manifest(
         "topology_overlay": contract.get("topology_overlay"),
         "transport_mode": contract.get("transport_mode"),
         "run_class": contract.get("run_class"),
-        "status": report.get("status"),
+        "status": normalized_report.get("status"),
+        "result_boundary": normalized_report.get("result_boundary"),
         "stop_point": contract.get("stop_point"),
         "host": machine_profile.get("hostname"),
         "report_json": str(report_path),
@@ -1061,6 +1147,7 @@ def write_bundle_manifest(
         ("transport_mode", manifest["transport_mode"]),
         ("run_class", manifest["run_class"]),
         ("status", manifest["status"]),
+        ("result_boundary", manifest["result_boundary"]),
         ("stop_point", manifest["stop_point"]),
         ("host", manifest["host"]),
         ("report_json", manifest["report_json"]),
@@ -1297,6 +1384,10 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
     for row in findings_rows:
         key = str(row.get("status"))
         status_counts[key] = status_counts.get(key, 0) + 1
+    boundary_counts: dict[str, int] = {}
+    for row in findings_rows:
+        key = str(row.get("result_boundary"))
+        boundary_counts[key] = boundary_counts.get(key, 0) + 1
 
     findings_lines = [
         "# Current Findings",
@@ -1312,6 +1403,28 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         findings_lines.append(_markdown_table_from_rows(status_rows, ["status", "count"]))
     else:
         findings_lines.append(_markdown_table_from_rows([{"status": "none", "count": 0}], ["status", "count"]))
+    findings_lines.extend(
+        [
+            "",
+            "## Boundary Counts",
+            "",
+        ]
+    )
+    if boundary_counts:
+        boundary_rows = [
+            {"result_boundary": key, "count": value}
+            for key, value in sorted(boundary_counts.items())
+        ]
+        findings_lines.append(
+            _markdown_table_from_rows(boundary_rows, ["result_boundary", "count"])
+        )
+    else:
+        findings_lines.append(
+            _markdown_table_from_rows(
+                [{"result_boundary": "none", "count": 0}],
+                ["result_boundary", "count"],
+            )
+        )
     findings_lines.extend(
         [
             "",
