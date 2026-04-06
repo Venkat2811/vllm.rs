@@ -27,7 +27,17 @@
 
 ## Strongest Prompt Throughput Gains
 
-No prompt-throughput deltas were available.
+| model_label     | benchmark_family   | benchmark_submode   | topology_overlay   |   prompt_tps_delta_percent |   baseline_prompt_tps_mean |   myelon_prompt_tps_mean | baseline_first_prefill_seconds_mean   | myelon_first_prefill_seconds_mean   |
+|-----------------|--------------------|---------------------|--------------------|----------------------------|----------------------------|--------------------------|---------------------------------------|-------------------------------------|
+| Qwen/Qwen3-4B   | serving_qos        | warm_steady_state   | single_gpu         |                    16.4623 |                    4350.42 |                  5066.6  |                                       |                                     |
+| Qwen/Qwen3-4B   | serving_qos        | warm_steady_state   | tp2                |                    15.6186 |                    4504.07 |                  5207.54 |                                       |                                     |
+| Qwen/Qwen3-4B   | serving_qos        | warm_steady_state   | tp2                |                    13.786  |                    2135.71 |                  2430.14 |                                       |                                     |
+| Qwen/Qwen3-0.6B | serving_qos        | warm_steady_state   | tp2                |                     7.7878 |                    2694.03 |                  2903.84 |                                       |                                     |
+| Qwen/Qwen3-0.6B | serving_qos        | warm_steady_state   | single_gpu         |                     6.4893 |                    6280.56 |                  6688.12 |                                       |                                     |
+
+## Strongest Prefill-Roundtrip Wins
+
+No prefill-roundtrip deltas were available.
 
 ## Strongest First-Prefill Wins
 

@@ -1,6 +1,6 @@
-# Benchmark Family: pd_qos
+# Topology Overlay: pd_tp1
 
-- benchmark_family: `pd_qos`
+- topology_overlay: `pd_tp1`
 - retained_runs: `5`
 
 ## Status Counts
