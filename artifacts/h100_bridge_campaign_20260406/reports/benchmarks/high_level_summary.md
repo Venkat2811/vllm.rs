@@ -1,8 +1,8 @@
 # High-Level Summary
 
 - campaign_root: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406`
-- reports_found: `34`
-- completed_runs: `30`
+- reports_found: `36`
+- completed_runs: `32`
 - incomplete_or_skipped_runs: `4`
 
 ## Strongest Requests/sec Gains
@@ -27,7 +27,22 @@
 
 ## Strongest Prompt Throughput Gains
 
-No prompt-throughput deltas were available.
+| model_label        | benchmark_family      | benchmark_submode                 | topology_overlay   |   prompt_tps_delta_percent |   baseline_prompt_tps_mean |   myelon_prompt_tps_mean | baseline_first_prefill_seconds_mean   | myelon_first_prefill_seconds_mean   |
+|--------------------|-----------------------|-----------------------------------|--------------------|----------------------------|----------------------------|--------------------------|---------------------------------------|-------------------------------------|
+| Qwen/Qwen3-30B-A3B | server_prefill_stress | cache_thrash_round_robin          | tp2                |                    44.1311 |                    127.298 |                  183.476 |                                       |                                     |
+| Qwen/Qwen3-4B      | server_prefill_stress | cache_thrash_round_robin          | tp2                |                    33.6844 |                    417.843 |                  558.591 |                                       |                                     |
+| Qwen/Qwen3-0.6B    | server_prefill_stress | cache_thrash_round_robin          | tp2                |                    27.932  |                   1190.66  |                 1523.24  |                                       |                                     |
+| Qwen/Qwen3-4B      | server_prefill_stress | shared_prefix_round_robin_control | tp2                |                    20.4835 |                   1454.13  |                 1751.98  |                                       |                                     |
+| Qwen/Qwen3-30B-A3B | server_prefill_stress | cache_thrash_round_robin          | tp2                |                    18.9364 |                    496.239 |                  590.209 |                                       |                                     |
+
+## Strongest Prefill-Roundtrip Wins
+
+| model_label        | benchmark_family      | benchmark_submode                 | topology_overlay   |   prefill_roundtrip_ms_delta_percent |   baseline_prefill_roundtrip_ms_mean |   myelon_prefill_roundtrip_ms_mean | baseline_pressure_profile_outcome   | myelon_pressure_profile_outcome   |
+|--------------------|-----------------------|-----------------------------------|--------------------|--------------------------------------|--------------------------------------|------------------------------------|-------------------------------------|-----------------------------------|
+| Qwen/Qwen3-4B      | server_prefill_stress | shared_prefix_round_robin_control | tp2                |                             -12.4713 |                              4603.23 |                            4029.14 | requested_prefix_control_observed   | requested_prefix_control_observed |
+| Qwen/Qwen3-30B-A3B | server_prefill_stress | low_decode                        | tp2                |                              -9.513  |                             21934.8  |                           19848.2  | requested_relaxed_exceeded          | requested_relaxed_exceeded        |
+| Qwen/Qwen3-4B      | server_prefill_stress | low_decode                        | tp2                |                              -1.8813 |                              7779.18 |                            7632.83 | requested_relaxed_exceeded          | requested_relaxed_exceeded        |
+| Qwen/Qwen3-4B      | server_prefill_stress | cache_thrash_round_robin          | tp2                |                               2.8545 |                              3478.05 |                            3577.33 | requested_thrash_observed           | requested_thrash_observed         |
 
 ## Strongest First-Prefill Wins
 
