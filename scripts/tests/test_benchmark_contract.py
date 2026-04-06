@@ -2583,9 +2583,11 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             campaign_a = tmp_path / "single_gpu_random_qwen3_4b"
             campaign_b = tmp_path / "pd_skip_qwen35_27b"
             campaign_c = tmp_path / "tp2_prefill_qwen30ba3b"
+            campaign_d = tmp_path / "tp2_server_fixed_prompt_qwen30ba3b"
             campaign_a.mkdir()
             campaign_b.mkdir()
             campaign_c.mkdir()
+            campaign_d.mkdir()
 
             report_a = {
                 "status": "completed",
@@ -2673,8 +2675,14 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                     "benchmark_submode": "fixed_prompt_burst",
                     "workload_class": "custom_prompt_env_burst",
                     "topology_overlay": "tp2",
+                    "tp_scale_overlay": "tp2",
+                    "prefill_tp_size": 2,
+                    "decode_tp_size": 2,
+                    "pd_enabled": False,
+                    "pd_role_layout": None,
                     "transport_mode": "socket_vs_myelon_process_runner",
                     "run_class": "fullpass",
+                    "equivalence_group": "fixed_prompt_burst_bridge",
                     "stop_point": "minimal_decode_completion",
                     "skip_reason": None,
                 },
@@ -2722,9 +2730,72 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                     },
                 ],
             }
+            report_d = {
+                "status": "completed",
+                "benchmark_contract": {
+                    "benchmark_family": "server_prefill_stress",
+                    "benchmark_submode": "fixed_prompt_burst",
+                    "workload_class": "synthetic_server_prefill_fixed_prompt_burst",
+                    "topology_overlay": "tp2",
+                    "tp_scale_overlay": "tp2",
+                    "prefill_tp_size": 2,
+                    "decode_tp_size": 2,
+                    "pd_enabled": False,
+                    "pd_role_layout": None,
+                    "transport_mode": "socket_vs_myelon_process_runner",
+                    "run_class": "quickpass",
+                    "equivalence_group": "fixed_prompt_burst_bridge",
+                    "stop_point": "full_completion",
+                    "skip_reason": None,
+                },
+                "machine_profile": {
+                    "hostname": "hazy-instance-completes-fin-02",
+                    "gpu_inventory": [{"name": "NVIDIA H100 80GB HBM3"}],
+                },
+                "model_capability": {
+                    "model_label": "Qwen/Qwen3-30B-A3B",
+                    "architecture": "Qwen3MoeForCausalLM",
+                    "pd_supported": True,
+                },
+                "cases": [
+                    {
+                        "label": "runner",
+                        "execution_variant": "runner",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                        "summary": {
+                            "requests_per_sec": 10.0,
+                            "runtime_sec": 3.0,
+                            "table": {
+                                "ttft_ms": {"mean": 500.0},
+                                "tpot_ms": {"mean": 10.0},
+                                "latency_ms": {"mean": 1500.0},
+                            },
+                        },
+                    },
+                    {
+                        "label": "myelon",
+                        "execution_variant": "myelon",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                        "summary": {
+                            "requests_per_sec": 10.5,
+                            "runtime_sec": 2.9,
+                            "table": {
+                                "ttft_ms": {"mean": 450.0},
+                                "tpot_ms": {"mean": 9.5},
+                                "latency_ms": {"mean": 1400.0},
+                            },
+                        },
+                    },
+                ],
+            }
             (campaign_a / "report.json").write_text(json.dumps(report_a), encoding="utf-8")
             (campaign_b / "report.json").write_text(json.dumps(report_b), encoding="utf-8")
             (campaign_c / "report.json").write_text(json.dumps(report_c), encoding="utf-8")
+            (campaign_d / "report.json").write_text(json.dumps(report_d), encoding="utf-8")
 
             outputs = report_common.write_rollup_reports(tmp_path)
 
@@ -2733,11 +2804,24 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             rollup_run_index_md = Path(outputs["rollup_run_index_md"])
             per_model_side_by_side_md = Path(outputs["per_model_side_by_side_md"])
             all_run_commands_md = Path(outputs["all_run_commands_md"])
+            family_root = tmp_path / "reports" / "benchmarks" / "by_family"
+            equivalence_root = tmp_path / "reports" / "benchmarks" / "by_equivalence"
             self.assertTrue(current_findings_md.is_file())
             self.assertTrue(high_level_summary_md.is_file())
             self.assertTrue(rollup_run_index_md.is_file())
             self.assertTrue(per_model_side_by_side_md.is_file())
             self.assertTrue(all_run_commands_md.is_file())
+            self.assertTrue((family_root / "prefill_stress" / "findings.md").is_file())
+            self.assertTrue(
+                (family_root / "server_prefill_stress" / "findings.md").is_file()
+            )
+            self.assertTrue(
+                (
+                    equivalence_root
+                    / "fixed_prompt_burst_bridge"
+                    / "matched_runs.md"
+                ).is_file()
+            )
 
             findings_text = current_findings_md.read_text(encoding="utf-8")
             self.assertIn("Qwen/Qwen3-4B", findings_text)
@@ -2756,6 +2840,19 @@ class BenchmarkScriptReportTests(unittest.TestCase):
 
             commands_text = all_run_commands_md.read_text(encoding="utf-8")
             self.assertIn("All Run Commands", commands_text)
+
+            family_text = (
+                family_root / "server_prefill_stress" / "findings.md"
+            ).read_text(encoding="utf-8")
+            self.assertIn("server_prefill_stress", family_text)
+            self.assertIn("Qwen/Qwen3-30B-A3B", family_text)
+
+            equivalence_text = (
+                equivalence_root / "fixed_prompt_burst_bridge" / "matched_runs.md"
+            ).read_text(encoding="utf-8")
+            self.assertIn("fixed_prompt_burst_bridge", equivalence_text)
+            self.assertIn("prefill_stress", equivalence_text)
+            self.assertIn("server_prefill_stress", equivalence_text)
 
     def test_normalize_report_backfills_summary_means_from_benchmark_log(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
