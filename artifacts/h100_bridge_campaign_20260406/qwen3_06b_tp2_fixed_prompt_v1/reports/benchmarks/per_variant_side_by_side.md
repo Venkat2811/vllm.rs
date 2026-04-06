@@ -1,9 +1,29 @@
 # Per-Variant Side By Side
 
-| baseline_variant   | myelon_variant   | metric           |   baseline_value |   myelon_value |   delta_percent | baseline_status   | myelon_status   |
-|--------------------|------------------|------------------|------------------|----------------|-----------------|-------------------|-----------------|
-| runner             | myelon           | requests_per_sec |           30.538 |         29.999 |         -1.765  | completed         | completed       |
-| runner             | myelon           | runtime_sec      |           16.766 |         17.067 |          1.7953 | completed         | completed       |
-| runner             | myelon           | ttft_ms_mean     |         7357.86  |       7506.74  |          2.0234 | completed         | completed       |
-| runner             | myelon           | tpot_ms_mean     |            0     |          0     |                 | completed         | completed       |
-| runner             | myelon           | latency_ms_mean  |         7394     |       7549.52  |          2.1033 | completed         | completed       |
+| baseline_variant   | myelon_variant   | metric                                  |   baseline_value |   myelon_value |   delta_percent | baseline_status   | myelon_status   |
+|--------------------|------------------|-----------------------------------------|------------------|----------------|-----------------|-------------------|-----------------|
+| runner             | myelon           | requests_per_sec                        |           30.538 |         29.999 |         -1.765  | completed         | completed       |
+| runner             | myelon           | runtime_sec                             |           16.766 |         17.067 |          1.7953 | completed         | completed       |
+| runner             | myelon           | ttft_ms_mean                            |         7357.86  |       7506.74  |          2.0234 | completed         | completed       |
+| runner             | myelon           | tpot_ms_mean                            |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | latency_ms_mean                         |         7394     |       7549.52  |          2.1033 | completed         | completed       |
+| runner             | myelon           | planned_max_seqs                        |            8     |          8     |          0      | completed         | completed       |
+| runner             | myelon           | planned_usable_kvcache_tokens           |       789568     |     789568     |          0      | completed         | completed       |
+| runner             | myelon           | observed_gpu_kv_usage_percent_max       |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_cpu_swap_usage_percent_max     |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_prefix_cache_miss_count        |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_prefix_cache_insert_count      |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_prefix_cache_eviction_count    |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_prefill_event_count            |          512     |        512     |          0      | completed         | completed       |
+| runner             | myelon           | observed_prefill_seconds_total          |         1392.03  |       1397.39  |          0.385  | completed         | completed       |
+| runner             | myelon           | observed_prefill_tps_mean               |            6.902 |          6.966 |          0.9273 | completed         | completed       |
+| runner             | myelon           | observed_prompt_metric_event_count      |          512     |        512     |          0      | completed         | completed       |
+| runner             | myelon           | observed_prompt_seconds_total           |         1392.03  |       1397.39  |          0.385  | completed         | completed       |
+| runner             | myelon           | observed_prompt_tps_mean                |            6.496 |          6.556 |          0.9236 | completed         | completed       |
+| runner             | myelon           | observed_decode_metric_event_count      |          512     |        512     |          0      | completed         | completed       |
+| runner             | myelon           | observed_decode_seconds_total           |           18.58  |         22.02  |         18.5145 | completed         | completed       |
+| runner             | myelon           | observed_decode_tps_mean                |           61.911 |         59.267 |         -4.2706 | completed         | completed       |
+| runner             | myelon           | observed_prefix_cache_hit_count         |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_swap_out_attempt_count         |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_dropped_request_count          |            0     |          0     |                 | completed         | completed       |
+| runner             | myelon           | observed_stream_generation_failed_count |            0     |          0     |                 | completed         | completed       |

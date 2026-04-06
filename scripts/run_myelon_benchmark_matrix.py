@@ -12,7 +12,7 @@ from myelon_benchmark_common import (
     run_case_with_retries,
     summarize_numeric_runs,
 )
-from myelon_report_common import write_report_bundle
+from myelon_report_common import normalize_report, write_report_bundle
 from myelon_validation_common import (
     build_benchmark_contract,
     build_machine_profile,
@@ -240,6 +240,7 @@ def main() -> int:
             repo_root=repo_root,
             capture_raw_system=capture_raw_system,
         )
+        failure_report = normalize_report(failure_report)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
             json.dumps(failure_report, indent=2)
@@ -408,6 +409,7 @@ def main() -> int:
         repo_root=repo_root,
         capture_raw_system=capture_raw_system,
     )
+    report = normalize_report(report)
     output_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(output_path)
 

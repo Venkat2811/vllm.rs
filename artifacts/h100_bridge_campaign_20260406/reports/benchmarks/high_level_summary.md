@@ -1,8 +1,8 @@
 # High-Level Summary
 
 - campaign_root: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406`
-- reports_found: `30`
-- completed_runs: `26`
+- reports_found: `32`
+- completed_runs: `28`
 - incomplete_or_skipped_runs: `4`
 
 ## Strongest Requests/sec Gains
@@ -22,8 +22,8 @@
 | Qwen/Qwen3-30B-A3B | server_prefill_stress | cache_thrash_round_robin | tp2                |                -32.6971 |                72898.7  |              49063    | requested_swap_not_observed         | requested_swap_not_observed       |
 | Qwen/Qwen3-0.6B    | server_prefill_stress | cache_thrash_round_robin | tp2                |                 -9.6087 |                 7095    |               6413.26 | requested_thrash_observed           | requested_thrash_observed         |
 | Qwen/Qwen3-30B-A3B | server_prefill_stress | cache_thrash_round_robin | tp2                |                 -8.5929 |                 5048.02 |               4614.25 | requested_thrash_not_observed       | requested_thrash_not_observed     |
+| Qwen/Qwen3-4B      | server_prefill_stress | cache_thrash_round_robin | tp2                |                 -6.4732 |                16483.3  |              15416.3  | requested_thrash_observed           | requested_thrash_observed         |
 | Qwen/Qwen3-30B-A3B | server_prefill_stress | fixed_prompt_burst       | tp2                |                 -5.8981 |                14527.3  |              13670.5  | requested_relaxed_observed          | requested_relaxed_observed        |
-| Qwen/Qwen3-30B-A3B | server_prefill_stress | fixed_prompt_burst       | tp2                |                 -3.9982 |                 9854.32 |               9460.32 | requested_relaxed_observed          | requested_relaxed_observed        |
 
 ## Notable Regressions
 

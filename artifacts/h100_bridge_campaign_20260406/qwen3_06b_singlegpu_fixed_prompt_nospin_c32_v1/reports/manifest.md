@@ -11,6 +11,7 @@
 | transport_mode    | socket_vs_myelon_process_runner                                                                                                          |
 | run_class         | fullpass                                                                                                                                 |
 | status            | completed                                                                                                                                |
+| result_boundary   | benchmark_complete                                                                                                                       |
 | stop_point        | full_completion                                                                                                                          |
 | host              | hazy-instance-completes-fin-02                                                                                                           |
 | report_json       | /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/report.json |
