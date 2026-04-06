@@ -37,12 +37,15 @@ Per-case reports for serving and PD now also record:
 The shared retained contract now includes:
 
 - `benchmark_family`
+- `benchmark_submode`
 - `question_answered`
 - `workload_class`
 - `warmup_policy`
 - `first_turn_measured`
 - `arrival_pattern`
 - `concurrency_policy`
+- `topology_overlay`
+- `transport_mode`
 - `run_class`
 - `stop_point`
 - `skip_reason`

@@ -226,6 +226,11 @@ def main() -> int:
         effective_device_ids.extend(client_device_ids)
     benchmark_contract = build_benchmark_contract(
         benchmark_family="pd_qos",
+        benchmark_submode=(
+            "first_transfer_control"
+            if workload_class == "pd_first_transfer_control"
+            else ("warm_steady_state" if warmup_step else "cold_turn")
+        ),
         question_answered="How does Myelon affect PD-capable serving paths on supported transports and models?",
         workload_class=workload_class,
         warmup_policy=warmup_policy,
@@ -243,6 +248,12 @@ def main() -> int:
             "client_device_ids": client_device_ids,
             "pd_url": pd_url,
         },
+        topology_overlay="pd_tp1",
+        transport_mode=(
+            "pd_tcp"
+            if pd_url and pd_url.startswith("tcp://")
+            else ("pd_localipc_default" if not pd_url else "pd_custom_url")
+        ),
         run_class=run_class,
         stop_point="full_completion",
         skip_reason=None,
