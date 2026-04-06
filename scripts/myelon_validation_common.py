@@ -65,7 +65,7 @@ def infer_workload_class_from_path(path: str) -> str:
         return "sharegpt_bounded"
     if "synthetic" in lowered:
         return "synthetic_multi_turn"
-    if "first_transfer" in lowered:
+    if "first_transfer" in lowered or "transfer_first" in lowered:
         return "pd_first_transfer_control"
     return "file_defined"
 
@@ -134,12 +134,15 @@ def build_machine_profile(
 
 def build_benchmark_contract(
     benchmark_family: str,
+    benchmark_submode: str,
     question_answered: str,
     workload_class: str,
     warmup_policy: str,
     first_turn_measured: bool | None,
     arrival_pattern: str,
     concurrency_policy: dict[str, object],
+    topology_overlay: str,
+    transport_mode: str,
     run_class: str,
     stop_point: str,
     skip_reason: str | None,
@@ -151,6 +154,8 @@ def build_benchmark_contract(
         )
     if not question_answered.strip():
         raise ValueError("question_answered must be non-empty")
+    if not benchmark_submode.strip():
+        raise ValueError("benchmark_submode must be non-empty")
     if not workload_class.strip():
         raise ValueError("workload_class must be non-empty")
     if not warmup_policy.strip():
@@ -159,6 +164,10 @@ def build_benchmark_contract(
         raise ValueError("arrival_pattern must be non-empty")
     if not isinstance(concurrency_policy, dict) or not concurrency_policy:
         raise ValueError("concurrency_policy must be a non-empty dict")
+    if not topology_overlay.strip():
+        raise ValueError("topology_overlay must be non-empty")
+    if not transport_mode.strip():
+        raise ValueError("transport_mode must be non-empty")
     if run_class not in VALID_RUN_CLASSES:
         raise ValueError(
             f"invalid run class {run_class!r}; expected one of {sorted(VALID_RUN_CLASSES)}"
@@ -170,12 +179,15 @@ def build_benchmark_contract(
 
     return {
         "benchmark_family": benchmark_family,
+        "benchmark_submode": benchmark_submode,
         "question_answered": question_answered,
         "workload_class": workload_class,
         "warmup_policy": warmup_policy,
         "first_turn_measured": first_turn_measured,
         "arrival_pattern": arrival_pattern,
         "concurrency_policy": concurrency_policy,
+        "topology_overlay": topology_overlay,
+        "transport_mode": transport_mode,
         "run_class": run_class,
         "stop_point": stop_point,
         "skip_reason": skip_reason,

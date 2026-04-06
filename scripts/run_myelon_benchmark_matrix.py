@@ -178,6 +178,7 @@ def main() -> int:
     report_cases = []
     benchmark_contract = build_benchmark_contract(
         benchmark_family="prefill_stress",
+        benchmark_submode="fixed_prompt_burst",
         question_answered="Does Myelon reduce transport-sensitive prompt and prefill cost?",
         workload_class=workload_class_for_profile(workload_profile, prompt_source),
         warmup_policy=f"cli_warmup_runs:{warmup_runs}",
@@ -192,6 +193,8 @@ def main() -> int:
             "mode": mode,
             "expected_num_shards": expected_num_shards,
         },
+        topology_overlay=mode,
+        transport_mode="socket_vs_myelon_process_runner",
         run_class=run_class,
         stop_point="full_completion",
         skip_reason=None,
