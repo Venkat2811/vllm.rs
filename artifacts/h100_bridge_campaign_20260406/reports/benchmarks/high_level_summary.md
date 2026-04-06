@@ -25,6 +25,14 @@
 | Qwen/Qwen3-4B      | server_prefill_stress | cache_thrash_round_robin | tp2                |                 -6.4732 |                16483.3  |              15416.3  | requested_thrash_observed           | requested_thrash_observed         |
 | Qwen/Qwen3-30B-A3B | server_prefill_stress | fixed_prompt_burst       | tp2                |                 -5.8981 |                14527.3  |              13670.5  | requested_relaxed_observed          | requested_relaxed_observed        |
 
+## Strongest Prompt Throughput Gains
+
+No prompt-throughput deltas were available.
+
+## Strongest First-Prefill Wins
+
+No first-prefill deltas were available.
+
 ## Notable Regressions
 
 | model_label        | benchmark_family      | benchmark_submode                 | topology_overlay   |   requests_per_sec_delta_percent |   baseline_requests_per_sec |   myelon_requests_per_sec | baseline_pressure_profile_outcome   | myelon_pressure_profile_outcome   |

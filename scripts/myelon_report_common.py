@@ -100,6 +100,84 @@ def _sorted_top_rows(
     return sortable[:limit]
 
 
+def _slugify(value: object) -> str:
+    text = str(value or "").strip().lower()
+    if not text:
+        return "unspecified"
+    text = re.sub(r"[^a-z0-9]+", "_", text)
+    text = text.strip("_")
+    return text or "unspecified"
+
+
+def _write_grouped_report_bundle(
+    group_root: Path,
+    title: str,
+    identity_key: str,
+    identity_value: object,
+    findings_rows: list[dict[str, object]],
+    findings_fields: list[str],
+    detailed_rows: list[dict[str, object]],
+    detailed_fields: list[str],
+    findings_stem: str = "findings",
+) -> None:
+    group_root.mkdir(parents=True, exist_ok=True)
+
+    findings_csv_path = group_root / f"{findings_stem}.csv"
+    findings_md_path = group_root / f"{findings_stem}.md"
+    side_csv_path = group_root / "per_model_side_by_side.csv"
+    side_md_path = group_root / "per_model_side_by_side.md"
+
+    _write_csv(findings_csv_path, findings_rows, findings_fields)
+    _write_csv(side_csv_path, detailed_rows, detailed_fields)
+
+    status_counts: dict[str, int] = {}
+    for row in findings_rows:
+        key = str(row.get("status"))
+        status_counts[key] = status_counts.get(key, 0) + 1
+
+    findings_lines = [
+        f"# {title}",
+        "",
+        f"- {identity_key}: `{identity_value}`",
+        f"- retained_runs: `{len(findings_rows)}`",
+        "",
+        "## Status Counts",
+        "",
+    ]
+    if status_counts:
+        status_rows = [
+            {"status": key, "count": value}
+            for key, value in sorted(status_counts.items())
+        ]
+        findings_lines.append(_markdown_table_from_rows(status_rows, ["status", "count"]))
+    else:
+        findings_lines.append("No retained runs were available.")
+    findings_lines.extend(
+        [
+            "",
+            "## Findings",
+            "",
+        ]
+    )
+    if findings_rows:
+        findings_lines.append(_markdown_table_from_rows(findings_rows, findings_fields))
+    else:
+        findings_lines.append("No retained runs were available.")
+    findings_md_path.write_text("\n".join(findings_lines) + "\n", encoding="utf-8")
+
+    side_lines = [
+        f"# {title} Side By Side",
+        "",
+        f"- {identity_key}: `{identity_value}`",
+        "",
+    ]
+    if detailed_rows:
+        side_lines.append(_markdown_table_from_rows(detailed_rows, detailed_fields))
+    else:
+        side_lines.append("No baseline/Myelon comparison pairs were available.")
+    side_md_path.write_text("\n".join(side_lines) + "\n", encoding="utf-8")
+
+
 def _run_capture(command: list[str]) -> str | None:
     try:
         completed = subprocess.run(
@@ -1848,6 +1926,8 @@ def build_rollup_rows(report_path: Path, report: dict[str, object]) -> tuple[dic
 def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
     report_paths = find_report_jsons(campaign_root)
     reports_dir = campaign_root / "reports" / "benchmarks"
+    by_family_root = reports_dir / "by_family"
+    by_equivalence_root = reports_dir / "by_equivalence"
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     current_findings_csv = reports_dir / "current_findings.csv"
@@ -2196,6 +2276,51 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         command_lines.append("No retained report.json files were found.")
     all_run_commands_md.write_text("\n".join(command_lines) + "\n", encoding="utf-8")
 
+    family_groups: dict[str, list[dict[str, object]]] = {}
+    family_detail_groups: dict[str, list[dict[str, object]]] = {}
+    for row in findings_rows:
+        family_key = str(row.get("benchmark_family") or "unspecified")
+        family_groups.setdefault(family_key, []).append(row)
+    for row in detailed_rows:
+        family_key = str(row.get("benchmark_family") or "unspecified")
+        family_detail_groups.setdefault(family_key, []).append(row)
+    for family_key, grouped_findings in family_groups.items():
+        _write_grouped_report_bundle(
+            group_root=by_family_root / _slugify(family_key),
+            title=f"Benchmark Family: {family_key}",
+            identity_key="benchmark_family",
+            identity_value=family_key,
+            findings_rows=grouped_findings,
+            findings_fields=findings_fields,
+            detailed_rows=family_detail_groups.get(family_key, []),
+            detailed_fields=detailed_fields,
+        )
+
+    equivalence_groups: dict[str, list[dict[str, object]]] = {}
+    equivalence_detail_groups: dict[str, list[dict[str, object]]] = {}
+    for row in findings_rows:
+        equivalence_key = row.get("equivalence_group")
+        if equivalence_key in (None, ""):
+            continue
+        equivalence_groups.setdefault(str(equivalence_key), []).append(row)
+    for row in detailed_rows:
+        equivalence_key = row.get("equivalence_group")
+        if equivalence_key in (None, ""):
+            continue
+        equivalence_detail_groups.setdefault(str(equivalence_key), []).append(row)
+    for equivalence_key, grouped_findings in equivalence_groups.items():
+        _write_grouped_report_bundle(
+            group_root=by_equivalence_root / _slugify(equivalence_key),
+            title=f"Matched Equivalence Group: {equivalence_key}",
+            identity_key="equivalence_group",
+            identity_value=equivalence_key,
+            findings_rows=grouped_findings,
+            findings_fields=findings_fields,
+            detailed_rows=equivalence_detail_groups.get(equivalence_key, []),
+            detailed_fields=detailed_fields,
+            findings_stem="matched_runs",
+        )
+
     return {
         "current_findings_csv": str(current_findings_csv),
         "current_findings_md": str(current_findings_md),
@@ -2205,4 +2330,6 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         "per_model_side_by_side_csv": str(per_model_side_by_side_csv),
         "per_model_side_by_side_md": str(per_model_side_by_side_md),
         "all_run_commands_md": str(all_run_commands_md),
+        "by_family_root": str(by_family_root),
+        "by_equivalence_root": str(by_equivalence_root),
     }
