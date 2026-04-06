@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import re
+import select
 import statistics
 import subprocess
 import time
@@ -15,9 +16,15 @@ DECODE_METRICS_RE = re.compile(
 TOPOLOGY_RE = re.compile(
     r"Runner topology mode=(\w+) reason=([^\s]+) num_shards=(\d+) device_ids=\[([^\]]*)\]"
 )
+FIRST_PREFILL_RE = re.compile(
+    r"Prefilling \[seq_id \d+\]: (\d+) tokens in ([0-9.]+)s \(([0-9.]+) tokens/s\)"
+)
 
 NUMERIC_METRICS = (
     "elapsed_seconds",
+    "first_prefill_tokens",
+    "first_prefill_seconds",
+    "first_prefill_tokens_per_second",
     "prompt_tokens",
     "prompt_seconds",
     "prompt_tokens_per_second",
@@ -32,6 +39,7 @@ def build_command(
     binary_path: Path,
     model_path: str,
     prompt: str,
+    batch_size: int,
     max_model_len: str,
     max_tokens: str,
     seed: str,
@@ -53,6 +61,8 @@ def build_command(
         max_tokens,
         "--prompts",
         prompt,
+        "--batch",
+        str(batch_size),
         "--dtype",
         "bf16",
         "--seed",
@@ -78,6 +88,9 @@ def parse_metrics(output: str) -> dict:
 
     metrics = {
         "response": response_match.group(1).strip() if response_match else None,
+        "first_prefill_tokens": None,
+        "first_prefill_seconds": None,
+        "first_prefill_tokens_per_second": None,
         "prompt_tokens": None,
         "prompt_seconds": None,
         "prompt_tokens_per_second": None,
@@ -107,6 +120,12 @@ def parse_metrics(output: str) -> dict:
         metrics["decoded_tokens"] = int(decode_match.group(1))
         metrics["decode_seconds"] = float(decode_match.group(2))
         metrics["decode_tokens_per_second"] = float(decode_match.group(3))
+
+    first_prefill_match = FIRST_PREFILL_RE.search(output)
+    if first_prefill_match:
+        metrics["first_prefill_tokens"] = int(first_prefill_match.group(1))
+        metrics["first_prefill_seconds"] = float(first_prefill_match.group(2))
+        metrics["first_prefill_tokens_per_second"] = float(first_prefill_match.group(3))
 
     if topology_match:
         raw_device_ids = topology_match.group(4).strip()
@@ -145,6 +164,94 @@ def run_case(repo_root: Path, label: str, command: list[str], timeout_seconds: i
     }
 
 
+def run_case_until_first_prefill(
+    repo_root: Path,
+    label: str,
+    command: list[str],
+    timeout_seconds: int,
+) -> dict:
+    started_at = time.time()
+    process = subprocess.Popen(
+        command,
+        cwd=repo_root,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+    combined_output_parts: list[str] = []
+    stop_point_reached = False
+    timed_out = False
+    process_exit_code: int | None = None
+
+    try:
+        stdout = process.stdout
+        assert stdout is not None
+        while True:
+            remaining = timeout_seconds - (time.time() - started_at)
+            if remaining <= 0:
+                timed_out = True
+                break
+
+            ready, _, _ = select.select([stdout], [], [], min(0.2, remaining))
+            if ready:
+                line = stdout.readline()
+                if line == "":
+                    if process.poll() is not None:
+                        break
+                    continue
+                combined_output_parts.append(line)
+                if FIRST_PREFILL_RE.search(line):
+                    stop_point_reached = True
+                    break
+            elif process.poll() is not None:
+                break
+
+        if stop_point_reached and process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+        elif timed_out and process.poll() is None:
+            process.kill()
+            process.wait(timeout=5)
+
+        remainder = stdout.read()
+        if remainder:
+            combined_output_parts.append(remainder)
+        process_exit_code = process.returncode
+    finally:
+        if process.poll() is None:
+            process.kill()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+
+    finished_at = time.time()
+    combined_output = "".join(combined_output_parts)
+    metrics = parse_metrics(combined_output)
+    if metrics.get("prompt_tokens") is None and metrics.get("first_prefill_tokens") is not None:
+        metrics["prompt_tokens"] = metrics["first_prefill_tokens"]
+        metrics["prompt_seconds"] = metrics["first_prefill_seconds"]
+        metrics["prompt_tokens_per_second"] = metrics["first_prefill_tokens_per_second"]
+
+    exit_code = 0 if stop_point_reached else (124 if timed_out else process_exit_code or 1)
+    return {
+        "label": label,
+        "command": command,
+        "exit_code": exit_code,
+        "process_exit_code": process_exit_code,
+        "stop_point_reached": stop_point_reached,
+        "elapsed_seconds": round(finished_at - started_at, 3),
+        "metrics": metrics,
+        "stdout": combined_output,
+        "stderr": "",
+    }
+
+
 def run_case_with_retries(
     repo_root: Path,
     label: str,
@@ -173,6 +280,44 @@ def run_case_with_retries(
     return final_run
 
 
+def run_case_for_stop_point_with_retries(
+    repo_root: Path,
+    label: str,
+    command: list[str],
+    timeout_seconds: int,
+    max_attempts: int,
+    retry_sleep_seconds: float,
+    stop_point: str,
+) -> dict:
+    if stop_point == "first_prefill_completion":
+        attempts = []
+        for attempt_index in range(max_attempts):
+            run = run_case_until_first_prefill(repo_root, label, command, timeout_seconds)
+            attempts.append(run)
+            if run["exit_code"] == 0 and metrics_are_complete(run["metrics"], stop_point):
+                final_run = dict(run)
+                final_run["attempt_count"] = attempt_index + 1
+                final_run["retried"] = attempt_index > 0
+                final_run["attempts"] = [dict(attempt) for attempt in attempts]
+                return final_run
+            if attempt_index + 1 < max_attempts and retry_sleep_seconds > 0:
+                time.sleep(retry_sleep_seconds)
+
+        final_run = dict(attempts[-1])
+        final_run["attempt_count"] = len(attempts)
+        final_run["retried"] = len(attempts) > 1
+        final_run["attempts"] = [dict(attempt) for attempt in attempts]
+        return final_run
+    return run_case_with_retries(
+        repo_root,
+        label,
+        command,
+        timeout_seconds,
+        max_attempts,
+        retry_sleep_seconds,
+    )
+
+
 def summarize_numeric_runs(runs: list[dict]) -> dict:
     summary: dict[str, dict[str, float | int]] = {}
     for key in NUMERIC_METRICS:
@@ -192,16 +337,22 @@ def summarize_numeric_runs(runs: list[dict]) -> dict:
     return summary
 
 
-def metrics_are_complete(metrics: dict) -> bool:
-    if metrics.get("response") is None:
+def metrics_are_complete(
+    metrics: dict,
+    stop_point: str = "full_completion",
+    require_response: bool = True,
+) -> bool:
+    if metrics.get("prompt_tokens") is None:
         return False
-    if metrics.get("prompt_tokens") is None or metrics.get("decoded_tokens") is None:
+    if metrics.get("prompt_seconds") is None or metrics.get("prompt_tokens_per_second") is None:
         return False
-    if metrics.get("prompt_seconds") is None or metrics.get("decode_seconds") is None:
+    if stop_point == "first_prefill_completion":
+        return not metrics.get("error_logged", False)
+    if require_response and metrics.get("response") is None:
         return False
-    if metrics.get("prompt_tokens_per_second") is None or metrics.get(
-        "decode_tokens_per_second"
-    ) is None:
+    if metrics.get("decoded_tokens") is None:
+        return False
+    if metrics.get("decode_seconds") is None or metrics.get("decode_tokens_per_second") is None:
         return False
     if metrics.get("runner_prefill_error_logged") or metrics.get("engine_loop_error_logged"):
         return False

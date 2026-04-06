@@ -13,6 +13,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 import myelon_validation_common as validation_common
 import myelon_report_common as report_common
+import myelon_benchmark_common as benchmark_common
 import run_myelon_benchmark_matrix as benchmark_matrix
 import run_myelon_pd_benchmark_matrix as pd_matrix
 import run_myelon_server_benchmark_matrix as server_matrix
@@ -96,6 +97,46 @@ class FakeProcess:
         self.returncode = 0
 
 
+class FakeStream:
+    def __init__(self, text: str) -> None:
+        self._lines = text.splitlines(keepends=True)
+
+    def has_pending_data(self) -> bool:
+        return bool(self._lines)
+
+    def readline(self) -> str:
+        if self._lines:
+            return self._lines.pop(0)
+        return ""
+
+    def read(self) -> str:
+        if not self._lines:
+            return ""
+        remainder = "".join(self._lines)
+        self._lines = []
+        return remainder
+
+
+class FakePrefillProbeProcess:
+    def __init__(self, text: str) -> None:
+        self.stdout = FakeStream(text)
+        self.returncode = None
+
+    def poll(self) -> int | None:
+        return self.returncode
+
+    def wait(self, timeout: int | None = None) -> int:
+        if self.returncode is None:
+            self.returncode = 0
+        return self.returncode
+
+    def terminate(self) -> None:
+        self.returncode = -15
+
+    def kill(self) -> None:
+        self.returncode = -9
+
+
 def complete_run(label: str) -> dict:
     return {
         "label": label,
@@ -119,6 +160,84 @@ def complete_run(label: str) -> dict:
             "engine_loop_error_logged": False,
             "error_logged": False,
             "runner_mode": "tp",
+            "runner_reason": "test",
+            "num_shards": 2,
+            "device_ids": [0, 1],
+        },
+        "stdout": "",
+        "stderr": "",
+        "attempt_count": 1,
+        "retried": False,
+        "attempts": [],
+    }
+
+
+def complete_first_prefill_run(label: str) -> dict:
+    return {
+        "label": label,
+        "command": ["fake"],
+        "exit_code": 0,
+        "process_exit_code": -15,
+        "stop_point_reached": True,
+        "elapsed_seconds": 0.5,
+        "metrics": {
+            "response": None,
+            "first_prefill_tokens": 256,
+            "first_prefill_seconds": 2.5,
+            "first_prefill_tokens_per_second": 102.4,
+            "prompt_tokens": 256,
+            "prompt_seconds": 2.5,
+            "prompt_tokens_per_second": 102.4,
+            "decoded_tokens": None,
+            "decode_seconds": None,
+            "decode_tokens_per_second": None,
+            "myelon_enabled": label.startswith("myelon"),
+            "myelon_first_request_logged": label.startswith("myelon"),
+            "myelon_first_response_logged": False,
+            "socket_shutdown_logged": False,
+            "myelon_shutdown_logged": False,
+            "runner_prefill_error_logged": False,
+            "engine_loop_error_logged": False,
+            "error_logged": False,
+            "runner_mode": "tp",
+            "runner_reason": "test",
+            "num_shards": 2,
+            "device_ids": [0, 1],
+        },
+        "stdout": "",
+        "stderr": "",
+        "attempt_count": 1,
+        "retried": False,
+        "attempts": [],
+    }
+
+
+def complete_batch_completion_run(label: str) -> dict:
+    return {
+        "label": label,
+        "command": ["fake"],
+        "exit_code": 0,
+        "elapsed_seconds": 1.5,
+        "metrics": {
+            "response": None,
+            "first_prefill_tokens": 17,
+            "first_prefill_seconds": 1.35,
+            "first_prefill_tokens_per_second": 12.64,
+            "prompt_tokens": 2048,
+            "prompt_seconds": 1.35,
+            "prompt_tokens_per_second": 1522.68,
+            "decoded_tokens": 128,
+            "decode_seconds": 0.06,
+            "decode_tokens_per_second": 1976.6,
+            "myelon_enabled": label.startswith("myelon"),
+            "myelon_first_request_logged": label.startswith("myelon"),
+            "myelon_first_response_logged": False,
+            "socket_shutdown_logged": True,
+            "myelon_shutdown_logged": False,
+            "runner_prefill_error_logged": False,
+            "engine_loop_error_logged": False,
+            "error_logged": False,
+            "runner_mode": "process",
             "runner_reason": "test",
             "num_shards": 2,
             "device_ids": [0, 1],
@@ -166,6 +285,41 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             cpu_mem_fold=0.1,
         )
         self.assertEqual(profile, "hard_thrash")
+
+    def test_run_case_until_first_prefill_captures_prefill_metrics(self) -> None:
+        output = "\n".join(
+            [
+                "2026-04-06T12:25:52.000000Z  WARN vllm_rs::utils: Runner topology mode=process reason=forced_runner num_shards=2 device_ids=[0, 1]",
+                "2026-04-06T12:25:57.365547Z  INFO vllm_rs::core::engine: Prefilling [seq_id 0]: 100 tokens in 1.00s (100.00 tokens/s)",
+            ]
+        )
+
+        def fake_select(readers, _writers, _errors, _timeout):
+            stream = readers[0]
+            return ([stream], [], []) if stream.has_pending_data() else ([], [], [])
+
+        with mock.patch.object(
+            benchmark_common.subprocess,
+            "Popen",
+            return_value=FakePrefillProbeProcess(output),
+        ), mock.patch.object(
+            benchmark_common.select,
+            "select",
+            side_effect=fake_select,
+        ):
+            run = benchmark_common.run_case_until_first_prefill(
+                repo_root=Path("."),
+                label="runner-probe",
+                command=["fake"],
+                timeout_seconds=5,
+            )
+
+        self.assertEqual(run["exit_code"], 0)
+        self.assertTrue(run["stop_point_reached"])
+        self.assertEqual(run["metrics"]["first_prefill_tokens"], 100)
+        self.assertEqual(run["metrics"]["first_prefill_seconds"], 1.0)
+        self.assertEqual(run["metrics"]["prompt_tokens"], 100)
+        self.assertEqual(run["metrics"]["prompt_tokens_per_second"], 100.0)
 
     def test_run_class_helpers(self) -> None:
         self.assertEqual(validation_common.infer_cli_run_class(5), "fullpass")
@@ -265,6 +419,31 @@ class BenchmarkContractHelperTests(unittest.TestCase):
         )
         self.assertEqual(status, "partial")
 
+    def test_infer_report_status_treats_planned_stop_point_probe_as_completed(self) -> None:
+        status = report_common.infer_report_status(
+            {
+                "status": "partial",
+                "benchmark_contract": {
+                    "stop_point": "minimal_decode_completion",
+                },
+                "cases": [
+                    {
+                        "label": "runner",
+                        "stop_point": "minimal_decode_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                    },
+                    {
+                        "label": "myelon",
+                        "stop_point": "minimal_decode_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                    },
+                ],
+            }
+        )
+        self.assertEqual(status, "completed")
+
     def test_infer_case_result_boundary_classifies_completion_and_runtime(self) -> None:
         self.assertEqual(
             report_common.infer_case_result_boundary(
@@ -357,6 +536,46 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             }
         )
         self.assertEqual(skipped["result_boundary"], "architecture_limited")
+
+    def test_normalize_report_marks_stop_point_probe_completed(self) -> None:
+        normalized = report_common.normalize_report(
+            {
+                "status": "partial",
+                "benchmark_contract": {
+                    "benchmark_family": "prefill_stress",
+                    "benchmark_submode": "fixed_prompt_burst",
+                    "question_answered": "prefill",
+                    "workload_class": "synthetic_prompt_short_burst",
+                    "warmup_policy": "cli_warmup_runs:1",
+                    "first_turn_measured": True,
+                    "arrival_pattern": "prompt_burst_serial_runs",
+                    "concurrency_policy": {"driver": "cli_batch_burst_repeated_invocation"},
+                    "cache_pressure_profile": "unspecified",
+                    "equivalence_group": None,
+                    "topology_overlay": "tp2",
+                    "transport_mode": "socket_vs_myelon_process_runner",
+                    "run_class": "fullpass",
+                    "stop_point": "first_prefill_completion",
+                    "skip_reason": None,
+                },
+                "cases": [
+                    {
+                        "label": "runner",
+                        "stop_point": "first_prefill_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                    },
+                    {
+                        "label": "myelon",
+                        "stop_point": "first_prefill_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                    },
+                ],
+            }
+        )
+        self.assertEqual(normalized["status"], "completed")
+        self.assertEqual(normalized["result_boundary"], "stop_point_limited")
 
     def test_build_run_index_rows_include_result_boundary(self) -> None:
         report = report_common.normalize_report(
@@ -638,7 +857,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                     return_value=CompletedProcess(["cargo"], 0, "", ""),
                 ), mock.patch.object(
                     benchmark_matrix,
-                    "run_case_with_retries",
+                    "run_case_for_stop_point_with_retries",
                     side_effect=[
                         complete_run("runner-warmup-1"),
                         complete_run("runner-measured-1"),
@@ -656,7 +875,18 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "fixed_prompt_burst")
             self.assertEqual(report["benchmark_contract"]["topology_overlay"], "tp2")
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
+            self.assertEqual(report["benchmark_contract"]["stop_point"], "full_completion")
+            self.assertEqual(
+                report["benchmark_contract"]["workload_class"],
+                "synthetic_prompt_short_burst",
+            )
+            self.assertEqual(
+                report["benchmark_contract"]["concurrency_policy"]["batch_size"],
+                256,
+            )
             self.assertEqual(report["status"], "completed")
+            self.assertIn("--batch", report["cases"][0]["command"])
+            self.assertIn("256", report["cases"][0]["command"])
             self.assertIn("machine_profile", report)
             self.assertIn("model_capability", report)
             self.assertIn("report_bundle", report)
@@ -672,6 +902,164 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertTrue(side_by_side_md.is_file())
             self.assertTrue(system_md.is_file())
             self.assertTrue(manifest_json.is_file())
+
+    def test_cli_benchmark_minimal_decode_defaults_stop_point_from_max_tokens_one(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_path = tmp_path / "cli_report.json"
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_OUT": str(output_path),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_BENCHMARK_MODE": "tp2",
+                "VLLM_BENCHMARK_WARMUP_RUNS": "0",
+                "VLLM_BENCHMARK_MEASURED_RUNS": "1",
+                "VLLM_MAX_TOKENS": "1",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    benchmark_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    benchmark_matrix.subprocess,
+                    "run",
+                    return_value=CompletedProcess(["cargo"], 0, "", ""),
+                ), mock.patch.object(
+                    benchmark_matrix,
+                    "run_case_for_stop_point_with_retries",
+                    side_effect=[
+                        complete_batch_completion_run("runner-measured-1"),
+                        complete_batch_completion_run("myelon-measured-1"),
+                    ],
+                ):
+                    rc = benchmark_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                report["benchmark_contract"]["stop_point"],
+                "minimal_decode_completion",
+            )
+            self.assertEqual(report["cases"][0]["stop_point"], "minimal_decode_completion")
+
+    def test_cli_benchmark_honors_explicit_batch_size_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_path = tmp_path / "cli_batch_report.json"
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_OUT": str(output_path),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_BENCHMARK_MODE": "tp2",
+                "VLLM_BENCHMARK_WARMUP_RUNS": "0",
+                "VLLM_BENCHMARK_MEASURED_RUNS": "1",
+                "VLLM_BENCHMARK_BATCH_SIZE": "64",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    benchmark_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    benchmark_matrix.subprocess,
+                    "run",
+                    return_value=CompletedProcess(["cargo"], 0, "", ""),
+                ), mock.patch.object(
+                    benchmark_matrix,
+                    "run_case_for_stop_point_with_retries",
+                    side_effect=[
+                        complete_batch_completion_run("runner-measured-1"),
+                        complete_batch_completion_run("myelon-measured-1"),
+                    ],
+                ):
+                    rc = benchmark_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["batch_size"], 64)
+            self.assertEqual(
+                report["benchmark_contract"]["concurrency_policy"]["batch_size"],
+                64,
+            )
+            self.assertIn("--batch", report["cases"][0]["command"])
+            self.assertIn("64", report["cases"][0]["command"])
+
+    def test_cli_benchmark_first_prefill_probe_records_prefill_stop_point(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_path = tmp_path / "cli_probe_report.json"
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_OUT": str(output_path),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_BENCHMARK_MODE": "tp2",
+                "VLLM_BENCHMARK_WARMUP_RUNS": "0",
+                "VLLM_BENCHMARK_MEASURED_RUNS": "1",
+                "VLLM_PREFILL_STRESS_STOP_POINT": "first_prefill_completion",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    benchmark_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    benchmark_matrix.subprocess,
+                    "run",
+                    return_value=CompletedProcess(["cargo"], 0, "", ""),
+                ), mock.patch.object(
+                    benchmark_matrix,
+                    "run_case_for_stop_point_with_retries",
+                    side_effect=[
+                        complete_first_prefill_run("runner-measured-1"),
+                        complete_first_prefill_run("myelon-measured-1"),
+                    ],
+                ):
+                    rc = benchmark_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                report["benchmark_contract"]["stop_point"],
+                "first_prefill_completion",
+            )
+            self.assertEqual(report["cases"][0]["stop_point"], "first_prefill_completion")
+            self.assertEqual(report["cases"][0]["sample_response"], None)
+            self.assertEqual(
+                report["comparisons"]["myelon_first_prefill_tps_ratio_vs_runner"],
+                1.0,
+            )
+
+    def test_cli_benchmark_rejects_invalid_stop_point(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_path = tmp_path / "cli_invalid_report.json"
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_OUT": str(output_path),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_PREFILL_STRESS_STOP_POINT": "bad_mode",
+            }
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                rc = benchmark_matrix.main()
+
+            self.assertEqual(rc, 1)
+            self.assertFalse(output_path.exists())
 
     def test_server_benchmark_report_includes_contract_and_case_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -2169,8 +2557,10 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             tmp_path = Path(tmp_dir)
             campaign_a = tmp_path / "single_gpu_random_qwen3_4b"
             campaign_b = tmp_path / "pd_skip_qwen35_27b"
+            campaign_c = tmp_path / "tp2_prefill_qwen30ba3b"
             campaign_a.mkdir()
             campaign_b.mkdir()
+            campaign_c.mkdir()
 
             report_a = {
                 "status": "completed",
@@ -2251,8 +2641,65 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 },
                 "cases": [],
             }
+            report_c = {
+                "status": "completed",
+                "benchmark_contract": {
+                    "benchmark_family": "prefill_stress",
+                    "benchmark_submode": "fixed_prompt_burst",
+                    "workload_class": "custom_prompt_env_burst",
+                    "topology_overlay": "tp2",
+                    "transport_mode": "socket_vs_myelon_process_runner",
+                    "run_class": "fullpass",
+                    "stop_point": "minimal_decode_completion",
+                    "skip_reason": None,
+                },
+                "machine_profile": {
+                    "hostname": "hazy-instance-completes-fin-02",
+                    "gpu_inventory": [{"name": "NVIDIA H100 80GB HBM3"}],
+                },
+                "model_capability": {
+                    "model_label": "Qwen/Qwen3-30B-A3B",
+                    "architecture": "Qwen3MoeForCausalLM",
+                    "pd_supported": True,
+                },
+                "cases": [
+                    {
+                        "label": "runner",
+                        "execution_variant": "runner",
+                        "stop_point": "minimal_decode_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                        "summary": {},
+                        "measured_summary": {
+                            "first_prefill_seconds": {"mean": 1.48},
+                            "first_prefill_tokens_per_second": {"mean": 11.63},
+                            "prompt_seconds": {"mean": 1.48},
+                            "prompt_tokens_per_second": {"mean": 1401.14},
+                            "decode_seconds": {"mean": 0.063333},
+                            "decode_tokens_per_second": {"mean": 1939.38},
+                        },
+                    },
+                    {
+                        "label": "myelon",
+                        "execution_variant": "myelon",
+                        "stop_point": "minimal_decode_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                        "summary": {},
+                        "measured_summary": {
+                            "first_prefill_seconds": {"mean": 1.36},
+                            "first_prefill_tokens_per_second": {"mean": 12.49},
+                            "prompt_seconds": {"mean": 1.36},
+                            "prompt_tokens_per_second": {"mean": 1504.67},
+                            "decode_seconds": {"mean": 0.06},
+                            "decode_tokens_per_second": {"mean": 2024.07},
+                        },
+                    },
+                ],
+            }
             (campaign_a / "report.json").write_text(json.dumps(report_a), encoding="utf-8")
             (campaign_b / "report.json").write_text(json.dumps(report_b), encoding="utf-8")
+            (campaign_c / "report.json").write_text(json.dumps(report_c), encoding="utf-8")
 
             outputs = report_common.write_rollup_reports(tmp_path)
 
@@ -2273,6 +2720,9 @@ class BenchmarkScriptReportTests(unittest.TestCase):
 
             high_level_text = high_level_summary_md.read_text(encoding="utf-8")
             self.assertIn("Strongest Requests/sec Gains", high_level_text)
+            self.assertIn("Strongest Prompt Throughput Gains", high_level_text)
+            self.assertIn("Strongest First-Prefill Wins", high_level_text)
+            self.assertIn("Qwen/Qwen3-30B-A3B", high_level_text)
             self.assertIn("Incomplete / Unsupported", high_level_text)
 
             side_text = per_model_side_by_side_md.read_text(encoding="utf-8")
