@@ -1,0 +1,2 @@
+variant=myelon
+served_model=c1899de289a04d12100db370d81485cdf75e47ca
