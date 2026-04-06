@@ -98,6 +98,7 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             first_turn_measured=True,
             arrival_pattern="prompt_burst_serial_runs",
             concurrency_policy={"driver": "cli", "max_num_seqs": 1},
+            cache_pressure_profile="unspecified",
             topology_overlay="tp2",
             transport_mode="socket_vs_myelon_process_runner",
             run_class="quickpass",
@@ -106,8 +107,19 @@ class BenchmarkContractHelperTests(unittest.TestCase):
         )
         self.assertEqual(contract["benchmark_family"], "prefill_stress")
         self.assertEqual(contract["benchmark_submode"], "fixed_prompt_burst")
+        self.assertEqual(contract["cache_pressure_profile"], "unspecified")
         self.assertEqual(contract["run_class"], "quickpass")
         self.assertIn("concurrency_policy", contract)
+
+    def test_resolve_cache_pressure_profile_detects_hard_thrash(self) -> None:
+        profile = validation_common.resolve_cache_pressure_profile(
+            None,
+            kv_fraction=0.35,
+            prefix_cache_enabled=True,
+            prefix_cache_max_tokens=4096,
+            cpu_mem_fold=0.1,
+        )
+        self.assertEqual(profile, "hard_thrash")
 
     def test_run_class_helpers(self) -> None:
         self.assertEqual(validation_common.infer_cli_run_class(5), "fullpass")
@@ -299,6 +311,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             report = json.loads(report_path.read_text(encoding="utf-8"))
             self.assertEqual(report["benchmark_contract"]["benchmark_family"], "serving_qos")
             self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "warm_steady_state")
+            self.assertEqual(report["benchmark_contract"]["cache_pressure_profile"], "relaxed")
             self.assertEqual(
                 report["benchmark_contract"]["transport_mode"],
                 "socket_vs_myelon_process_runner",
@@ -314,6 +327,87 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["run_index_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["side_by_side_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["system_info"]["md"]).is_file())
+
+    def test_server_prefill_stress_report_includes_cache_pressure_profile_and_flags(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            workload_file = tmp_path / "synthetic_multi_turn_smoke.json"
+            workload_file.write_text("{}\n", encoding="utf-8")
+            output_dir = tmp_path / "server_prefill_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_INPUT_FILE": str(workload_file),
+                "VLLM_SERVER_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_SERVER_BENCHMARK_MODE": "single_gpu",
+                "VLLM_SERVER_BENCHMARK_FAMILY": "server_prefill_stress",
+                "VLLM_SERVER_BENCHMARK_SUBMODE": "cache_thrash_round_robin",
+                "VLLM_SERVER_PREFIX_CACHE": "1",
+                "VLLM_SERVER_PREFIX_CACHE_MAX_TOKENS": "4096",
+                "VLLM_SERVER_KV_FRACTION": "0.35",
+                "VLLM_SERVER_CPU_MEM_FOLD": "0.1",
+                "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] == "cargo":
+                    return CompletedProcess(command, 0, "", "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    server_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    server_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    server_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ):
+                    rc = server_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report_path = output_dir / "report.json"
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                report["benchmark_contract"]["benchmark_family"],
+                "server_prefill_stress",
+            )
+            self.assertEqual(
+                report["benchmark_contract"]["benchmark_submode"],
+                "cache_thrash_round_robin",
+            )
+            self.assertEqual(
+                report["benchmark_contract"]["cache_pressure_profile"],
+                "hard_thrash",
+            )
+            self.assertTrue(report["prefix_cache_enabled"])
+            self.assertEqual(report["prefix_cache_max_tokens"], 4096)
+            self.assertEqual(report["kv_fraction"], 0.35)
+            self.assertEqual(report["cpu_mem_fold"], 0.1)
+            runner_command = report["cases"][0]["server_command"]
+            self.assertIn("--prefix-cache", runner_command)
+            self.assertIn("--prefix-cache-max-tokens", runner_command)
+            self.assertIn("--kv-fraction", runner_command)
+            self.assertIn("--cpu-mem-fold", runner_command)
 
     def test_pd_benchmark_report_includes_contract_and_case_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

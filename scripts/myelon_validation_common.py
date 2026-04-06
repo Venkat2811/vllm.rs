@@ -21,7 +21,12 @@ def default_build_features() -> str:
 
 
 VALID_RUN_CLASSES = frozenset({"smoke", "quickpass", "fullpass"})
-VALID_BENCHMARK_FAMILIES = frozenset({"prefill_stress", "serving_qos", "pd_qos"})
+VALID_BENCHMARK_FAMILIES = frozenset(
+    {"prefill_stress", "server_prefill_stress", "serving_qos", "pd_qos"}
+)
+VALID_CACHE_PRESSURE_PROFILES = frozenset(
+    {"unspecified", "relaxed", "bounded_prefix", "swap_pressure", "hard_thrash"}
+)
 
 
 def resolve_run_class(explicit: str | None, inferred_default: str) -> str:
@@ -60,6 +65,59 @@ def classify_arrival_pattern(request_rate: str | float | int | None) -> str:
     if value <= 0:
         return "saturation_zero_gap"
     return "configured_fixed_rate"
+
+
+def infer_cache_pressure_profile(
+    kv_fraction: float | None,
+    prefix_cache_enabled: bool,
+    prefix_cache_max_tokens: int | None,
+    cpu_mem_fold: float | None,
+) -> str:
+    if not prefix_cache_enabled and kv_fraction is None and cpu_mem_fold is None:
+        return "relaxed"
+
+    if (
+        kv_fraction is not None
+        and kv_fraction <= 0.4
+        and prefix_cache_enabled
+        and prefix_cache_max_tokens is not None
+        and prefix_cache_max_tokens <= 8192
+        and cpu_mem_fold is not None
+        and cpu_mem_fold <= 0.2
+    ):
+        return "hard_thrash"
+
+    if prefix_cache_enabled and prefix_cache_max_tokens is not None:
+        return "bounded_prefix"
+
+    if kv_fraction is not None and kv_fraction <= 0.5:
+        return "swap_pressure"
+
+    return "relaxed"
+
+
+def resolve_cache_pressure_profile(
+    explicit: str | None,
+    *,
+    kv_fraction: float | None,
+    prefix_cache_enabled: bool,
+    prefix_cache_max_tokens: int | None,
+    cpu_mem_fold: float | None,
+) -> str:
+    if explicit is not None and explicit.strip():
+        candidate = explicit.strip()
+        if candidate not in VALID_CACHE_PRESSURE_PROFILES:
+            raise ValueError(
+                f"invalid cache pressure profile {candidate!r}; expected one of "
+                f"{sorted(VALID_CACHE_PRESSURE_PROFILES)}"
+            )
+        return candidate
+    return infer_cache_pressure_profile(
+        kv_fraction,
+        prefix_cache_enabled,
+        prefix_cache_max_tokens,
+        cpu_mem_fold,
+    )
 
 
 def infer_workload_class_from_path(path: str) -> str:
@@ -361,6 +419,7 @@ def build_benchmark_contract(
     first_turn_measured: bool | None,
     arrival_pattern: str,
     concurrency_policy: dict[str, object],
+    cache_pressure_profile: str,
     topology_overlay: str,
     transport_mode: str,
     run_class: str,
@@ -384,6 +443,11 @@ def build_benchmark_contract(
         raise ValueError("arrival_pattern must be non-empty")
     if not isinstance(concurrency_policy, dict) or not concurrency_policy:
         raise ValueError("concurrency_policy must be a non-empty dict")
+    if cache_pressure_profile not in VALID_CACHE_PRESSURE_PROFILES:
+        raise ValueError(
+            f"invalid cache pressure profile {cache_pressure_profile!r}; expected one of "
+            f"{sorted(VALID_CACHE_PRESSURE_PROFILES)}"
+        )
     if not topology_overlay.strip():
         raise ValueError("topology_overlay must be non-empty")
     if not transport_mode.strip():
@@ -406,6 +470,7 @@ def build_benchmark_contract(
         "first_turn_measured": first_turn_measured,
         "arrival_pattern": arrival_pattern,
         "concurrency_policy": concurrency_policy,
+        "cache_pressure_profile": cache_pressure_profile,
         "topology_overlay": topology_overlay,
         "transport_mode": transport_mode,
         "run_class": run_class,
