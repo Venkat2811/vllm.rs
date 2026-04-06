@@ -1,8 +1,8 @@
 # High-Level Summary
 
 - campaign_root: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406`
-- reports_found: `32`
-- completed_runs: `28`
+- reports_found: `34`
+- completed_runs: `30`
 - incomplete_or_skipped_runs: `4`
 
 ## Strongest Requests/sec Gains
@@ -29,11 +29,11 @@
 
 | model_label        | benchmark_family      | benchmark_submode                 | topology_overlay   |   requests_per_sec_delta_percent |   baseline_requests_per_sec |   myelon_requests_per_sec | baseline_pressure_profile_outcome   | myelon_pressure_profile_outcome   |
 |--------------------|-----------------------|-----------------------------------|--------------------|----------------------------------|-----------------------------|---------------------------|-------------------------------------|-----------------------------------|
+| Qwen/Qwen3-4B      | server_prefill_stress | cache_thrash_round_robin          | tp2                |                          -5.3908 |                       1.113 |                     1.053 | requested_thrash_observed           | requested_thrash_observed         |
 | Qwen/Qwen3-0.6B    | server_prefill_stress | cache_thrash_round_robin          | tp2                |                          -4.577  |                       2.447 |                     2.335 | requested_thrash_observed           | requested_thrash_observed         |
 | Qwen/Qwen3-0.6B    | server_prefill_stress | fixed_prompt_burst                | single_gpu         |                          -2.3638 |                      31.178 |                    30.441 | requested_relaxed_observed          | requested_relaxed_observed        |
 | Qwen/Qwen3-30B-A3B | server_prefill_stress | shared_prefix_round_robin_control | tp2                |                          -2.243  |                       0.535 |                     0.523 | requested_prefix_control_observed   | requested_prefix_control_observed |
-| Qwen/Qwen3-0.6B    | server_prefill_stress | fixed_prompt_burst                | tp2                |                          -2.1794 |                      30.788 |                    30.117 | requested_relaxed_observed          | requested_relaxed_observed        |
-| Qwen/Qwen3-0.6B    | server_prefill_stress | fixed_prompt_burst                | single_gpu         |                          -1.8297 |                      15.248 |                    14.969 | requested_relaxed_observed          | requested_relaxed_observed        |
+| Qwen/Qwen3-4B      | server_prefill_stress | shared_prefix_round_robin_control | tp2                |                          -2.2161 |                       1.444 |                     1.412 | requested_prefix_control_observed   | requested_prefix_control_observed |
 
 ## Incomplete / Unsupported
 

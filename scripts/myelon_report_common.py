@@ -50,6 +50,12 @@ DECODE_METRIC_RE = re.compile(
 SWAP_OUT_ATTEMPT_RE = re.compile(r"Trying to swap out preempt Seq \d+")
 DROPPED_REQUEST_RE = re.compile(r"drop the oldest active request")
 STREAM_GENERATION_FAILED_RE = re.compile(r"Stream generation failed")
+FIRST_TOKEN_PATH_RE = re.compile(
+    r"\[Seq \d+\]\s+⏱️ FirstTokenPath: scheduler_wait_ms=(\d+) prefill_roundtrip_ms=(\d+) response_to_emit_ms=(\d+) ingress_to_emit_ms=(\d+)"
+)
+FIRST_TOKEN_FLUSH_RE = re.compile(
+    r"\[Seq \d+\]\s+⏱️ FirstTokenFlush: emit_to_flush_ms=(\d+) kind=([a-z_]+)(?: emission_trace=missing)?"
+)
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -432,6 +438,42 @@ def build_case_rows(report: dict[str, object]) -> list[dict[str, object]]:
             )
             row["observed_decode_tps_mean"] = observed_server_path_attribution.get(
                 "observed_decode_tps_mean"
+            )
+            row["observed_first_token_path_event_count"] = observed_server_path_attribution.get(
+                "observed_first_token_path_event_count"
+            )
+            row["observed_scheduler_wait_ms_total"] = observed_server_path_attribution.get(
+                "observed_scheduler_wait_ms_total"
+            )
+            row["observed_scheduler_wait_ms_mean"] = observed_server_path_attribution.get(
+                "observed_scheduler_wait_ms_mean"
+            )
+            row["observed_prefill_roundtrip_ms_total"] = observed_server_path_attribution.get(
+                "observed_prefill_roundtrip_ms_total"
+            )
+            row["observed_prefill_roundtrip_ms_mean"] = observed_server_path_attribution.get(
+                "observed_prefill_roundtrip_ms_mean"
+            )
+            row["observed_response_to_emit_ms_total"] = observed_server_path_attribution.get(
+                "observed_response_to_emit_ms_total"
+            )
+            row["observed_response_to_emit_ms_mean"] = observed_server_path_attribution.get(
+                "observed_response_to_emit_ms_mean"
+            )
+            row["observed_ingress_to_emit_ms_total"] = observed_server_path_attribution.get(
+                "observed_ingress_to_emit_ms_total"
+            )
+            row["observed_ingress_to_emit_ms_mean"] = observed_server_path_attribution.get(
+                "observed_ingress_to_emit_ms_mean"
+            )
+            row["observed_first_token_flush_count"] = observed_server_path_attribution.get(
+                "observed_first_token_flush_count"
+            )
+            row["observed_emit_to_flush_ms_total"] = observed_server_path_attribution.get(
+                "observed_emit_to_flush_ms_total"
+            )
+            row["observed_emit_to_flush_ms_mean"] = observed_server_path_attribution.get(
+                "observed_emit_to_flush_ms_mean"
             )
             row["observed_prefix_cache_hit_count"] = observed_server_path_attribution.get(
                 "observed_prefix_cache_hit_count"
@@ -919,6 +961,21 @@ def _summarize_triplet_matches(
     }
 
 
+def _summarize_numeric_values(values: list[float | int]) -> dict[str, float | int] | None:
+    if not values:
+        return None
+    total = float(sum(values))
+    if all(isinstance(value, int) for value in values):
+        total_value: float | int = int(total)
+    else:
+        total_value = round(total, 3)
+    return {
+        "count": len(values),
+        "total": total_value,
+        "mean": round(total / len(values), 3),
+    }
+
+
 def _backfill_case_server_path_attribution(case: dict[str, object]) -> None:
     existing = case.get("observed_server_path_attribution")
     if isinstance(existing, dict) and existing:
@@ -937,6 +994,8 @@ def _backfill_case_server_path_attribution(case: dict[str, object]) -> None:
     prompt_matches = PROMPT_METRIC_RE.findall(text)
     decode_matches = DECODE_METRIC_RE.findall(text)
     prefix_cache_hit_matches = PREFIX_CACHE_HIT_RE.findall(text)
+    first_token_path_matches = FIRST_TOKEN_PATH_RE.findall(text)
+    first_token_flush_matches = FIRST_TOKEN_FLUSH_RE.findall(text)
     swap_out_attempt_count = len(SWAP_OUT_ATTEMPT_RE.findall(text))
     dropped_request_count = len(DROPPED_REQUEST_RE.findall(text))
     stream_generation_failed_count = len(STREAM_GENERATION_FAILED_RE.findall(text))
@@ -947,6 +1006,8 @@ def _backfill_case_server_path_attribution(case: dict[str, object]) -> None:
             prompt_matches,
             decode_matches,
             prefix_cache_hit_matches,
+            first_token_path_matches,
+            first_token_flush_matches,
             swap_out_attempt_count,
             dropped_request_count,
             stream_generation_failed_count,
@@ -1005,6 +1066,42 @@ def _backfill_case_server_path_attribution(case: dict[str, object]) -> None:
                 ],
             }
         )
+
+    if first_token_path_matches:
+        scheduler_wait_summary = _summarize_numeric_values(
+            [int(wait_ms) for wait_ms, _, _, _ in first_token_path_matches]
+        )
+        prefill_roundtrip_summary = _summarize_numeric_values(
+            [int(roundtrip_ms) for _, roundtrip_ms, _, _ in first_token_path_matches]
+        )
+        response_to_emit_summary = _summarize_numeric_values(
+            [int(response_ms) for _, _, response_ms, _ in first_token_path_matches]
+        )
+        ingress_to_emit_summary = _summarize_numeric_values(
+            [int(ingress_ms) for _, _, _, ingress_ms in first_token_path_matches]
+        )
+        attribution["observed_first_token_path_event_count"] = len(first_token_path_matches)
+        if scheduler_wait_summary is not None:
+            attribution["observed_scheduler_wait_ms_total"] = scheduler_wait_summary["total"]
+            attribution["observed_scheduler_wait_ms_mean"] = scheduler_wait_summary["mean"]
+        if prefill_roundtrip_summary is not None:
+            attribution["observed_prefill_roundtrip_ms_total"] = prefill_roundtrip_summary["total"]
+            attribution["observed_prefill_roundtrip_ms_mean"] = prefill_roundtrip_summary["mean"]
+        if response_to_emit_summary is not None:
+            attribution["observed_response_to_emit_ms_total"] = response_to_emit_summary["total"]
+            attribution["observed_response_to_emit_ms_mean"] = response_to_emit_summary["mean"]
+        if ingress_to_emit_summary is not None:
+            attribution["observed_ingress_to_emit_ms_total"] = ingress_to_emit_summary["total"]
+            attribution["observed_ingress_to_emit_ms_mean"] = ingress_to_emit_summary["mean"]
+
+    if first_token_flush_matches:
+        emit_to_flush_summary = _summarize_numeric_values(
+            [int(flush_ms) for flush_ms, _ in first_token_flush_matches]
+        )
+        attribution["observed_first_token_flush_count"] = len(first_token_flush_matches)
+        if emit_to_flush_summary is not None:
+            attribution["observed_emit_to_flush_ms_total"] = emit_to_flush_summary["total"]
+            attribution["observed_emit_to_flush_ms_mean"] = emit_to_flush_summary["mean"]
 
     case["observed_server_path_attribution"] = attribution
 
@@ -1228,6 +1325,18 @@ def build_side_by_side_rows(report: dict[str, object]) -> list[dict[str, object]
         "observed_prefill_event_count",
         "observed_prefill_seconds_total",
         "observed_prefill_tps_mean",
+        "observed_first_token_path_event_count",
+        "observed_scheduler_wait_ms_total",
+        "observed_scheduler_wait_ms_mean",
+        "observed_prefill_roundtrip_ms_total",
+        "observed_prefill_roundtrip_ms_mean",
+        "observed_response_to_emit_ms_total",
+        "observed_response_to_emit_ms_mean",
+        "observed_ingress_to_emit_ms_total",
+        "observed_ingress_to_emit_ms_mean",
+        "observed_first_token_flush_count",
+        "observed_emit_to_flush_ms_total",
+        "observed_emit_to_flush_ms_mean",
         "observed_prompt_metric_event_count",
         "observed_prompt_seconds_total",
         "observed_prompt_tps_mean",

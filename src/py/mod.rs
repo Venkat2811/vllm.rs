@@ -170,6 +170,7 @@ impl PyStreamItem {
     #[getter]
     fn datatype(&self) -> &'static str {
         match self.0 {
+            StreamItem::PhaseTrace(_) => "PHASE_TRACE",
             StreamItem::Token(_, _) => "TOKEN",
             StreamItem::TokenID(_) => "TOKEN_ID",
             StreamItem::Completion(_) => "COMPLETION",
@@ -187,6 +188,9 @@ impl PyStreamItem {
     #[getter]
     fn data(&self, py: Python) -> PyResult<Py<PyAny>> {
         match &self.0 {
+            StreamItem::PhaseTrace(trace) => {
+                ("first_token_emitted_at_ms", trace.first_token_emitted_at_ms).into_py_any(py)
+            }
             StreamItem::Token(s, id) => (s, id).into_py_any(py),
             StreamItem::TokenID(id) => id.into_py_any(py),
             StreamItem::Completion(c) => (c.0, c.1, c.2, c.3.clone()).into_py_any(py),

@@ -59,9 +59,13 @@ SERVER_ATTRIBUTION_LOG_TEXT = "\n".join(
     [
         "2026-04-06T12:25:57.365547Z  INFO vllm_rs::core::engine: Prefilling [seq_id 0]: 100 tokens in 1.00s (100.00 tokens/s)",
         "2026-04-06T12:25:58.365547Z  INFO vllm_rs::core::engine: Prefilling [seq_id 1]: 200 tokens in 2.00s (100.00 tokens/s, cache included)",
+        "2026-04-06T12:25:58.965547Z  INFO vllm_rs::core::engine: [Seq 0] ⏱️ FirstTokenPath: scheduler_wait_ms=150 prefill_roundtrip_ms=1200 response_to_emit_ms=25 ingress_to_emit_ms=1375",
+        "2026-04-06T12:25:59.965547Z  INFO vllm_rs::core::engine: [Seq 1] ⏱️ FirstTokenPath: scheduler_wait_ms=250 prefill_roundtrip_ms=1700 response_to_emit_ms=50 ingress_to_emit_ms=2000",
         "2026-04-06T12:25:59.365547Z  INFO vllm_rs::server::server: [Seq 0] ⏱️ Prompt: 90 tokens in 0.90s (100.00 t/s)",
         "2026-04-06T12:26:00.365547Z  INFO vllm_rs::server::server: [Seq 1] ⏱️ Prompt: 180 tokens in 1.80s (100.00 t/s)",
         "2026-04-06T12:26:01.365547Z  INFO vllm_rs::server::server: [Seq 0] ⏱️ Decoded: 8 tokens in 4.00s (2.00 t/s)",
+        "2026-04-06T12:26:01.465547Z  INFO vllm_rs::server::server: [Seq 0] ⏱️ FirstTokenFlush: emit_to_flush_ms=7 kind=content",
+        "2026-04-06T12:26:02.465547Z  INFO vllm_rs::server::server: [Seq 1] ⏱️ FirstTokenFlush: emit_to_flush_ms=11 kind=tool_chunk",
         "2026-04-06T12:26:02.365547Z  INFO vllm_rs::core::block_manager: Prefix cache hit seq 2 (1024 cached tokens, 16 blocks)",
         "2026-04-06T12:26:03.365547Z  INFO vllm_rs::core::block_manager: Prefix cache hit seq 3 (512 cached tokens, 8 blocks)",
         "2026-04-06T12:26:04.365547Z  WARN vllm_rs::core::scheduler: Trying to swap out preempt Seq 5",
@@ -558,6 +562,18 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             self.assertEqual(attribution["observed_decode_tps_mean"], 2.0)
             self.assertEqual(attribution["observed_prefix_cache_hit_count"], 2)
             self.assertEqual(attribution["observed_prefix_cache_hit_tokens_total"], 1536)
+            self.assertEqual(attribution["observed_first_token_path_event_count"], 2)
+            self.assertEqual(attribution["observed_scheduler_wait_ms_total"], 400)
+            self.assertEqual(attribution["observed_scheduler_wait_ms_mean"], 200.0)
+            self.assertEqual(attribution["observed_prefill_roundtrip_ms_total"], 2900)
+            self.assertEqual(attribution["observed_prefill_roundtrip_ms_mean"], 1450.0)
+            self.assertEqual(attribution["observed_response_to_emit_ms_total"], 75)
+            self.assertEqual(attribution["observed_response_to_emit_ms_mean"], 37.5)
+            self.assertEqual(attribution["observed_ingress_to_emit_ms_total"], 3375)
+            self.assertEqual(attribution["observed_ingress_to_emit_ms_mean"], 1687.5)
+            self.assertEqual(attribution["observed_first_token_flush_count"], 2)
+            self.assertEqual(attribution["observed_emit_to_flush_ms_total"], 18)
+            self.assertEqual(attribution["observed_emit_to_flush_ms_mean"], 9.0)
             self.assertEqual(attribution["observed_swap_out_attempt_count"], 1)
             self.assertEqual(attribution["observed_dropped_request_count"], 1)
             self.assertEqual(attribution["observed_stream_generation_failed_count"], 1)
@@ -570,6 +586,8 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             case_rows = report_common.build_case_rows(normalized)
             self.assertEqual(case_rows[0]["observed_prefill_event_count"], 2)
             self.assertEqual(case_rows[0]["observed_prompt_seconds_total"], 2.7)
+            self.assertEqual(case_rows[0]["observed_scheduler_wait_ms_total"], 400)
+            self.assertEqual(case_rows[0]["observed_emit_to_flush_ms_mean"], 9.0)
             self.assertEqual(case_rows[0]["observed_swap_out_attempt_count"], 1)
 
 
