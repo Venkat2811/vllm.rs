@@ -228,6 +228,7 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
             "warmup_policy": contract.get("warmup_policy"),
             "first_turn_measured": contract.get("first_turn_measured"),
             "arrival_pattern": contract.get("arrival_pattern"),
+            "cache_pressure_profile": contract.get("cache_pressure_profile"),
             "topology_overlay": contract.get("topology_overlay"),
             "transport_mode": contract.get("transport_mode"),
             "run_class": contract.get("run_class"),
@@ -304,16 +305,28 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
             "topology_overlay": "pd_tp1",
             "transport_mode": infer_pd_transport_mode(report.get("pd_url")),
             "run_class": run_class,
+            "cache_pressure_profile": "unspecified",
             "stop_point": "full_completion",
             "skip_reason": None,
         }
 
     if "mode" in report and "cases" in report:
         mode = str(report.get("mode"))
+        benchmark_family = str(report.get("benchmark_family", "serving_qos"))
+        benchmark_submode = str(
+            report.get(
+                "benchmark_submode",
+                "warm_steady_state" if warmup_step else "cold_turn",
+            )
+        )
         return {
-            "benchmark_family": "serving_qos",
-            "benchmark_submode": "warm_steady_state" if warmup_step else "cold_turn",
-            "question_answered": "What user-facing QoS difference does Myelon produce in persistent serving?",
+            "benchmark_family": benchmark_family,
+            "benchmark_submode": benchmark_submode,
+            "question_answered": (
+                "What user-facing QoS difference does Myelon produce in persistent serving?"
+                if benchmark_family == "serving_qos"
+                else "How much shared-memory gain survives when the full server path stays in the loop under cache-hostile, prefill-dominant conditions?"
+            ),
             "workload_class": workload_class,
             "warmup_policy": "warmup_step_skips_first_turn" if warmup_step else "measure_first_turn",
             "first_turn_measured": not warmup_step,
@@ -328,6 +341,7 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
                 "request_rate": request_rate,
                 "mode": mode,
             },
+            "cache_pressure_profile": report.get("cache_pressure_profile", "unspecified"),
             "topology_overlay": mode,
             "transport_mode": "socket_vs_myelon_process_runner",
             "run_class": run_class,
@@ -346,6 +360,7 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
         "concurrency_policy": {
             "driver": "legacy_cli",
         },
+        "cache_pressure_profile": "unspecified",
         "topology_overlay": str(report.get("mode", "legacy_cli")),
         "transport_mode": "socket_vs_myelon_process_runner",
         "run_class": "quickpass",
@@ -501,6 +516,7 @@ def write_benchmark_reports(
         ("warmup_policy", contract.get("warmup_policy")),
         ("first_turn_measured", contract.get("first_turn_measured")),
         ("arrival_pattern", contract.get("arrival_pattern")),
+        ("cache_pressure_profile", contract.get("cache_pressure_profile")),
         ("topology_overlay", contract.get("topology_overlay")),
         ("transport_mode", contract.get("transport_mode")),
         ("run_class", contract.get("run_class")),
