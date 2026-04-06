@@ -10,6 +10,7 @@ from tabulate import tabulate
 from myelon_validation_common import (
     classify_arrival_pattern,
     classify_model_capability,
+    extract_server_kvcache_plan,
     infer_pd_transport_mode,
     infer_request_run_class,
     infer_workload_class_from_path,
@@ -59,6 +60,18 @@ def _markdown_table_from_rows(
 ) -> str:
     values = [[row.get(name, "") for name in fieldnames] for row in rows]
     return tabulate(values, headers=fieldnames, tablefmt="github")
+
+
+def _sorted_top_rows(
+    rows: list[dict[str, object]],
+    key: str,
+    *,
+    reverse: bool,
+    limit: int = 5,
+) -> list[dict[str, object]]:
+    sortable = [row for row in rows if isinstance(row.get(key), (int, float))]
+    sortable.sort(key=lambda row: float(row.get(key)), reverse=reverse)
+    return sortable[:limit]
 
 
 def _run_capture(command: list[str]) -> str | None:
@@ -219,6 +232,24 @@ def build_case_rows(report: dict[str, object]) -> list[dict[str, object]]:
             ).get("mean")
         observed_cache_pressure = case.get("observed_cache_pressure") if isinstance(case, dict) else None
         if isinstance(observed_cache_pressure, dict):
+            row["requested_cache_pressure_profile"] = observed_cache_pressure.get(
+                "requested_cache_pressure_profile"
+            )
+            row["pressure_profile_outcome"] = observed_cache_pressure.get(
+                "pressure_profile_outcome"
+            )
+            row["planned_gpu_blocks"] = observed_cache_pressure.get(
+                "planned_gpu_blocks"
+            )
+            row["planned_usable_kvcache_tokens"] = observed_cache_pressure.get(
+                "planned_usable_kvcache_tokens"
+            )
+            row["planned_max_seqs"] = observed_cache_pressure.get(
+                "planned_max_seqs"
+            )
+            row["planned_tokens_per_seq_limit"] = observed_cache_pressure.get(
+                "planned_tokens_per_seq_limit"
+            )
             row["configured_prefix_cache_blocks"] = observed_cache_pressure.get(
                 "configured_prefix_cache_blocks"
             )
@@ -272,6 +303,10 @@ def _classify_observed_cache_pressure(
 ) -> str | None:
     if cpu_swap_percent is not None and cpu_swap_percent > 0.0:
         return "swap_engaged"
+    if gpu_usage_percent is not None and gpu_usage_percent >= 90.0:
+        if eviction_count > 0:
+            return "high_gpu_pressure_prefix_eviction"
+        return "high_gpu_pressure_no_swap"
     if eviction_count > 0:
         return "prefix_eviction"
     if gpu_usage_percent is None:
@@ -283,6 +318,41 @@ def _classify_observed_cache_pressure(
     if gpu_usage_percent > 0.0:
         return "minimal_pressure"
     return "no_observed_pressure"
+
+
+def _classify_pressure_profile_outcome(
+    requested_profile: str | None,
+    observed_level: str | None,
+) -> str | None:
+    if requested_profile is None or requested_profile == "unspecified":
+        return None
+    if requested_profile == "swap_pressure":
+        if observed_level == "swap_engaged":
+            return "requested_swap_achieved"
+        if observed_level in {
+            "high_gpu_pressure_no_swap",
+            "high_gpu_pressure_prefix_eviction",
+        }:
+            return "requested_swap_reduced_to_gpu_pressure"
+        return "requested_swap_not_observed"
+    if requested_profile == "hard_thrash":
+        if observed_level in {
+            "swap_engaged",
+            "high_gpu_pressure_no_swap",
+            "high_gpu_pressure_prefix_eviction",
+            "high_gpu_pressure",
+        }:
+            return "requested_thrash_observed"
+        return "requested_thrash_not_observed"
+    if requested_profile == "bounded_prefix":
+        if observed_level in {"prefix_eviction", "minimal_pressure", "moderate_gpu_pressure"}:
+            return "requested_prefix_control_observed"
+        return "requested_prefix_control_not_observed"
+    if requested_profile == "relaxed":
+        if observed_level in {"minimal_pressure", "no_observed_pressure", None}:
+            return "requested_relaxed_observed"
+        return "requested_relaxed_exceeded"
+    return None
 
 
 def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[dict[str, object]]:
@@ -569,7 +639,10 @@ def _backfill_case_summary_from_benchmark_log(case: dict[str, object]) -> None:
         }
 
 
-def _backfill_case_observed_cache_pressure(case: dict[str, object]) -> None:
+def _backfill_case_observed_cache_pressure(
+    case: dict[str, object],
+    default_requested_profile: str | None = None,
+) -> None:
     existing = case.get("observed_cache_pressure")
     if isinstance(existing, dict) and existing:
         return
@@ -582,6 +655,7 @@ def _backfill_case_observed_cache_pressure(case: dict[str, object]) -> None:
     if not path.is_file():
         return
 
+    planned_kvcache = extract_server_kvcache_plan(path)
     configured_prefix_cache_blocks = None
     configured_prefix_cache_tokens = None
     max_gpu_usage_percent = None
@@ -656,7 +730,34 @@ def _backfill_case_observed_cache_pressure(case: dict[str, object]) -> None:
     ):
         return
 
+    requested_profile = case.get("cache_pressure_profile", default_requested_profile)
+    observed_level = _classify_observed_cache_pressure(
+        max_gpu_usage_percent,
+        max_cpu_swap_percent,
+        prefix_cache_eviction_count,
+    )
     case["observed_cache_pressure"] = {
+        "requested_cache_pressure_profile": requested_profile,
+        "planned_gpu_blocks": (
+            planned_kvcache.get("planned_gpu_blocks")
+            if planned_kvcache is not None
+            else None
+        ),
+        "planned_usable_kvcache_tokens": (
+            planned_kvcache.get("planned_usable_kvcache_tokens")
+            if planned_kvcache is not None
+            else None
+        ),
+        "planned_max_seqs": (
+            planned_kvcache.get("planned_max_seqs")
+            if planned_kvcache is not None
+            else None
+        ),
+        "planned_tokens_per_seq_limit": (
+            planned_kvcache.get("planned_tokens_per_seq_limit")
+            if planned_kvcache is not None
+            else None
+        ),
         "configured_prefix_cache_blocks": configured_prefix_cache_blocks,
         "configured_prefix_cache_tokens": configured_prefix_cache_tokens,
         "observed_gpu_kv_usage_percent_max": max_gpu_usage_percent,
@@ -668,21 +769,25 @@ def _backfill_case_observed_cache_pressure(case: dict[str, object]) -> None:
         "observed_prefix_cache_miss_count": prefix_cache_miss_count,
         "observed_prefix_cache_insert_count": prefix_cache_insert_count,
         "observed_prefix_cache_eviction_count": prefix_cache_eviction_count,
-        "observed_cache_pressure_level": _classify_observed_cache_pressure(
-            max_gpu_usage_percent,
-            max_cpu_swap_percent,
-            prefix_cache_eviction_count,
+        "observed_cache_pressure_level": observed_level,
+        "pressure_profile_outcome": _classify_pressure_profile_outcome(
+            requested_profile,
+            observed_level,
         ),
     }
 
 
 def normalize_report(report: dict[str, object]) -> dict[str, object]:
     normalized = json.loads(json.dumps(report))
+    contract = infer_benchmark_contract(report)
+    default_requested_profile = None
+    if isinstance(contract, dict):
+        default_requested_profile = contract.get("cache_pressure_profile")
     for case in normalized.get("cases", []):
         if isinstance(case, dict):
             _backfill_case_summary_from_benchmark_log(case)
-            _backfill_case_observed_cache_pressure(case)
-    normalized["benchmark_contract"] = infer_benchmark_contract(report)
+            _backfill_case_observed_cache_pressure(case, default_requested_profile)
+    normalized["benchmark_contract"] = contract
     normalized["machine_profile"] = infer_machine_profile(report)
     normalized["model_capability"] = infer_model_capability(report)
     normalized["status"] = infer_report_status(report)
@@ -721,6 +826,8 @@ def build_side_by_side_rows(report: dict[str, object]) -> list[dict[str, object]
         "prompt_tps_mean",
         "decode_seconds_mean",
         "decode_tps_mean",
+        "planned_max_seqs",
+        "planned_usable_kvcache_tokens",
         "observed_gpu_kv_usage_percent_max",
         "observed_cpu_swap_usage_percent_max",
         "observed_prefix_cache_miss_count",
@@ -972,11 +1079,25 @@ def build_rollup_rows(report_path: Path, report: dict[str, object]) -> tuple[dic
             "myelon_observed_cpu_swap_usage_percent_max": myelon_case.get(
                 "observed_cpu_swap_usage_percent_max"
             ),
+            "baseline_pressure_profile_outcome": baseline_case.get(
+                "pressure_profile_outcome"
+            ),
+            "myelon_pressure_profile_outcome": myelon_case.get(
+                "pressure_profile_outcome"
+            ),
             "baseline_observed_cache_pressure_level": baseline_case.get(
                 "observed_cache_pressure_level"
             ),
             "myelon_observed_cache_pressure_level": myelon_case.get(
                 "observed_cache_pressure_level"
+            ),
+            "baseline_planned_max_seqs": baseline_case.get("planned_max_seqs"),
+            "myelon_planned_max_seqs": myelon_case.get("planned_max_seqs"),
+            "baseline_planned_usable_kvcache_tokens": baseline_case.get(
+                "planned_usable_kvcache_tokens"
+            ),
+            "myelon_planned_usable_kvcache_tokens": myelon_case.get(
+                "planned_usable_kvcache_tokens"
             ),
         }
     )
@@ -995,6 +1116,7 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
 
     current_findings_csv = reports_dir / "current_findings.csv"
     current_findings_md = reports_dir / "current_findings.md"
+    high_level_summary_md = reports_dir / "high_level_summary.md"
     rollup_run_index_csv = reports_dir / "rollup_run_index.csv"
     rollup_run_index_md = reports_dir / "rollup_run_index.md"
     per_model_side_by_side_csv = reports_dir / "per_model_side_by_side.csv"
@@ -1085,6 +1207,113 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         findings_lines.append("No retained report.json files were found.")
     current_findings_md.write_text("\n".join(findings_lines) + "\n", encoding="utf-8")
 
+    completed_rows = [
+        row
+        for row in findings_rows
+        if row.get("status") == "completed"
+    ]
+    strongest_rps = _sorted_top_rows(
+        completed_rows,
+        "requests_per_sec_delta_percent",
+        reverse=True,
+    )
+    strongest_ttft = _sorted_top_rows(
+        completed_rows,
+        "ttft_ms_delta_percent",
+        reverse=False,
+    )
+    notable_regressions = _sorted_top_rows(
+        completed_rows,
+        "requests_per_sec_delta_percent",
+        reverse=False,
+    )
+    incomplete_rows = [
+        row
+        for row in findings_rows
+        if row.get("status") != "completed"
+        or row.get("skip_reason")
+    ]
+    summary_lines = [
+        "# High-Level Summary",
+        "",
+        f"- campaign_root: `{campaign_root}`",
+        f"- reports_found: `{len(report_paths)}`",
+        f"- completed_runs: `{len(completed_rows)}`",
+        f"- incomplete_or_skipped_runs: `{len(incomplete_rows)}`",
+        "",
+        "## Strongest Requests/sec Gains",
+        "",
+    ]
+    summary_fields = [
+        "model_label",
+        "benchmark_family",
+        "benchmark_submode",
+        "topology_overlay",
+        "requests_per_sec_delta_percent",
+        "baseline_requests_per_sec",
+        "myelon_requests_per_sec",
+        "baseline_pressure_profile_outcome",
+        "myelon_pressure_profile_outcome",
+    ]
+    if strongest_rps:
+        summary_lines.append(_markdown_table_from_rows(strongest_rps, summary_fields))
+    else:
+        summary_lines.append("No completed baseline/Myelon comparisons were available.")
+    summary_lines.extend(
+        [
+            "",
+            "## Strongest TTFT Wins",
+            "",
+        ]
+    )
+    ttft_fields = [
+        "model_label",
+        "benchmark_family",
+        "benchmark_submode",
+        "topology_overlay",
+        "ttft_ms_delta_percent",
+        "baseline_ttft_ms_mean",
+        "myelon_ttft_ms_mean",
+        "baseline_pressure_profile_outcome",
+        "myelon_pressure_profile_outcome",
+    ]
+    if strongest_ttft:
+        summary_lines.append(_markdown_table_from_rows(strongest_ttft, ttft_fields))
+    else:
+        summary_lines.append("No TTFT deltas were available.")
+    summary_lines.extend(
+        [
+            "",
+            "## Notable Regressions",
+            "",
+        ]
+    )
+    if notable_regressions:
+        summary_lines.append(_markdown_table_from_rows(notable_regressions, summary_fields))
+    else:
+        summary_lines.append("No completed baseline/Myelon comparisons were available.")
+    summary_lines.extend(
+        [
+            "",
+            "## Incomplete / Unsupported",
+            "",
+        ]
+    )
+    incomplete_fields = [
+        "model_label",
+        "benchmark_family",
+        "benchmark_submode",
+        "topology_overlay",
+        "status",
+        "skip_reason",
+        "report_json",
+    ]
+    if incomplete_rows:
+        summary_lines.append(_markdown_table_from_rows(incomplete_rows, incomplete_fields))
+    else:
+        summary_lines.append("No incomplete or skipped runs.")
+    high_level_summary_md.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
+
     run_index_lines = [
         "# Rollup Run Index",
         "",
@@ -1152,6 +1381,7 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
     return {
         "current_findings_csv": str(current_findings_csv),
         "current_findings_md": str(current_findings_md),
+        "high_level_summary_md": str(high_level_summary_md),
         "rollup_run_index_csv": str(rollup_run_index_csv),
         "rollup_run_index_md": str(rollup_run_index_md),
         "per_model_side_by_side_csv": str(per_model_side_by_side_csv),
