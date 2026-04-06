@@ -41,7 +41,7 @@ AVG_LINE_RE = re.compile(
 )
 
 VALID_SERVER_SUBMODES = {
-    "serving_qos": {"cold_turn", "warm_steady_state"},
+    "serving_qos": {"cold_turn", "cold_turn_idle_gap", "warm_steady_state"},
     "server_prefill_stress": {
         "fixed_prompt_burst",
         "low_decode",
@@ -167,6 +167,35 @@ def expected_warmup_step(
     if benchmark_family == "serving_qos":
         return benchmark_submode == "warm_steady_state"
     return False
+
+
+def resolve_serving_qos_defaults(benchmark_submode: str) -> dict[str, object]:
+    if benchmark_submode == "cold_turn_idle_gap":
+        return {
+            "warmup_step": False,
+            "num_clients": 1,
+            "max_active_conversations": 2,
+            "max_num_requests": 16,
+            "max_turns": 2,
+            "request_rate": 1.0,
+        }
+    if benchmark_submode == "cold_turn":
+        return {
+            "warmup_step": False,
+            "num_clients": 1,
+            "max_active_conversations": 2,
+            "max_num_requests": 16,
+            "max_turns": 2,
+            "request_rate": 0.0,
+        }
+    return {
+        "warmup_step": True,
+        "num_clients": 1,
+        "max_active_conversations": 2,
+        "max_num_requests": 16,
+        "max_turns": 2,
+        "request_rate": 0.0,
+    }
 
 
 def default_server_workload_path(
@@ -441,6 +470,7 @@ def main() -> int:
         return 1
     requested_cache_pressure_profile = env_optional_str("VLLM_CACHE_PRESSURE_PROFILE")
     prefill_defaults = {}
+    serving_defaults = {}
     if benchmark_family == "server_prefill_stress":
         prefill_defaults = apply_server_prefill_cache_pressure_defaults(
             benchmark_submode,
@@ -449,6 +479,8 @@ def main() -> int:
             else None,
             resolve_server_prefill_defaults(benchmark_submode),
         )
+    else:
+        serving_defaults = resolve_serving_qos_defaults(benchmark_submode)
     workload_default = default_server_workload_path(
         repo_root,
         benchmark_family,
@@ -482,19 +514,29 @@ def main() -> int:
     }
     num_clients = env_or_default_int(
         "VLLM_SERVER_BENCH_NUM_CLIENTS",
-        int(prefill_defaults.get("num_clients", 2)),
+        int(prefill_defaults.get("num_clients", serving_defaults.get("num_clients", 2))),
     )
     max_active_conversations = env_or_default_int(
         "VLLM_SERVER_BENCH_MAX_ACTIVE_CONVERSATIONS",
-        int(prefill_defaults.get("max_active_conversations", 4)),
+        int(
+            prefill_defaults.get(
+                "max_active_conversations",
+                serving_defaults.get("max_active_conversations", 4),
+            )
+        ),
     )
     max_num_requests = env_or_default_int(
         "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS",
-        int(prefill_defaults.get("max_num_requests", 16)),
+        int(
+            prefill_defaults.get(
+                "max_num_requests",
+                serving_defaults.get("max_num_requests", 16),
+            )
+        ),
     )
     max_turns = env_or_default_int(
         "VLLM_SERVER_BENCH_MAX_TURNS",
-        int(prefill_defaults.get("max_turns", 4)),
+        int(prefill_defaults.get("max_turns", serving_defaults.get("max_turns", 4))),
     )
     explicit_max_num_seqs = env_optional_int("VLLM_SERVER_MAX_NUM_SEQS")
     if explicit_max_num_seqs is not None:
@@ -509,7 +551,7 @@ def main() -> int:
     max_retries = env_int("VLLM_SERVER_BENCH_MAX_RETRIES", 1)
     request_rate = env_or_default_float_string(
         "VLLM_SERVER_BENCH_REQUEST_RATE",
-        float(prefill_defaults.get("request_rate", 0.0)),
+        float(prefill_defaults.get("request_rate", serving_defaults.get("request_rate", 0.0))),
     )
     port_base = env_int("VLLM_SERVER_BENCH_PORT_BASE", 18080)
     explicit_warmup_step = env_optional_bool("VLLM_SERVER_BENCH_WARMUP_STEP")
