@@ -142,6 +142,8 @@ def default_server_workload_path(
 ) -> Path:
     if benchmark_family == "server_prefill_stress":
         inputs_dir = repo_root / "artifacts" / "h100_benchmarking_2026_04_06" / "inputs"
+        if benchmark_submode == "fixed_prompt_burst":
+            return inputs_dir / "synthetic_server_prefill_fixed_prompt_burst.json"
         if benchmark_submode == "shared_prefix_round_robin_control":
             return inputs_dir / "synthetic_server_prefill_shared_prefix_round_robin.json"
         return inputs_dir / "synthetic_server_prefill_stress_round_robin.json"
@@ -168,6 +170,21 @@ def env_or_default_float_string(name: str, default: float) -> str:
 
 
 def resolve_server_prefill_defaults(benchmark_submode: str) -> dict[str, object]:
+    if benchmark_submode == "fixed_prompt_burst":
+        return {
+            "warmup_step": False,
+            "num_clients": 1,
+            "max_active_conversations": 32,
+            "max_num_requests": 32,
+            "max_turns": 2,
+            "request_rate": "0",
+            "conversation_sampling": "round_robin",
+            "limit_min_tokens": 1,
+            "limit_max_tokens": 1,
+            "prefix_cache_enabled": False,
+            "kv_fraction": 0.55,
+            "cpu_mem_fold": 0.5,
+        }
     if benchmark_submode == "shared_prefix_round_robin_control":
         return {
             "warmup_step": False,

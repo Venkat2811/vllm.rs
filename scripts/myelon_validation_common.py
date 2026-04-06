@@ -122,6 +122,8 @@ def resolve_cache_pressure_profile(
 
 def infer_workload_class_from_path(path: str) -> str:
     lowered = path.lower()
+    if "fixed_prompt_burst" in lowered:
+        return "synthetic_server_fixed_prompt_burst"
     if "server_prefill" in lowered and "shared_prefix" in lowered:
         return "synthetic_server_shared_prefix_control"
     if "server_prefill" in lowered:
