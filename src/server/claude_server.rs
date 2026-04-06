@@ -2347,12 +2347,15 @@ pub async fn messages(
                     None => break,
                 };
 
-                stream_started = true;
-                idle_sleep
-                    .as_mut()
-                    .reset(time::Instant::now() + idle_timeout);
+                if !matches!(item, StreamItem::PhaseTrace(_)) {
+                    stream_started = true;
+                    idle_sleep
+                        .as_mut()
+                        .reset(time::Instant::now() + idle_timeout);
+                }
 
                 match item {
+                    StreamItem::PhaseTrace(_) => {}
                     StreamItem::Token(token, token_id) => {
                         total_decoded_tokens += 1;
 

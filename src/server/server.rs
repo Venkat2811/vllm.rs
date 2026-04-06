@@ -119,6 +119,40 @@ fn resolve_keep_alive_interval_ms() -> Option<u64> {
     resolve_keep_alive_interval_ms_from_env(env::var("KEEP_ALIVE_INTERVAL").ok().as_deref())
 }
 
+fn current_time_ms() -> usize {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_millis() as usize
+}
+
+fn note_first_token_flush(
+    seq_id: usize,
+    first_token_flush_logged: &mut bool,
+    first_token_emitted_at_ms: Option<usize>,
+    kind: &str,
+) {
+    if *first_token_flush_logged {
+        return;
+    }
+    let flush_time_ms = current_time_ms();
+    if let Some(emitted_at_ms) = first_token_emitted_at_ms {
+        crate::log_info!(
+            "[Seq {}] ⏱️ FirstTokenFlush: emit_to_flush_ms={} kind={}",
+            seq_id,
+            flush_time_ms.saturating_sub(emitted_at_ms),
+            kind,
+        );
+    } else {
+        crate::log_info!(
+            "[Seq {}] ⏱️ FirstTokenFlush: emit_to_flush_ms=0 kind={} emission_trace=missing",
+            seq_id,
+            kind,
+        );
+    }
+    *first_token_flush_logged = true;
+}
+
 fn extract_text_from_content(content: Option<&super::MessageContentType>) -> String {
     match content {
         Some(super::MessageContentType::PureText(text)) => text.clone(),
@@ -590,6 +624,8 @@ pub async fn chat_completion(
 
             let mut current_stream = stream;
             let current_seq_id = seq_id;
+            let mut first_token_emitted_at_ms: Option<usize> = None;
+            let mut first_token_flush_logged = false;
 
             loop {
                 let item = tokio::select! {
@@ -617,6 +653,11 @@ pub async fn chat_completion(
                 };
 
                 match item {
+                    StreamItem::PhaseTrace(trace) => {
+                        if first_token_emitted_at_ms.is_none() {
+                            first_token_emitted_at_ms = Some(trace.first_token_emitted_at_ms);
+                        }
+                    }
                     StreamItem::Token(token, token_id) => {
                         if decode_start_time == 0 {
                             decode_start_time = std::time::SystemTime::now()
@@ -662,8 +703,7 @@ pub async fn chat_completion(
                                     if let Some(ref l) = stream_logger {
                                         l.log_stream_token(&text);
                                     }
-                                    if !reasoning_router.send(&text, was_in_reasoning, &stream_ctx)
-                                    {
+                                    if !reasoning_router.send(&text, was_in_reasoning, &stream_ctx) {
                                         crate::log_error!(
                                             "[Seq {}] Stream send error (disconnected)",
                                             current_seq_id
@@ -672,6 +712,12 @@ pub async fn chat_completion(
                                         e.cancel(current_seq_id);
                                         break;
                                     }
+                                    note_first_token_flush(
+                                        current_seq_id,
+                                        &mut first_token_flush_logged,
+                                        first_token_emitted_at_ms,
+                                        "content",
+                                    );
                                 }
                                 StreamResult::Buffering => {
                                     // Parser is buffering, don't send anything to client yet.
@@ -763,6 +809,12 @@ pub async fn chat_completion(
                                         e.cancel(current_seq_id);
                                         break;
                                     }
+                                    note_first_token_flush(
+                                        current_seq_id,
+                                        &mut first_token_flush_logged,
+                                        first_token_emitted_at_ms,
+                                        "flush_buffer",
+                                    );
                                 }
                                 StreamResult::ToolCalls(tools) => {
                                     buffering_since = None;
@@ -788,6 +840,12 @@ pub async fn chat_completion(
                                 e.cancel(current_seq_id);
                                 break;
                             }
+                            note_first_token_flush(
+                                current_seq_id,
+                                &mut first_token_flush_logged,
+                                first_token_emitted_at_ms,
+                                "direct_token",
+                            );
                         }
                     }
                     StreamItem::Done((
@@ -837,7 +895,17 @@ pub async fn chat_completion(
                                                     current_seq_id,
                                                     safe_buffer.len()
                                                 );
-                                                stream_ctx.send_token(&safe_buffer);
+                                                if !stream_ctx.send_token(&safe_buffer) {
+                                                    let mut e = engine_clone.write();
+                                                    e.cancel(current_seq_id);
+                                                    break;
+                                                }
+                                                note_first_token_flush(
+                                                    current_seq_id,
+                                                    &mut first_token_flush_logged,
+                                                    first_token_emitted_at_ms,
+                                                    "partial_buffer",
+                                                );
                                             }
                                         }
                                     }
@@ -888,6 +956,12 @@ pub async fn chat_completion(
                                     e.cancel(current_seq_id);
                                     break;
                                 }
+                                note_first_token_flush(
+                                    current_seq_id,
+                                    &mut first_token_flush_logged,
+                                    first_token_emitted_at_ms,
+                                    "suppressed_text",
+                                );
                             } else if !pending_tool_calls.is_empty()
                                 && !suppressed_tool_markup.is_empty()
                             {
@@ -978,7 +1052,14 @@ pub async fn chat_completion(
                                 }],
                                 usage: None,
                             };
-                            let _ = response_tx.try_send(ChatResponse::Chunk(tool_chunk));
+                            if response_tx.try_send(ChatResponse::Chunk(tool_chunk)).is_ok() {
+                                note_first_token_flush(
+                                    current_seq_id,
+                                    &mut first_token_flush_logged,
+                                    first_token_emitted_at_ms,
+                                    "tool_chunk",
+                                );
+                            }
                         }
                         if !has_any_tool_calls {
                             if let Some(feedback) = invalid_feedback {
@@ -994,6 +1075,12 @@ pub async fn chat_completion(
                                     e.cancel(current_seq_id);
                                     break;
                                 }
+                                note_first_token_flush(
+                                    current_seq_id,
+                                    &mut first_token_flush_logged,
+                                    first_token_emitted_at_ms,
+                                    "feedback",
+                                );
                             }
                         }
                         if tool_choice_required && !has_any_tool_calls {
