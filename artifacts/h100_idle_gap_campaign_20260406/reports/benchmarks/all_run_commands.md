@@ -171,3 +171,61 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm python3 /root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py --input-file /root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/synthetic_multi_turn_smoke.json --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_pd_warm_steady_state_v1/myelon_pd/conversations.json --model /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --url http://127.0.0.1:18080 --num-clients 1 --max-active-conversations 2 --max-turns 2 --max-retries 1 --request-timeout-sec 300 --request-rate 0 --max-num-requests 16 --warmup-step --served-model-name 1cfa9a7208912126459214e8b04321603b3df60c
 ```
 
+## Qwen/Qwen3-4B / serving_qos / tp2
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_tp2_cold_turn_idle_gap_v1/report.json`
+- status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18080 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --max-num-seqs 8 --dtype bf16 --seed 123 --num-shards 2 --force-runner --max-model-len 1024 --device-ids 0,1
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm python3 /root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py --input-file /root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/synthetic_multi_turn_smoke.json --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_tp2_cold_turn_idle_gap_v1/runner/conversations.json --model /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --url http://127.0.0.1:18080 --num-clients 1 --max-active-conversations 2 --max-turns 2 --max-retries 1 --request-timeout-sec 300 --request-rate 1.0 --conversation-sampling round_robin --max-num-requests 32 --served-model-name 1cfa9a7208912126459214e8b04321603b3df60c
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18081 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --max-num-seqs 8 --dtype bf16 --seed 123 --num-shards 2 --myelon-ipc --max-model-len 1024 --device-ids 0,1 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --myelon-busy-spin
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm python3 /root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py --input-file /root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/synthetic_multi_turn_smoke.json --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_tp2_cold_turn_idle_gap_v1/myelon/conversations.json --model /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --url http://127.0.0.1:18081 --num-clients 1 --max-active-conversations 2 --max-turns 2 --max-retries 1 --request-timeout-sec 300 --request-rate 1.0 --conversation-sampling round_robin --max-num-requests 32 --served-model-name 1cfa9a7208912126459214e8b04321603b3df60c
+```
+
+## Qwen/Qwen3-4B / serving_qos / tp2
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_tp2_warm_steady_state_v1/report.json`
+- status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18080 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --max-num-seqs 8 --dtype bf16 --seed 123 --num-shards 2 --force-runner --max-model-len 1024 --device-ids 0,1
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm python3 /root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py --input-file /root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/synthetic_multi_turn_smoke.json --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_tp2_warm_steady_state_v1/runner/conversations.json --model /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --url http://127.0.0.1:18080 --num-clients 1 --max-active-conversations 2 --max-turns 2 --max-retries 1 --request-timeout-sec 300 --request-rate 0 --conversation-sampling round_robin --max-num-requests 32 --warmup-step --served-model-name 1cfa9a7208912126459214e8b04321603b3df60c
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18081 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --max-num-seqs 8 --dtype bf16 --seed 123 --num-shards 2 --myelon-ipc --max-model-len 1024 --device-ids 0,1 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --myelon-busy-spin
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm python3 /root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py --input-file /root/Documents/myelon-launch/vllm.rs/artifacts/b300_benchmarking_2026_04_02/synthetic_multi_turn_smoke.json --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_idle_gap_campaign_20260406/qwen3_4b_tp2_warm_steady_state_v1/myelon/conversations.json --model /root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c --url http://127.0.0.1:18081 --num-clients 1 --max-active-conversations 2 --max-turns 2 --max-retries 1 --request-timeout-sec 300 --request-rate 0 --conversation-sampling round_robin --max-num-requests 32 --warmup-step --served-model-name 1cfa9a7208912126459214e8b04321603b3df60c
+```
+
