@@ -30,6 +30,19 @@ BENCHMARK_TEXT = "\n".join(
     ]
 )
 
+SERVER_LOG_TEXT = "\n".join(
+    [
+        "2026-04-06T12:25:53.916988Z  WARN vllm_rs::core::scheduler: Prefix cache enabled: 64 blocks (4096 tokens).",
+        "2026-04-06T12:25:57.365547Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 5774 blocks (369536 tokens) free, used 0.4% (0.07GB/16.99GB); CPU swap used 0.0% (0.00GB/1.70GB)",
+        "2026-04-06T12:25:58.294354Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 5745 blocks (367680 tokens) free, used 0.9% (0.16GB/16.99GB); CPU swap used 0.0% (0.00GB/1.70GB)",
+        "2026-04-06T12:25:58.720030Z  INFO vllm_rs::core::scheduler: GPU Kvcache: 5735 blocks (367040 tokens) free, used 1.1% (0.19GB/16.99GB); CPU swap used 0.0% (0.00GB/1.70GB)",
+        "2026-04-06T12:25:56.263013Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 0 (1624 tokens, 0 cached blocks, raw_match=0 blocks)",
+        "2026-04-06T12:25:57.353794Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 0 (1632 tokens, 25 blocks)",
+        "2026-04-06T12:25:57.403174Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 1 (1891 tokens, 25 cached blocks, raw_match=0 blocks)",
+        "2026-04-06T12:25:58.282825Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 1 (1899 tokens, 29 blocks)",
+    ]
+)
+
 
 class FakeProcess:
     def __init__(self) -> None:
@@ -203,6 +216,60 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             }
         )
         self.assertEqual(status, "partial")
+
+    def test_normalize_report_backfills_observed_cache_pressure_from_server_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            benchmark_log = tmp_path / "benchmark.log"
+            server_log = tmp_path / "server.log"
+            benchmark_log.write_text(BENCHMARK_TEXT, encoding="utf-8")
+            server_log.write_text(SERVER_LOG_TEXT, encoding="utf-8")
+
+            normalized = report_common.normalize_report(
+                {
+                    "benchmark_contract": {
+                        "benchmark_family": "server_prefill_stress",
+                        "benchmark_submode": "cache_thrash_round_robin",
+                        "question_answered": "bridge",
+                        "workload_class": "synthetic_server_prefill_stress",
+                        "warmup_policy": "measure_first_turn",
+                        "first_turn_measured": True,
+                        "arrival_pattern": "saturation_zero_gap",
+                        "concurrency_policy": {"driver": "persistent_http_server"},
+                        "cache_pressure_profile": "hard_thrash",
+                        "equivalence_group": None,
+                        "topology_overlay": "tp2",
+                        "transport_mode": "socket_vs_myelon_process_runner",
+                        "run_class": "fullpass",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                    },
+                    "cases": [
+                        {
+                            "label": "runner",
+                            "execution_variant": "runner",
+                            "benchmark_log_path": str(benchmark_log),
+                            "server_log_path": str(server_log),
+                        }
+                    ],
+                }
+            )
+
+            case = normalized["cases"][0]
+            observed = case["observed_cache_pressure"]
+            self.assertEqual(observed["observed_cache_pressure_level"], "minimal_pressure")
+            self.assertEqual(observed["configured_prefix_cache_blocks"], 64)
+            self.assertEqual(observed["configured_prefix_cache_tokens"], 4096)
+            self.assertEqual(observed["observed_prefix_cache_miss_count"], 2)
+            self.assertEqual(observed["observed_prefix_cache_insert_count"], 2)
+            self.assertEqual(observed["observed_prefix_cache_eviction_count"], 0)
+            self.assertEqual(observed["observed_gpu_kv_usage_percent_max"], 1.1)
+            self.assertEqual(observed["observed_cpu_swap_usage_percent_max"], 0.0)
+
+            case_rows = report_common.build_case_rows(normalized)
+            self.assertEqual(case_rows[0]["observed_cache_pressure_level"], "minimal_pressure")
+            self.assertEqual(case_rows[0]["observed_gpu_kv_usage_percent_max"], 1.1)
+            self.assertEqual(case_rows[0]["observed_cpu_swap_usage_percent_max"], 0.0)
 
 
 class BenchmarkScriptReportTests(unittest.TestCase):
@@ -585,12 +652,19 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "cache_thrash_round_robin")
             self.assertEqual(report["benchmark_contract"]["cache_pressure_profile"], "hard_thrash")
             self.assertFalse(report["warmup_step"])
+            self.assertEqual(report["max_num_seqs"], 64)
+            self.assertEqual(report["num_clients"], 32)
+            self.assertEqual(report["max_num_requests"], 384)
             self.assertEqual(report["conversation_sampling"], "round_robin")
             self.assertEqual(report["limit_min_tokens"], 8)
             self.assertEqual(report["limit_max_tokens"], 8)
             self.assertTrue(report["workload_file"].endswith("synthetic_server_prefill_stress_round_robin.json"))
             benchmark_command = report["cases"][0]["benchmark_command"]
+            self.assertIn("--num-clients", benchmark_command)
+            self.assertIn("32", benchmark_command)
             self.assertIn("--conversation-sampling", benchmark_command)
+            self.assertIn("--max-num-requests", benchmark_command)
+            self.assertIn("384", benchmark_command)
             self.assertIn("--limit-min-tokens", benchmark_command)
             self.assertIn("--limit-max-tokens", benchmark_command)
             self.assertNotIn("--warmup-step", benchmark_command)
@@ -601,6 +675,8 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("limit_min_tokens", run_index_text)
             self.assertIn("limit_max_tokens", run_index_text)
             server_command = report["cases"][0]["server_command"]
+            self.assertIn("--max-num-seqs", server_command)
+            self.assertIn("64", server_command)
             self.assertIn("--prefix-cache", server_command)
             self.assertIn("--prefix-cache-max-tokens", server_command)
             self.assertIn("--kv-fraction", server_command)
@@ -662,10 +738,54 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 "shared_prefix_round_robin_control",
             )
             self.assertEqual(report["benchmark_contract"]["cache_pressure_profile"], "bounded_prefix")
+            self.assertEqual(report["num_clients"], 32)
+            self.assertEqual(report["max_num_requests"], 384)
             self.assertTrue(
                 report["workload_file"].endswith(
                     "synthetic_server_prefill_shared_prefix_round_robin.json"
                 )
+            )
+
+    def test_server_prefill_round_robin_inputs_repeat_source_text(self) -> None:
+        inputs_dir = (
+            SCRIPTS_DIR.parent
+            / "artifacts"
+            / "h100_benchmarking_2026_04_06"
+            / "inputs"
+        )
+        long_source_path = inputs_dir / "synthetic_server_prefill_long_source.txt"
+        self.assertTrue(long_source_path.is_file())
+        self.assertGreater(
+            long_source_path.stat().st_size,
+            1_000_000,
+            msg="synthetic_server_prefill_long_source.txt should be large enough for heavy round-robin prompts",
+        )
+        for name in (
+            "synthetic_server_prefill_stress_round_robin.json",
+            "synthetic_server_prefill_shared_prefix_round_robin.json",
+        ):
+            payload = json.loads((inputs_dir / name).read_text(encoding="utf-8"))
+            self.assertEqual(
+                payload["num_conversations"],
+                64,
+                msg=f"{name} should keep enough conversations to create real reuse distance",
+            )
+            self.assertGreaterEqual(
+                len(payload["text_files"]),
+                1,
+                msg=f"{name} should reference at least one large source text file",
+            )
+            self.assertTrue(
+                all(
+                    path.endswith("synthetic_server_prefill_long_source.txt")
+                    for path in payload["text_files"]
+                ),
+                msg=f"{name} should use the dedicated long source text for heavy round-robin generation",
+            )
+            self.assertEqual(
+                payload["prompt_output"]["num_tokens"]["value"],
+                8,
+                msg=f"{name} should remain low-decode",
             )
 
     def test_server_prefill_fixed_prompt_burst_selects_builtin_workload(self) -> None:
@@ -727,6 +847,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 report["benchmark_contract"]["equivalence_group"],
                 "fixed_prompt_burst_bridge",
             )
+            self.assertEqual(report["max_num_seqs"], 32)
             self.assertTrue(
                 report["workload_file"].endswith(
                     "synthetic_server_prefill_fixed_prompt_burst.json"
@@ -736,6 +857,8 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["limit_max_tokens"], 1)
             self.assertFalse(report["prefix_cache_enabled"])
             server_command = report["cases"][0]["server_command"]
+            self.assertIn("--max-num-seqs", server_command)
+            self.assertIn("32", server_command)
             self.assertIn("--kv-fraction", server_command)
             self.assertNotIn("--max-model-len", server_command)
             benchmark_command = report["cases"][0]["benchmark_command"]
@@ -743,6 +866,65 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("--prompt-text", benchmark_command)
             self.assertIn("Please talk about China in more details.", benchmark_command)
             self.assertNotIn("--input-file", benchmark_command)
+
+    def test_server_prefill_stress_tracks_active_conversation_override_for_seq_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_dir = tmp_path / "server_prefill_override_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_SERVER_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_SERVER_BENCHMARK_MODE": "single_gpu",
+                "VLLM_SERVER_BENCHMARK_FAMILY": "server_prefill_stress",
+                "VLLM_SERVER_BENCHMARK_SUBMODE": "fixed_prompt_burst",
+                "VLLM_SERVER_BENCH_MAX_ACTIVE_CONVERSATIONS": "256",
+                "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "256",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] == "cargo":
+                    return CompletedProcess(command, 0, "", "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    server_matrix,
+                    "validate_requested_topology",
+                    return_value=2,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    server_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    server_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ):
+                    rc = server_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["max_active_conversations"], 256)
+            self.assertEqual(report["max_num_requests"], 256)
+            self.assertEqual(report["max_num_seqs"], 256)
+            server_command = report["cases"][0]["server_command"]
+            self.assertIn("--max-num-seqs", server_command)
+            self.assertIn("256", server_command)
 
     def test_server_prefill_explicit_max_model_len_drops_default_kv_fraction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -1385,6 +1567,135 @@ class BenchmarkScriptReportTests(unittest.TestCase):
 
             commands_text = all_run_commands_md.read_text(encoding="utf-8")
             self.assertIn("All Run Commands", commands_text)
+
+    def test_normalize_report_backfills_summary_means_from_benchmark_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            benchmark_log_path = tmp_path / "benchmark.log"
+            benchmark_log_path.write_text(
+                "\n".join(
+                    [
+                        "runtime_sec = 25.203",
+                        "requests_per_sec = 1.270",
+                        "06-04-2026 12:32:11 [INFO] - [ttft_ms                  ] avg:    340.742, min:    174.289, max:    936.404",
+                        "06-04-2026 12:32:11 [INFO] - [tpot_ms                  ] avg:     12.217, min:     12.058, max:     13.709",
+                        "06-04-2026 12:32:11 [INFO] - [latency_ms               ] avg:    426.262, min:    259.640, max:   1032.370",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            report = {
+                "status": "completed",
+                "benchmark_contract": {
+                    "benchmark_family": "server_prefill_stress",
+                    "benchmark_submode": "shared_prefix_round_robin_control",
+                    "workload_class": "synthetic_server_shared_prefix_control",
+                    "topology_overlay": "tp2",
+                    "transport_mode": "socket_vs_myelon_process_runner",
+                    "run_class": "fullpass",
+                    "stop_point": "full_completion",
+                    "skip_reason": None,
+                },
+                "machine_profile": {
+                    "hostname": "plain-bear-unfolds-fin-02",
+                    "gpu_inventory": [{"name": "NVIDIA H100 80GB HBM3"}],
+                },
+                "model_capability": {
+                    "model_label": "Qwen/Qwen3-30B-A3B",
+                    "architecture": "Qwen3MoeForCausalLM",
+                    "pd_supported": True,
+                },
+                "cases": [
+                    {
+                        "label": "runner",
+                        "execution_variant": "runner",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                        "benchmark_log_path": str(benchmark_log_path),
+                        "summary": {
+                            "requests_per_sec": 1.27,
+                            "runtime_sec": 25.203,
+                            "table": {},
+                        },
+                    }
+                ],
+            }
+
+            normalized = report_common.normalize_report(report)
+            case_rows = report_common.build_case_rows(normalized)
+
+            self.assertEqual(case_rows[0]["requests_per_sec"], 1.27)
+            self.assertEqual(case_rows[0]["runtime_sec"], 25.203)
+            self.assertAlmostEqual(case_rows[0]["ttft_ms_mean"], 340.742)
+            self.assertAlmostEqual(case_rows[0]["tpot_ms_mean"], 12.217)
+            self.assertAlmostEqual(case_rows[0]["latency_ms_mean"], 426.262)
+
+    def test_normalize_report_backfills_truncated_summary_rows_from_benchmark_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            benchmark_log_path = tmp_path / "benchmark.log"
+            benchmark_log_path.write_text(
+                "\n".join(
+                    [
+                        "runtime_sec = 25.472",
+                        "requests_per_sec = 1.256",
+                        "                   count     mean     std  ...      75%      90%      max",
+                        "ttft_ms             32.0   703.48  324.80  ...   939.36  1061.53  1383.45",
+                        "tpot_ms             32.0    12.25    0.31  ...    12.22    12.29    13.91",
+                        "latency_ms          32.0   789.25  325.44  ...  1025.09  1157.72  1469.14",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            report = {
+                "status": "completed",
+                "benchmark_contract": {
+                    "benchmark_family": "server_prefill_stress",
+                    "benchmark_submode": "cache_thrash_round_robin",
+                    "workload_class": "synthetic_server_prefill_stress",
+                    "topology_overlay": "tp2",
+                    "transport_mode": "socket_vs_myelon_process_runner",
+                    "run_class": "fullpass",
+                    "stop_point": "full_completion",
+                    "skip_reason": None,
+                },
+                "machine_profile": {
+                    "hostname": "plain-bear-unfolds-fin-02",
+                    "gpu_inventory": [{"name": "NVIDIA H100 80GB HBM3"}],
+                },
+                "model_capability": {
+                    "model_label": "Qwen/Qwen3-30B-A3B",
+                    "architecture": "Qwen3MoeForCausalLM",
+                    "pd_supported": True,
+                },
+                "cases": [
+                    {
+                        "label": "runner",
+                        "execution_variant": "runner",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                        "benchmark_exit_code": 0,
+                        "benchmark_log_path": str(benchmark_log_path),
+                        "summary": {
+                            "requests_per_sec": 1.256,
+                            "runtime_sec": 25.472,
+                            "table": {},
+                        },
+                    }
+                ],
+            }
+
+            normalized = report_common.normalize_report(report)
+            case_rows = report_common.build_case_rows(normalized)
+
+            self.assertEqual(case_rows[0]["requests_per_sec"], 1.256)
+            self.assertEqual(case_rows[0]["runtime_sec"], 25.472)
+            self.assertAlmostEqual(case_rows[0]["ttft_ms_mean"], 703.48)
+            self.assertAlmostEqual(case_rows[0]["tpot_ms_mean"], 12.25)
+            self.assertAlmostEqual(case_rows[0]["latency_ms_mean"], 789.25)
 
 
 if __name__ == "__main__":
