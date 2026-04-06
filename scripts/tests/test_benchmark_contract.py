@@ -843,6 +843,24 @@ class BenchmarkContractHelperTests(unittest.TestCase):
 
 
 class BenchmarkScriptReportTests(unittest.TestCase):
+    def test_cli_prepare_cases_supports_tp8_mode(self) -> None:
+        self.assertEqual(
+            benchmark_matrix.prepare_cases("tp8", None),
+            [
+                ("runner", ["--num-shards", "8", "--force-runner"]),
+                ("myelon", ["--num-shards", "8", "--myelon-ipc"]),
+            ],
+        )
+
+    def test_server_prepare_cases_supports_tp8_mode(self) -> None:
+        self.assertEqual(
+            server_matrix.prepare_cases("tp8"),
+            [
+                ("runner", ["--num-shards", "8", "--force-runner"]),
+                ("myelon", ["--num-shards", "8", "--myelon-ipc"]),
+            ],
+        )
+
     def test_server_parse_summary_extracts_prefixed_avg_lines(self) -> None:
         summary = server_matrix.parse_summary(
             "\n".join(
@@ -938,6 +956,57 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertTrue(side_by_side_md.is_file())
             self.assertTrue(system_md.is_file())
             self.assertTrue(manifest_json.is_file())
+
+    def test_cli_benchmark_report_supports_tp8_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            output_path = tmp_path / "cli_tp8_report.json"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_OUT": str(output_path),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_BENCHMARK_MODE": "tp8",
+                "VLLM_BENCHMARK_WARMUP_RUNS": "0",
+                "VLLM_BENCHMARK_MEASURED_RUNS": "1",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    benchmark_matrix,
+                    "validate_requested_topology",
+                    return_value=8,
+                ), mock.patch.object(
+                    benchmark_matrix.subprocess,
+                    "run",
+                    return_value=CompletedProcess(["cargo"], 0, "", ""),
+                ), mock.patch.object(
+                    benchmark_matrix,
+                    "run_case_for_stop_point_with_retries",
+                    side_effect=[
+                        complete_batch_completion_run("runner-measured-1"),
+                        complete_batch_completion_run("myelon-measured-1"),
+                    ],
+                ):
+                    rc = benchmark_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["benchmark_contract"]["topology_overlay"], "tp8")
+            self.assertEqual(report["benchmark_contract"]["tp_scale_overlay"], "tp8")
+            self.assertEqual(report["benchmark_contract"]["prefill_tp_size"], 8)
+            self.assertEqual(report["benchmark_contract"]["decode_tp_size"], 8)
+            self.assertEqual(
+                report["benchmark_contract"]["concurrency_policy"]["expected_num_shards"],
+                8,
+            )
+            self.assertEqual(report["cases"][0]["command"].count("--num-shards"), 1)
+            self.assertIn("8", report["cases"][0]["command"])
+            self.assertIn("--force-runner", report["cases"][0]["command"])
+            self.assertIn("--myelon-ipc", report["cases"][1]["command"])
 
     def test_cli_benchmark_minimal_decode_defaults_stop_point_from_max_tokens_one(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -1199,6 +1268,69 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("myelon_rpc_depth", run_index_text)
             self.assertIn("myelon_response_depth", run_index_text)
             self.assertIn("myelon_busy_spin", run_index_text)
+
+    def test_server_benchmark_report_supports_tp8_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            workload_file = tmp_path / "synthetic_multi_turn_smoke.json"
+            workload_file.write_text("{}\n", encoding="utf-8")
+            output_dir = tmp_path / "server_tp8_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_INPUT_FILE": str(workload_file),
+                "VLLM_SERVER_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_SERVER_BENCHMARK_MODE": "tp8",
+                "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] == "cargo":
+                    return CompletedProcess(command, 0, "", "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    server_matrix,
+                    "validate_requested_topology",
+                    return_value=8,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    server_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    server_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    server_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ):
+                    rc = server_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report = json.loads((output_dir / "report.json").read_text(encoding="utf-8"))
+            self.assertEqual(report["benchmark_contract"]["topology_overlay"], "tp8")
+            self.assertEqual(report["benchmark_contract"]["tp_scale_overlay"], "tp8")
+            self.assertEqual(report["benchmark_contract"]["prefill_tp_size"], 8)
+            self.assertEqual(report["benchmark_contract"]["decode_tp_size"], 8)
+            self.assertEqual(report["effective_device_ids"], list(range(8)))
+            runner_command = report["cases"][0]["server_command"]
+            self.assertIn("--num-shards", runner_command)
+            self.assertIn("8", runner_command)
+            self.assertIn("--force-runner", runner_command)
+            self.assertIn("--device-ids", runner_command)
+            self.assertIn("0,1,2,3,4,5,6,7", runner_command)
 
     def test_server_serving_qos_cold_turn_mode_disables_warmup_step(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
