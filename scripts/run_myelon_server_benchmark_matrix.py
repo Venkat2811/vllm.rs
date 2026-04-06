@@ -21,6 +21,7 @@ from myelon_validation_common import (
     env_str,
     extract_server_kvcache_plan,
     infer_request_run_class,
+    infer_tp_scale_contract_fields,
     infer_workload_class_from_path,
     parse_device_ids,
     resolve_cache_pressure_profile,
@@ -115,18 +116,26 @@ def env_optional_str(name: str) -> str | None:
     return value
 
 
+def resolve_mode_num_shards(mode: str, env_name: str) -> int:
+    inferred = infer_tp_scale_contract_fields(mode)
+    if inferred["pd_enabled"]:
+        raise ValueError(
+            f"unsupported {env_name} {mode!r}; expected 'single_gpu' or 'tpN'"
+        )
+    num_shards = inferred["prefill_tp_size"]
+    if not isinstance(num_shards, int) or num_shards <= 0:
+        raise ValueError(
+            f"unsupported {env_name} {mode!r}; expected 'single_gpu' or 'tpN'"
+        )
+    return num_shards
+
+
 def prepare_cases(mode: str) -> list[tuple[str, list[str]]]:
-    if mode == "single_gpu":
-        return [
-            ("runner", ["--num-shards", "1", "--force-runner"]),
-            ("myelon", ["--num-shards", "1", "--myelon-ipc"]),
-        ]
-    if mode == "tp2":
-        return [
-            ("runner", ["--num-shards", "2", "--force-runner"]),
-            ("myelon", ["--num-shards", "2", "--myelon-ipc"]),
-        ]
-    raise ValueError(f"unsupported VLLM_SERVER_BENCHMARK_MODE '{mode}'")
+    num_shards = resolve_mode_num_shards(mode, "VLLM_SERVER_BENCHMARK_MODE")
+    return [
+        ("runner", ["--num-shards", str(num_shards), "--force-runner"]),
+        ("myelon", ["--num-shards", str(num_shards), "--myelon-ipc"]),
+    ]
 
 
 def resolve_server_benchmark_family(explicit: str | None) -> str:
@@ -661,8 +670,11 @@ def main() -> int:
         print(f"fixed prompt burst benchmark script does not exist: {fixed_prompt_burst_script}", file=sys.stderr)
         return 1
 
-    expected_num_shards = 1 if mode == "single_gpu" else 2
     try:
+        expected_num_shards = resolve_mode_num_shards(
+            mode,
+            "VLLM_SERVER_BENCHMARK_MODE",
+        )
         detected_cuda_device_count = validate_requested_topology(
             expected_num_shards,
             parsed_device_ids,
@@ -817,10 +829,10 @@ def main() -> int:
             else None
         ),
         topology_overlay=mode,
-        tp_scale_overlay=("tp1" if mode == "single_gpu" else "tp2"),
-        prefill_tp_size=(1 if mode == "single_gpu" else 2),
-        decode_tp_size=(1 if mode == "single_gpu" else 2),
-        pd_enabled=False,
+        tp_scale_overlay=None,
+        prefill_tp_size=None,
+        decode_tp_size=None,
+        pd_enabled=None,
         pd_role_layout=None,
         transport_mode="socket_vs_myelon_process_runner",
         run_class=run_class,

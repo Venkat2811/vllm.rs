@@ -1,0 +1,3 @@
+benchmark_exit_code,case_status,decode_seconds_mean,decode_tps_mean,execution_variant,first_prefill_seconds_mean,first_prefill_tps_mean,label,latency_ms_mean,prompt_seconds_mean,prompt_tps_mean,requests_per_sec,result_boundary,runtime_sec,skip_reason,stop_point,tpot_ms_mean,ttft_ms_mean
+0,completed,1.846667,8868.696667,runner,9.103333,87.516667,runner,,9.103333,22376.583333,,benchmark_complete,,,full_completion,,
+0,completed,1.91,8575.006667,myelon,9.346667,85.19,myelon,,9.346667,21780.876667,,benchmark_complete,,,full_completion,,
