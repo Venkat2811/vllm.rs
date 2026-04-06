@@ -1,0 +1,1 @@
+{"object":"list","data":[{"id":"1cfa9a7208912126459214e8b04321603b3df60c","object":"model","created":1775512106279,"owned_by":"vllm.rs","permission":[],"modalities":["text","embedding"],"max_model_len":1536}]}
