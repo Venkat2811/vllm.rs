@@ -2857,6 +2857,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             equivalence_root = tmp_path / "reports" / "benchmarks" / "by_equivalence"
             workload_root = tmp_path / "reports" / "benchmarks" / "by_workload"
             topology_root = tmp_path / "reports" / "benchmarks" / "by_topology"
+            model_root = tmp_path / "reports" / "benchmarks" / "by_model"
             run_class_root = tmp_path / "reports" / "benchmarks" / "by_run_class"
             result_boundary_root = (
                 tmp_path / "reports" / "benchmarks" / "by_result_boundary"
@@ -2892,6 +2893,9 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 ).is_file()
             )
             self.assertTrue((topology_root / "tp2" / "findings.md").is_file())
+            self.assertTrue(
+                (model_root / "qwen_qwen3_30b_a3b" / "findings.md").is_file()
+            )
             self.assertTrue((run_class_root / "fullpass" / "findings.md").is_file())
             self.assertTrue(
                 (result_boundary_root / "benchmark_complete" / "findings.md").is_file()
@@ -2971,6 +2975,12 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             ).read_text(encoding="utf-8")
             self.assertIn("tp2", topology_text)
             self.assertIn("Qwen/Qwen3-30B-A3B", topology_text)
+
+            model_text = (
+                model_root / "qwen_qwen3_30b_a3b" / "findings.md"
+            ).read_text(encoding="utf-8")
+            self.assertIn("Qwen/Qwen3-30B-A3B", model_text)
+            self.assertIn("server_prefill_stress", model_text)
 
             run_class_text = (
                 run_class_root / "fullpass" / "findings.md"
