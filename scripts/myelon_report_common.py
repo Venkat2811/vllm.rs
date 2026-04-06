@@ -4,6 +4,13 @@ import json
 import subprocess
 from pathlib import Path
 
+from myelon_validation_common import (
+    classify_arrival_pattern,
+    classify_model_capability,
+    infer_request_run_class,
+    infer_workload_class_from_path,
+)
+
 
 def _write_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -215,11 +222,163 @@ def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[d
             "skip_reason": contract.get("skip_reason"),
             "host": machine_profile.get("hostname"),
             "gpu_names": ",".join(str(item) for item in gpu_names if item),
+            "model_label": model_capability.get("model_label"),
             "model_architecture": model_capability.get("architecture"),
             "pd_supported": model_capability.get("pd_supported"),
             "report_json": str(report_path),
         }
     ]
+
+
+def infer_report_status(report: dict[str, object]) -> str:
+    existing = report.get("status")
+    if isinstance(existing, str) and existing.strip():
+        return existing
+    contract = report.get("benchmark_contract", {})
+    if isinstance(contract, dict) and contract.get("skip_reason"):
+        return "skipped"
+    for case in report.get("cases", []):
+        if not isinstance(case, dict):
+            continue
+        if case.get("skip_reason"):
+            return "partial"
+        if case.get("stop_point") not in (None, "full_completion"):
+            return "partial"
+        if case.get("benchmark_exit_code") not in (None, 0):
+            return "partial"
+    return "completed"
+
+
+def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
+    existing = report.get("benchmark_contract")
+    if isinstance(existing, dict) and existing:
+        return existing
+
+    workload_file = str(report.get("workload_file", ""))
+    workload_class = infer_workload_class_from_path(workload_file)
+    warmup_step = bool(report.get("warmup_step", False))
+    max_num_requests = report.get("max_num_requests")
+    if isinstance(max_num_requests, int) and max_num_requests <= 0:
+        max_num_requests = None
+    run_class = infer_request_run_class(max_num_requests)
+    request_rate = report.get("request_rate", 0)
+
+    if report.get("pd_url") is not None or report.get("server_device_ids") is not None:
+        return {
+            "benchmark_family": "pd_qos",
+            "benchmark_submode": (
+                "first_transfer_control"
+                if workload_class == "pd_first_transfer_control"
+                else ("warm_steady_state" if warmup_step else "cold_turn")
+            ),
+            "question_answered": "How does Myelon affect PD-capable serving paths on supported transports and models?",
+            "workload_class": workload_class,
+            "warmup_policy": "warmup_step_skips_first_turn" if warmup_step else "measure_first_turn",
+            "first_turn_measured": not warmup_step,
+            "arrival_pattern": classify_arrival_pattern(request_rate),
+            "concurrency_policy": {
+                "driver": "pd_server_client_http",
+                "max_num_seqs": report.get("max_num_seqs"),
+                "num_clients": report.get("num_clients"),
+                "max_active_conversations": report.get("max_active_conversations"),
+                "max_num_requests": max_num_requests,
+                "max_turns": report.get("max_turns"),
+                "request_rate": request_rate,
+            },
+            "topology_overlay": "pd_tp1",
+            "transport_mode": (
+                "pd_tcp"
+                if isinstance(report.get("pd_url"), str) and str(report.get("pd_url")).startswith("tcp://")
+                else ("pd_localipc_default" if not report.get("pd_url") else "pd_custom_url")
+            ),
+            "run_class": run_class,
+            "stop_point": "full_completion",
+            "skip_reason": None,
+        }
+
+    if "mode" in report and "cases" in report:
+        mode = str(report.get("mode"))
+        return {
+            "benchmark_family": "serving_qos",
+            "benchmark_submode": "warm_steady_state" if warmup_step else "cold_turn",
+            "question_answered": "What user-facing QoS difference does Myelon produce in persistent serving?",
+            "workload_class": workload_class,
+            "warmup_policy": "warmup_step_skips_first_turn" if warmup_step else "measure_first_turn",
+            "first_turn_measured": not warmup_step,
+            "arrival_pattern": classify_arrival_pattern(request_rate),
+            "concurrency_policy": {
+                "driver": "persistent_http_server",
+                "max_num_seqs": report.get("max_num_seqs"),
+                "num_clients": report.get("num_clients"),
+                "max_active_conversations": report.get("max_active_conversations"),
+                "max_num_requests": max_num_requests,
+                "max_turns": report.get("max_turns"),
+                "request_rate": request_rate,
+                "mode": mode,
+            },
+            "topology_overlay": mode,
+            "transport_mode": "socket_vs_myelon_process_runner",
+            "run_class": run_class,
+            "stop_point": "full_completion",
+            "skip_reason": None,
+        }
+
+    return {
+        "benchmark_family": "prefill_stress",
+        "benchmark_submode": "legacy_cli",
+        "question_answered": "Does Myelon materially improve transport-sensitive prompt or prefill paths?",
+        "workload_class": workload_class or "file_defined",
+        "warmup_policy": "legacy_cli_unspecified",
+        "first_turn_measured": True,
+        "arrival_pattern": "prompt_burst_serial_runs",
+        "concurrency_policy": {
+            "driver": "legacy_cli",
+        },
+        "topology_overlay": str(report.get("mode", "legacy_cli")),
+        "transport_mode": "socket_vs_myelon_process_runner",
+        "run_class": "quickpass",
+        "stop_point": "full_completion",
+        "skip_reason": None,
+    }
+
+
+def infer_machine_profile(report: dict[str, object]) -> dict[str, object]:
+    existing = report.get("machine_profile")
+    if isinstance(existing, dict) and existing:
+        return existing
+    return {
+        "hostname": None,
+        "gpu_inventory": [],
+        "detected_cuda_device_count": report.get("detected_cuda_device_count"),
+        "effective_device_ids": report.get("effective_device_ids"),
+    }
+
+
+def infer_model_capability(report: dict[str, object]) -> dict[str, object]:
+    existing = report.get("model_capability")
+    if isinstance(existing, dict) and existing:
+        return existing
+    model_path = report.get("model_path")
+    if isinstance(model_path, str) and model_path:
+        return classify_model_capability(model_path)
+    return {
+        "model_label": None,
+        "architecture": None,
+        "architectures": [],
+        "model_type": None,
+        "layer_types": [],
+        "pd_supported": None,
+        "pd_skip_reason": None,
+    }
+
+
+def normalize_report(report: dict[str, object]) -> dict[str, object]:
+    normalized = dict(report)
+    normalized["benchmark_contract"] = infer_benchmark_contract(report)
+    normalized["machine_profile"] = infer_machine_profile(report)
+    normalized["model_capability"] = infer_model_capability(report)
+    normalized["status"] = infer_report_status(report)
+    return normalized
 
 
 def build_side_by_side_rows(report: dict[str, object]) -> list[dict[str, object]]:
@@ -258,6 +417,8 @@ def build_side_by_side_rows(report: dict[str, object]) -> list[dict[str, object]
     for metric in metrics:
         baseline_value = _to_float(baseline_case.get(metric))
         myelon_value = _to_float(myelon_case.get(metric))
+        if baseline_value is None and myelon_value is None:
+            continue
         delta_percent = None
         if baseline_value not in (None, 0.0) and myelon_value is not None:
             delta_percent = ((myelon_value - baseline_value) / baseline_value) * 100.0
@@ -411,4 +572,194 @@ def write_report_bundle(
         "benchmarks": benchmarks,
         "repo_state": repo_state,
         "raw_captures": raw_captures,
+    }
+
+
+def load_report_json(path: Path) -> dict[str, object] | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def find_report_jsons(root: Path) -> list[Path]:
+    results = []
+    for path in root.rglob("report.json"):
+        if "reports" in path.parts:
+            continue
+        results.append(path)
+    return sorted(results)
+
+
+def build_rollup_rows(report_path: Path, report: dict[str, object]) -> tuple[dict[str, object], list[dict[str, object]]]:
+    normalized_report = normalize_report(report)
+    run_index_row = build_run_index_rows(normalized_report, report_path)[0]
+    side_by_side_rows = build_side_by_side_rows(normalized_report)
+    metric_map = {
+        row.get("metric"): row
+        for row in side_by_side_rows
+        if isinstance(row, dict)
+    }
+    findings_row = dict(run_index_row)
+    findings_row.update(
+        {
+            "baseline_requests_per_sec": metric_map.get("requests_per_sec", {}).get("baseline_value"),
+            "myelon_requests_per_sec": metric_map.get("requests_per_sec", {}).get("myelon_value"),
+            "requests_per_sec_delta_percent": metric_map.get("requests_per_sec", {}).get("delta_percent"),
+            "baseline_ttft_ms_mean": metric_map.get("ttft_ms_mean", {}).get("baseline_value"),
+            "myelon_ttft_ms_mean": metric_map.get("ttft_ms_mean", {}).get("myelon_value"),
+            "ttft_ms_delta_percent": metric_map.get("ttft_ms_mean", {}).get("delta_percent"),
+            "baseline_latency_ms_mean": metric_map.get("latency_ms_mean", {}).get("baseline_value"),
+            "myelon_latency_ms_mean": metric_map.get("latency_ms_mean", {}).get("myelon_value"),
+            "latency_ms_delta_percent": metric_map.get("latency_ms_mean", {}).get("delta_percent"),
+        }
+    )
+    detailed_rows: list[dict[str, object]] = []
+    for row in side_by_side_rows:
+        detailed_row = dict(run_index_row)
+        detailed_row.update(row)
+        detailed_rows.append(detailed_row)
+    return findings_row, detailed_rows
+
+
+def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
+    report_paths = find_report_jsons(campaign_root)
+    reports_dir = campaign_root / "reports" / "benchmarks"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    current_findings_csv = reports_dir / "current_findings.csv"
+    current_findings_md = reports_dir / "current_findings.md"
+    rollup_run_index_csv = reports_dir / "rollup_run_index.csv"
+    rollup_run_index_md = reports_dir / "rollup_run_index.md"
+    per_model_side_by_side_csv = reports_dir / "per_model_side_by_side.csv"
+    per_model_side_by_side_md = reports_dir / "per_model_side_by_side.md"
+
+    run_index_rows: list[dict[str, object]] = []
+    findings_rows: list[dict[str, object]] = []
+    detailed_rows: list[dict[str, object]] = []
+
+    for report_path in report_paths:
+        report = load_report_json(report_path)
+        if not isinstance(report, dict):
+            continue
+        normalized_report = normalize_report(report)
+        run_index_row = build_run_index_rows(normalized_report, report_path)[0]
+        findings_row, detail_rows = build_rollup_rows(report_path, report)
+        run_index_rows.append(run_index_row)
+        findings_rows.append(findings_row)
+        detailed_rows.extend(detail_rows)
+
+    run_index_fields = (
+        [key for key in run_index_rows[0].keys()]
+        if run_index_rows
+        else [
+            "benchmark_family",
+            "benchmark_submode",
+            "workload_class",
+            "topology_overlay",
+            "transport_mode",
+            "run_class",
+            "status",
+            "report_json",
+        ]
+    )
+    findings_fields = (
+        [key for key in findings_rows[0].keys()]
+        if findings_rows
+        else run_index_fields
+    )
+    detailed_fields = (
+        [key for key in detailed_rows[0].keys()]
+        if detailed_rows
+        else [
+            "model_label",
+            "benchmark_family",
+            "topology_overlay",
+            "metric",
+            "baseline_value",
+            "myelon_value",
+            "delta_percent",
+        ]
+    )
+
+    _write_csv(rollup_run_index_csv, run_index_rows, run_index_fields)
+    _write_csv(current_findings_csv, findings_rows, findings_fields)
+    _write_csv(per_model_side_by_side_csv, detailed_rows, detailed_fields)
+
+    status_counts: dict[str, int] = {}
+    for row in findings_rows:
+        key = str(row.get("status"))
+        status_counts[key] = status_counts.get(key, 0) + 1
+
+    findings_lines = [
+        "# Current Findings",
+        "",
+        f"- campaign_root: `{campaign_root}`",
+        f"- reports_found: `{len(report_paths)}`",
+        "",
+        "## Status Counts",
+        "",
+        "| status | count |",
+        "| --- | --- |",
+    ]
+    if status_counts:
+        for key, value in sorted(status_counts.items()):
+            findings_lines.append(f"| {key} | {value} |")
+    else:
+        findings_lines.append("| none | 0 |")
+    findings_lines.extend(
+        [
+            "",
+            "## Campaign Findings",
+            "",
+        ]
+    )
+    if findings_rows:
+        findings_lines.append("| " + " | ".join(findings_fields) + " |")
+        findings_lines.append("| " + " | ".join("---" for _ in findings_fields) + " |")
+        for row in findings_rows:
+            findings_lines.append(
+                "| " + " | ".join(str(row.get(name, "")) for name in findings_fields) + " |"
+            )
+    else:
+        findings_lines.append("No retained report.json files were found.")
+    current_findings_md.write_text("\n".join(findings_lines) + "\n", encoding="utf-8")
+
+    run_index_lines = [
+        "# Rollup Run Index",
+        "",
+    ]
+    if run_index_rows:
+        run_index_lines.append("| " + " | ".join(run_index_fields) + " |")
+        run_index_lines.append("| " + " | ".join("---" for _ in run_index_fields) + " |")
+        for row in run_index_rows:
+            run_index_lines.append(
+                "| " + " | ".join(str(row.get(name, "")) for name in run_index_fields) + " |"
+            )
+    else:
+        run_index_lines.append("No retained report.json files were found.")
+    rollup_run_index_md.write_text("\n".join(run_index_lines) + "\n", encoding="utf-8")
+
+    side_by_side_lines = [
+        "# Per-Model Side By Side",
+        "",
+    ]
+    if detailed_rows:
+        side_by_side_lines.append("| " + " | ".join(detailed_fields) + " |")
+        side_by_side_lines.append("| " + " | ".join("---" for _ in detailed_fields) + " |")
+        for row in detailed_rows:
+            side_by_side_lines.append(
+                "| " + " | ".join(str(row.get(name, "")) for name in detailed_fields) + " |"
+            )
+    else:
+        side_by_side_lines.append("No baseline/Myelon comparison pairs were available.")
+    per_model_side_by_side_md.write_text("\n".join(side_by_side_lines) + "\n", encoding="utf-8")
+
+    return {
+        "current_findings_csv": str(current_findings_csv),
+        "current_findings_md": str(current_findings_md),
+        "rollup_run_index_csv": str(rollup_run_index_csv),
+        "rollup_run_index_md": str(rollup_run_index_md),
+        "per_model_side_by_side_csv": str(per_model_side_by_side_csv),
+        "per_model_side_by_side_md": str(per_model_side_by_side_md),
     }

@@ -82,6 +82,20 @@ def load_model_config(model_path: str | Path) -> dict[str, object] | None:
         return None
 
 
+def infer_model_label(model_path: str | Path) -> str:
+    path = Path(model_path)
+    for part in path.parts:
+        if part.startswith("models--"):
+            tokens = [token for token in part.split("--") if token]
+            if len(tokens) >= 3 and tokens[0] == "models":
+                return f"{tokens[1]}/{tokens[2]}"
+            if len(tokens) >= 2:
+                return "/".join(tokens[1:])
+    if path.name:
+        return path.name
+    return str(path)
+
+
 def classify_model_capability(model_path: str | Path) -> dict[str, object]:
     config = load_model_config(model_path)
     architectures = config.get("architectures", []) if isinstance(config, dict) else []
@@ -114,6 +128,7 @@ def classify_model_capability(model_path: str | Path) -> dict[str, object]:
     )
 
     return {
+        "model_label": infer_model_label(model_path),
         "architecture": architecture,
         "architectures": architectures,
         "model_type": model_type,
