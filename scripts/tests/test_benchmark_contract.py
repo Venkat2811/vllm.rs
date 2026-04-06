@@ -597,9 +597,11 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             current_findings_md = Path(outputs["current_findings_md"])
             rollup_run_index_md = Path(outputs["rollup_run_index_md"])
             per_model_side_by_side_md = Path(outputs["per_model_side_by_side_md"])
+            all_run_commands_md = Path(outputs["all_run_commands_md"])
             self.assertTrue(current_findings_md.is_file())
             self.assertTrue(rollup_run_index_md.is_file())
             self.assertTrue(per_model_side_by_side_md.is_file())
+            self.assertTrue(all_run_commands_md.is_file())
 
             findings_text = current_findings_md.read_text(encoding="utf-8")
             self.assertIn("Qwen/Qwen3-4B", findings_text)
@@ -608,6 +610,9 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             side_text = per_model_side_by_side_md.read_text(encoding="utf-8")
             self.assertIn("requests_per_sec", side_text)
             self.assertIn("Qwen/Qwen3-4B", side_text)
+
+            commands_text = all_run_commands_md.read_text(encoding="utf-8")
+            self.assertIn("All Run Commands", commands_text)
 
 
 if __name__ == "__main__":
