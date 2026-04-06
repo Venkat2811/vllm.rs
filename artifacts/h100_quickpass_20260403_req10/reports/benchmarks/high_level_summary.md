@@ -25,6 +25,14 @@
 | Qwen/Qwen3-4B   | serving_qos        | warm_steady_state   | single_gpu         |                -11.7877 |                 135.709 |               119.712 |                                     |                                   |
 | Qwen/Qwen3-0.6B | pd_qos             | warm_steady_state   | pd_tp1             |                -11.583  |                 315.755 |               279.181 |                                     |                                   |
 
+## Strongest Prompt Throughput Gains
+
+No prompt-throughput deltas were available.
+
+## Strongest First-Prefill Wins
+
+No first-prefill deltas were available.
+
 ## Notable Regressions
 
 | model_label          | benchmark_family   | benchmark_submode   | topology_overlay   |   requests_per_sec_delta_percent |   baseline_requests_per_sec |   myelon_requests_per_sec | baseline_pressure_profile_outcome   | myelon_pressure_profile_outcome   |
