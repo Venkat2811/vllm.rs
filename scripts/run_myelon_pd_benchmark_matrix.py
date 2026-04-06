@@ -12,6 +12,7 @@ from myelon_validation_common import (
     build_benchmark_contract,
     build_machine_profile,
     classify_arrival_pattern,
+    classify_model_capability,
     default_build_features,
     detect_cuda_device_count,
     env_str,
@@ -178,29 +179,14 @@ def main() -> int:
         print(f"upstream benchmark script does not exist: {upstream_benchmark_script}", file=sys.stderr)
         return 1
 
+    model_capability = classify_model_capability(model_path)
+
     try:
         validate_device_roles(server_device_ids, client_device_ids)
     except ValueError as error:
         print(f"invalid PD device configuration: {error}", file=sys.stderr)
         return 1
 
-    subprocess.run(
-        [
-            "cargo",
-            "build",
-            f"--{build_profile}",
-            "--bin",
-            "vllm-rs",
-            "--bin",
-            "runner",
-            "--features",
-            build_features,
-        ],
-        cwd=repo_root,
-        check=True,
-    )
-
-    binary_path = repo_root / "target" / build_profile / "vllm-rs"
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     output_root = Path(
         env_str(
@@ -258,7 +244,7 @@ def main() -> int:
         ),
         run_class=run_class,
         stop_point="full_completion",
-        skip_reason=None,
+        skip_reason=model_capability["pd_skip_reason"],
     )
     machine_profile = build_machine_profile(
         detected_cuda_device_count=detect_cuda_device_count(),
@@ -268,6 +254,7 @@ def main() -> int:
     report: dict[str, object] = {
         "benchmark_contract": benchmark_contract,
         "machine_profile": machine_profile,
+        "model_capability": model_capability,
         "model_path": model_path,
         "workload_file": str(workload_file),
         "build_profile": build_profile,
@@ -293,6 +280,39 @@ def main() -> int:
         "request_timeout_seconds": request_timeout_seconds,
         "cases": [],
     }
+
+    if not model_capability["pd_supported"]:
+        report["status"] = "skipped_unsupported_architecture"
+        report["report_bundle"] = write_report_bundle(
+            output_root=output_root,
+            report=report,
+            report_path=report_path,
+            repo_root=repo_root,
+            capture_raw_system=capture_raw_system,
+        )
+        report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        print(report_path)
+        return 0
+
+    report["status"] = "completed"
+
+    subprocess.run(
+        [
+            "cargo",
+            "build",
+            f"--{build_profile}",
+            "--bin",
+            "vllm-rs",
+            "--bin",
+            "runner",
+            "--features",
+            build_features,
+        ],
+        cwd=repo_root,
+        check=True,
+    )
+
+    binary_path = repo_root / "target" / build_profile / "vllm-rs"
 
     base_env = os.environ.copy()
     compute_cap_override = os.environ.get("CUDA_COMPUTE_CAP")
@@ -493,6 +513,12 @@ def main() -> int:
             case_report["pd_server_exit_code"] = terminate_process(pd_server, 10)
 
         report["cases"].append(case_report)
+        if (
+            case_report.get("skip_reason")
+            or case_report.get("stop_point") != "full_completion"
+            or case_report.get("benchmark_exit_code") not in (None, 0)
+        ):
+            report["status"] = "partial"
         report["report_bundle"] = write_report_bundle(
             output_root=output_root,
             report=report,

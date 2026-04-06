@@ -16,6 +16,7 @@ from myelon_validation_common import (
     build_benchmark_contract,
     build_machine_profile,
     classify_arrival_pattern,
+    classify_model_capability,
     default_build_features,
     env_str,
     infer_request_run_class,
@@ -308,6 +309,7 @@ def main() -> int:
     report_path = output_root / "report.json"
 
     report: dict[str, object] = {
+        "status": "completed",
         "mode": mode,
         "model_path": model_path,
         "workload_file": str(workload_file),
@@ -395,9 +397,11 @@ def main() -> int:
         detected_cuda_device_count=detected_cuda_device_count,
         effective_device_ids=effective_device_ids,
     )
+    model_capability = classify_model_capability(model_path)
     report["effective_device_ids"] = effective_device_ids
     report["benchmark_contract"] = benchmark_contract
     report["machine_profile"] = machine_profile
+    report["model_capability"] = model_capability
 
     for index, (label, topology_args) in enumerate(cases):
         port = port_base + index
@@ -544,6 +548,12 @@ def main() -> int:
             case_report["server_exit_code"] = terminate_process(server, 10)
 
         report["cases"].append(case_report)
+        if (
+            case_report.get("skip_reason")
+            or case_report.get("stop_point") != "full_completion"
+            or case_report.get("benchmark_exit_code") not in (None, 0)
+        ):
+            report["status"] = "partial"
         report["report_bundle"] = write_report_bundle(
             output_root=output_root,
             report=report,
