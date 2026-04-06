@@ -36,8 +36,8 @@
   "repo_state": {
     "repo_path": "/root/Documents/myelon-launch/vllm.rs",
     "branch": "myelon-integration-1",
-    "commit": "afc99aa6e120d9947d1a22dd352a2001b96b4b62",
-    "status": "M scripts/myelon_benchmark_common.py\n M scripts/myelon_report_common.py\n M scripts/run_myelon_benchmark_matrix.py\n M scripts/tests/test_benchmark_contract.py\n?? artifacts/h100_prefill_campaign_20260406/"
+    "commit": "b97556ec594ed257807e2e9f71a1f59a38f0c7e1",
+    "status": "M artifacts/h100_prefill_campaign_20260406/qwen30ba3b_tp2_first_prefill_v1/report.json\n M scripts/myelon_report_common.py\n M scripts/myelon_validation_common.py\n M scripts/run_myelon_benchmark_matrix.py\n M scripts/run_myelon_pd_benchmark_matrix.py\n M scripts/run_myelon_server_benchmark_matrix.py\n M scripts/tests/test_benchmark_contract.py"
   },
   "raw_captures": {}
 }

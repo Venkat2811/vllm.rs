@@ -27,6 +27,9 @@ VALID_BENCHMARK_FAMILIES = frozenset(
 VALID_CACHE_PRESSURE_PROFILES = frozenset(
     {"unspecified", "relaxed", "bounded_prefix", "swap_pressure", "hard_thrash"}
 )
+TP_SCALE_RE = re.compile(r"^tp(\d+)$")
+PD_SCALE_RE = re.compile(r"^pd\(tp(\d+)/tp(\d+)\)$")
+PD_FLAT_SCALE_RE = re.compile(r"^pd_tp(\d+)(?:_tp(\d+))?$")
 KVCACHE_PLAN_RE = re.compile(
     r"KVCache Allocation: (\d+) GPU blocks .* max usable kvcache tokens (\d+) .* "
     r"scheduling limits \[(\d+) seqs x (\d+) tokens\]"
@@ -442,6 +445,70 @@ def build_machine_profile(
     }
 
 
+def infer_tp_scale_contract_fields(
+    topology_overlay: str,
+    transport_mode: str | None = None,
+) -> dict[str, object]:
+    candidate = topology_overlay.strip()
+    if candidate == "single_gpu":
+        return {
+            "tp_scale_overlay": "tp1",
+            "prefill_tp_size": 1,
+            "decode_tp_size": 1,
+            "pd_enabled": False,
+            "pd_role_layout": None,
+        }
+
+    tp_match = TP_SCALE_RE.match(candidate)
+    if tp_match:
+        tp_size = int(tp_match.group(1))
+        return {
+            "tp_scale_overlay": candidate,
+            "prefill_tp_size": tp_size,
+            "decode_tp_size": tp_size,
+            "pd_enabled": False,
+            "pd_role_layout": None,
+        }
+
+    pd_scale_match = PD_SCALE_RE.match(candidate)
+    if pd_scale_match:
+        prefill_tp = int(pd_scale_match.group(1))
+        decode_tp = int(pd_scale_match.group(2))
+        return {
+            "tp_scale_overlay": candidate,
+            "prefill_tp_size": prefill_tp,
+            "decode_tp_size": decode_tp,
+            "pd_enabled": True,
+            "pd_role_layout": "same_host_split_roles",
+        }
+
+    pd_flat_match = PD_FLAT_SCALE_RE.match(candidate)
+    if pd_flat_match:
+        prefill_tp = int(pd_flat_match.group(1))
+        decode_tp = int(pd_flat_match.group(2) or pd_flat_match.group(1))
+        return {
+            "tp_scale_overlay": f"pd(tp{prefill_tp}/tp{decode_tp})",
+            "prefill_tp_size": prefill_tp,
+            "decode_tp_size": decode_tp,
+            "pd_enabled": True,
+            "pd_role_layout": "same_host_split_roles",
+        }
+
+    return {
+        "tp_scale_overlay": candidate,
+        "prefill_tp_size": None,
+        "decode_tp_size": None,
+        "pd_enabled": transport_mode.startswith("pd_")
+        if isinstance(transport_mode, str)
+        else False,
+        "pd_role_layout": (
+            "same_host_split_roles"
+            if isinstance(transport_mode, str) and transport_mode.startswith("pd_")
+            else None
+        ),
+    }
+
+
 def build_benchmark_contract(
     benchmark_family: str,
     benchmark_submode: str,
@@ -454,6 +521,11 @@ def build_benchmark_contract(
     cache_pressure_profile: str,
     equivalence_group: str | None,
     topology_overlay: str,
+    tp_scale_overlay: str | None,
+    prefill_tp_size: int | None,
+    decode_tp_size: int | None,
+    pd_enabled: bool | None,
+    pd_role_layout: str | None,
     transport_mode: str,
     run_class: str,
     stop_point: str,
@@ -485,6 +557,27 @@ def build_benchmark_contract(
         raise ValueError("equivalence_group must be non-empty when provided")
     if not topology_overlay.strip():
         raise ValueError("topology_overlay must be non-empty")
+    inferred_tp_scale = infer_tp_scale_contract_fields(topology_overlay, transport_mode)
+    if tp_scale_overlay is None:
+        tp_scale_overlay = inferred_tp_scale["tp_scale_overlay"]
+    if prefill_tp_size is None:
+        prefill_tp_size = inferred_tp_scale["prefill_tp_size"]
+    if decode_tp_size is None:
+        decode_tp_size = inferred_tp_scale["decode_tp_size"]
+    if pd_enabled is None:
+        pd_enabled = inferred_tp_scale["pd_enabled"]
+    if pd_role_layout is None:
+        pd_role_layout = inferred_tp_scale["pd_role_layout"]
+    if not isinstance(tp_scale_overlay, str) or not tp_scale_overlay.strip():
+        raise ValueError("tp_scale_overlay must be non-empty")
+    if prefill_tp_size is not None and prefill_tp_size <= 0:
+        raise ValueError("prefill_tp_size must be > 0 when provided")
+    if decode_tp_size is not None and decode_tp_size <= 0:
+        raise ValueError("decode_tp_size must be > 0 when provided")
+    if pd_role_layout is not None and not pd_role_layout.strip():
+        raise ValueError("pd_role_layout must be non-empty when provided")
+    if pd_enabled is False:
+        pd_role_layout = None
     if not transport_mode.strip():
         raise ValueError("transport_mode must be non-empty")
     if run_class not in VALID_RUN_CLASSES:
@@ -508,6 +601,11 @@ def build_benchmark_contract(
         "cache_pressure_profile": cache_pressure_profile,
         "equivalence_group": equivalence_group,
         "topology_overlay": topology_overlay,
+        "tp_scale_overlay": tp_scale_overlay,
+        "prefill_tp_size": prefill_tp_size,
+        "decode_tp_size": decode_tp_size,
+        "pd_enabled": pd_enabled,
+        "pd_role_layout": pd_role_layout,
         "transport_mode": transport_mode,
         "run_class": run_class,
         "stop_point": stop_point,
