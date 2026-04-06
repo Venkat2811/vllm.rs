@@ -90,17 +90,21 @@ class BenchmarkContractHelperTests(unittest.TestCase):
     def test_build_benchmark_contract_requires_expected_fields(self) -> None:
         contract = validation_common.build_benchmark_contract(
             benchmark_family="prefill_stress",
+            benchmark_submode="fixed_prompt_burst",
             question_answered="Does Myelon help prompt paths?",
             workload_class="synthetic_prompt_short",
             warmup_policy="cli_warmup_runs:1",
             first_turn_measured=True,
             arrival_pattern="prompt_burst_serial_runs",
             concurrency_policy={"driver": "cli", "max_num_seqs": 1},
+            topology_overlay="tp2",
+            transport_mode="socket_vs_myelon_process_runner",
             run_class="quickpass",
             stop_point="full_completion",
             skip_reason=None,
         )
         self.assertEqual(contract["benchmark_family"], "prefill_stress")
+        self.assertEqual(contract["benchmark_submode"], "fixed_prompt_burst")
         self.assertEqual(contract["run_class"], "quickpass")
         self.assertIn("concurrency_policy", contract)
 
@@ -157,6 +161,8 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(rc, 0)
             report = json.loads(output_path.read_text(encoding="utf-8"))
             self.assertEqual(report["benchmark_contract"]["benchmark_family"], "prefill_stress")
+            self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "fixed_prompt_burst")
+            self.assertEqual(report["benchmark_contract"]["topology_overlay"], "tp2")
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
             self.assertIn("machine_profile", report)
 
@@ -213,6 +219,11 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             report_path = output_dir / "report.json"
             report = json.loads(report_path.read_text(encoding="utf-8"))
             self.assertEqual(report["benchmark_contract"]["benchmark_family"], "serving_qos")
+            self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "warm_steady_state")
+            self.assertEqual(
+                report["benchmark_contract"]["transport_mode"],
+                "socket_vs_myelon_process_runner",
+            )
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
             self.assertEqual(report["cases"][0]["stop_point"], "full_completion")
             self.assertIn("machine_profile", report)
@@ -279,6 +290,8 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             report_path = output_dir / "report.json"
             report = json.loads(report_path.read_text(encoding="utf-8"))
             self.assertEqual(report["benchmark_contract"]["benchmark_family"], "pd_qos")
+            self.assertEqual(report["benchmark_contract"]["benchmark_submode"], "first_transfer_control")
+            self.assertEqual(report["benchmark_contract"]["transport_mode"], "pd_localipc_default")
             self.assertEqual(report["benchmark_contract"]["run_class"], "quickpass")
             self.assertEqual(report["cases"][0]["stop_point"], "full_completion")
             self.assertIn("machine_profile", report)
