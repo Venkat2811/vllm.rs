@@ -97,3 +97,4 @@ See:
 - `artifacts/h100_benchmarking_2026_04_06/benchmark_contract_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/report_bundle_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/unsupported_skip_slice.md`
+- `artifacts/h100_benchmarking_2026_04_06/side_by_side_report_slice.md`
