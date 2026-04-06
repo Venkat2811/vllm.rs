@@ -1,0 +1,13 @@
+# Per-Variant Side By Side
+
+| baseline_variant   | myelon_variant   | metric                             |   baseline_value |   myelon_value |   delta_percent | baseline_status   | myelon_status   |
+|--------------------|------------------|------------------------------------|------------------|----------------|-----------------|-------------------|-----------------|
+| runner_pd          | myelon_pd        | requests_per_sec                   |            1.164 |          1.163 |         -0.0859 | completed         | completed       |
+| runner_pd          | myelon_pd        | runtime_sec                        |            6.011 |          6.018 |          0.1165 | completed         | completed       |
+| runner_pd          | myelon_pd        | ttft_ms_mean                       |          331.445 |        306.037 |         -7.6658 | completed         | completed       |
+| runner_pd          | myelon_pd        | tpot_ms_mean                       |            6.673 |          6.756 |          1.2438 | completed         | completed       |
+| runner_pd          | myelon_pd        | latency_ms_mean                    |          532.614 |        509.719 |         -4.2986 | completed         | completed       |
+| runner_pd          | myelon_pd        | observed_successful_requests_total |            7     |          7     |          0      | completed         | completed       |
+| runner_pd          | myelon_pd        | observed_failed_requests_total     |            0     |          0     |                 | completed         | completed       |
+| runner_pd          | myelon_pd        | observed_clients_with_failures     |            0     |          0     |                 | completed         | completed       |
+| runner_pd          | myelon_pd        | observed_http_422_rejection_count  |            0     |          0     |                 | completed         | completed       |

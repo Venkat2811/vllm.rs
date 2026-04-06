@@ -2061,6 +2061,7 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
     by_equivalence_root = reports_dir / "by_equivalence"
     by_workload_root = reports_dir / "by_workload"
     by_topology_root = reports_dir / "by_topology"
+    by_model_root = reports_dir / "by_model"
     by_run_class_root = reports_dir / "by_run_class"
     by_result_boundary_root = reports_dir / "by_result_boundary"
     by_artifact_class_root = reports_dir / "by_artifact_class"
@@ -2758,6 +2759,12 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
             "findings_stem": "findings",
         },
         {
+            "root": by_model_root,
+            "field": "model_label",
+            "title_prefix": "Model",
+            "findings_stem": "findings",
+        },
+        {
             "root": by_run_class_root,
             "field": "run_class",
             "title_prefix": "Run Class",
@@ -2845,6 +2852,7 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         "by_equivalence_root": str(by_equivalence_root),
         "by_workload_root": str(by_workload_root),
         "by_topology_root": str(by_topology_root),
+        "by_model_root": str(by_model_root),
         "by_run_class_root": str(by_run_class_root),
         "by_result_boundary_root": str(by_result_boundary_root),
         "by_artifact_class_root": str(by_artifact_class_root),
