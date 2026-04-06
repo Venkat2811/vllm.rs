@@ -19,6 +19,7 @@ from myelon_validation_common import (
     classify_model_capability,
     default_build_features,
     env_str,
+    extract_server_kvcache_plan,
     infer_request_run_class,
     infer_workload_class_from_path,
     parse_device_ids,
@@ -43,6 +44,7 @@ VALID_SERVER_SUBMODES = {
     "serving_qos": {"cold_turn", "warm_steady_state"},
     "server_prefill_stress": {
         "fixed_prompt_burst",
+        "low_decode",
         "cache_thrash_round_robin",
         "shared_prefix_round_robin_control",
     },
@@ -218,6 +220,22 @@ def resolve_server_prefill_defaults(benchmark_submode: str) -> dict[str, object]
             "kv_fraction": 0.55,
             "cpu_mem_fold": 0.5,
         }
+    if benchmark_submode == "low_decode":
+        return {
+            "warmup_step": False,
+            "num_clients": 16,
+            "max_active_conversations": 32,
+            "max_num_seqs": 32,
+            "max_num_requests": 192,
+            "max_turns": 6,
+            "request_rate": "0",
+            "conversation_sampling": "round_robin",
+            "limit_min_tokens": 16,
+            "limit_max_tokens": 32,
+            "prefix_cache_enabled": False,
+            "kv_fraction": 0.55,
+            "cpu_mem_fold": 0.5,
+        }
     if benchmark_submode == "shared_prefix_round_robin_control":
         return {
             "warmup_step": False,
@@ -251,6 +269,25 @@ def resolve_server_prefill_defaults(benchmark_submode: str) -> dict[str, object]
         "kv_fraction": 0.08,
         "cpu_mem_fold": 0.05,
     }
+
+
+def apply_server_prefill_cache_pressure_defaults(
+    benchmark_submode: str,
+    cache_pressure_profile: str | None,
+    defaults: dict[str, object],
+) -> dict[str, object]:
+    resolved = dict(defaults)
+    if cache_pressure_profile != "swap_pressure":
+        return resolved
+    if benchmark_submode == "fixed_prompt_burst":
+        return resolved
+    resolved["prefix_cache_enabled"] = True
+    resolved["prefix_cache_max_tokens"] = 512
+    resolved["kv_fraction"] = 0.08
+    resolved["cpu_mem_fold"] = 2.0
+    resolved["limit_min_tokens"] = 32
+    resolved["limit_max_tokens"] = 32
+    return resolved
 
 
 def derive_device_ids(
@@ -370,6 +407,18 @@ def terminate_process(process: subprocess.Popen[bytes], timeout_seconds: int) ->
     return int(process.returncode)
 
 
+def should_abort_swap_pressure_for_seq_capacity(
+    cache_pressure_profile: str,
+    allocator_plan: dict[str, int] | None,
+) -> bool:
+    if cache_pressure_profile != "swap_pressure" or allocator_plan is None:
+        return False
+    planned_max_seqs = allocator_plan.get("planned_max_seqs")
+    if planned_max_seqs is None:
+        return False
+    return planned_max_seqs < 4
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parent.parent
     upstream_repo_root = repo_root.parent / "vllm"
@@ -390,11 +439,16 @@ def main() -> int:
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 1
-    prefill_defaults = (
-        resolve_server_prefill_defaults(benchmark_submode)
-        if benchmark_family == "server_prefill_stress"
-        else {}
-    )
+    requested_cache_pressure_profile = env_optional_str("VLLM_CACHE_PRESSURE_PROFILE")
+    prefill_defaults = {}
+    if benchmark_family == "server_prefill_stress":
+        prefill_defaults = apply_server_prefill_cache_pressure_defaults(
+            benchmark_submode,
+            requested_cache_pressure_profile.strip()
+            if requested_cache_pressure_profile is not None
+            else None,
+            resolve_server_prefill_defaults(benchmark_submode),
+        )
     workload_default = default_server_workload_path(
         repo_root,
         benchmark_family,
@@ -880,31 +934,53 @@ def main() -> int:
             models = ready_payload.get("data", [])
             served_model_name = models[0]["id"]
             case_report["served_model_name"] = served_model_name
+            allocator_plan = extract_server_kvcache_plan(server_log_path)
+            if allocator_plan is not None:
+                case_report["allocator_plan"] = allocator_plan
 
             benchmark_command_with_model = list(benchmark_command)
             benchmark_command_with_model.extend(["--served-model-name", served_model_name])
             case_report["benchmark_command"] = benchmark_command_with_model
 
-            started_at = time.time()
-            completed = subprocess.run(
-                benchmark_command_with_model,
-                cwd=repo_root,
-                env=base_env,
-                capture_output=True,
-                text=True,
-                timeout=benchmark_timeout_seconds,
-                check=False,
-            )
-            finished_at = time.time()
+            if should_abort_swap_pressure_for_seq_capacity(
+                cache_pressure_profile,
+                allocator_plan,
+            ):
+                case_report["benchmark_exit_code"] = None
+                case_report["stop_point"] = "allocator_seq_capacity_collapse"
+                case_report["skip_reason"] = (
+                    "swap_pressure_profile_collapsed_effective_seq_capacity"
+                )
+                benchmark_log_path.write_text(
+                    "benchmark skipped: allocator plan collapsed effective server "
+                    f"capacity to {allocator_plan['planned_max_seqs']} seq(s) x "
+                    f"{allocator_plan['planned_tokens_per_seq_limit']} tokens under "
+                    "swap_pressure profile\n",
+                    encoding="utf-8",
+                )
+            else:
+                started_at = time.time()
+                completed = subprocess.run(
+                    benchmark_command_with_model,
+                    cwd=repo_root,
+                    env=base_env,
+                    capture_output=True,
+                    text=True,
+                    timeout=benchmark_timeout_seconds,
+                    check=False,
+                )
+                finished_at = time.time()
 
-            benchmark_text = completed.stdout
-            if completed.stderr:
-                benchmark_text = benchmark_text + "\n" + completed.stderr
-            benchmark_log_path.write_text(benchmark_text, encoding="utf-8")
+                benchmark_text = completed.stdout
+                if completed.stderr:
+                    benchmark_text = benchmark_text + "\n" + completed.stderr
+                benchmark_log_path.write_text(benchmark_text, encoding="utf-8")
 
-            case_report["benchmark_exit_code"] = completed.returncode
-            case_report["benchmark_elapsed_seconds"] = round(finished_at - started_at, 3)
-            case_report["summary"] = parse_summary(benchmark_text)
+                case_report["benchmark_exit_code"] = completed.returncode
+                case_report["benchmark_elapsed_seconds"] = round(
+                    finished_at - started_at, 3
+                )
+                case_report["summary"] = parse_summary(benchmark_text)
         except subprocess.TimeoutExpired as error:
             case_report["benchmark_timeout"] = benchmark_timeout_seconds
             case_report["benchmark_exit_code"] = None

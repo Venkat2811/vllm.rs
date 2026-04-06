@@ -27,6 +27,10 @@ VALID_BENCHMARK_FAMILIES = frozenset(
 VALID_CACHE_PRESSURE_PROFILES = frozenset(
     {"unspecified", "relaxed", "bounded_prefix", "swap_pressure", "hard_thrash"}
 )
+KVCACHE_PLAN_RE = re.compile(
+    r"KVCache Allocation: (\d+) GPU blocks .* max usable kvcache tokens (\d+) .* "
+    r"scheduling limits \[(\d+) seqs x (\d+) tokens\]"
+)
 
 
 def resolve_run_class(explicit: str | None, inferred_default: str) -> str:
@@ -65,6 +69,28 @@ def classify_arrival_pattern(request_rate: str | float | int | None) -> str:
     if value <= 0:
         return "saturation_zero_gap"
     return "configured_fixed_rate"
+
+
+def extract_server_kvcache_plan(log_path: str | Path) -> dict[str, int] | None:
+    path = Path(log_path)
+    if not path.is_file():
+        return None
+
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+    match = KVCACHE_PLAN_RE.search(text)
+    if not match:
+        return None
+
+    return {
+        "planned_gpu_blocks": int(match.group(1)),
+        "planned_usable_kvcache_tokens": int(match.group(2)),
+        "planned_max_seqs": int(match.group(3)),
+        "planned_tokens_per_seq_limit": int(match.group(4)),
+    }
 
 
 def infer_cache_pressure_profile(
