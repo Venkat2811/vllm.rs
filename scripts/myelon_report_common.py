@@ -151,9 +151,18 @@ def build_case_rows(report: dict[str, object]) -> list[dict[str, object]]:
     for case in report.get("cases", []):
         summary = case.get("summary") if isinstance(case, dict) else None
         measured_summary = case.get("measured_summary") if isinstance(case, dict) else None
+        if case.get("skip_reason"):
+            case_status = "skipped"
+        elif case.get("stop_point") not in (None, "full_completion"):
+            case_status = str(case.get("stop_point"))
+        elif case.get("benchmark_exit_code") not in (None, 0):
+            case_status = "benchmark_failed"
+        else:
+            case_status = "completed"
         row: dict[str, object] = {
             "label": case.get("label"),
             "execution_variant": case.get("execution_variant", case.get("label")),
+            "case_status": case_status,
             "stop_point": case.get("stop_point", "full_completion"),
             "skip_reason": case.get("skip_reason"),
             "benchmark_exit_code": case.get("benchmark_exit_code"),
@@ -211,6 +220,7 @@ def write_benchmark_reports(
         f"| transport_mode | {contract.get('transport_mode')} |",
         f"| run_class | {contract.get('run_class')} |",
         f"| stop_point | {contract.get('stop_point')} |",
+        f"| status | {report.get('status')} |",
         f"| report_json | {report_path} |",
         "",
         "## Case Summary",

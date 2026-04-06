@@ -16,6 +16,7 @@ from myelon_report_common import write_report_bundle
 from myelon_validation_common import (
     build_benchmark_contract,
     build_machine_profile,
+    classify_model_capability,
     default_build_features,
     env_str,
     infer_cli_run_class,
@@ -209,6 +210,7 @@ def main() -> int:
         detected_cuda_device_count=detected_cuda_device_count,
         effective_device_ids=parsed_device_ids,
     )
+    model_capability = classify_model_capability(model_path)
 
     def write_failure_report(status: str, failed_case: str, failed_run: dict, stop_point: str) -> int:
         failure_contract = dict(benchmark_contract)
@@ -216,10 +218,11 @@ def main() -> int:
         failure_report = {
             "benchmark_contract": failure_contract,
             "machine_profile": machine_profile,
+            "model_capability": model_capability,
+            "status": status,
             "mode": mode,
             "workload_profile": workload_profile,
             "prompt_source": prompt_source,
-            "status": status,
             "failed_case": failed_case,
             "failed_run": failed_run,
         }
@@ -330,6 +333,8 @@ def main() -> int:
     report = {
         "benchmark_contract": benchmark_contract,
         "machine_profile": machine_profile,
+        "model_capability": model_capability,
+        "status": "completed",
         "mode": mode,
         "workload_profile": workload_profile,
         "prompt_source": prompt_source,
