@@ -97,6 +97,13 @@ def env_optional_int(name: str) -> int | None:
     return int(value)
 
 
+def env_optional_str(name: str) -> str | None:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return None
+    return value
+
+
 def prepare_cases(mode: str) -> list[tuple[str, list[str]]]:
     if mode == "single_gpu":
         return [
@@ -371,7 +378,6 @@ def main() -> int:
         )
     )
     mode = env_str("VLLM_SERVER_BENCHMARK_MODE", "single_gpu")
-    max_model_len = env_str("VLLM_MAX_MODEL_LEN", "1024")
     seed = env_str("VLLM_SEED", "123")
     build_profile = env_str("VLLM_BUILD_PROFILE", "release")
     build_features = env_str("VLLM_BUILD_FEATURES", "")
@@ -435,6 +441,22 @@ def main() -> int:
     cpu_mem_fold = env_optional_float("VLLM_SERVER_CPU_MEM_FOLD")
     if cpu_mem_fold is None and "cpu_mem_fold" in prefill_defaults:
         cpu_mem_fold = float(prefill_defaults["cpu_mem_fold"])
+    explicit_max_model_len = env_optional_str("VLLM_MAX_MODEL_LEN")
+    explicit_kv_fraction = env_optional_str("VLLM_SERVER_KV_FRACTION")
+    if explicit_max_model_len is not None and explicit_kv_fraction is not None:
+        print(
+            "VLLM_MAX_MODEL_LEN and VLLM_SERVER_KV_FRACTION cannot both be set explicitly",
+            file=sys.stderr,
+        )
+        return 1
+    if explicit_max_model_len is not None:
+        max_model_len: str | None = explicit_max_model_len
+        if benchmark_family == "server_prefill_stress" and explicit_kv_fraction is None:
+            kv_fraction = None
+    elif benchmark_family == "server_prefill_stress" and kv_fraction is not None:
+        max_model_len = None
+    else:
+        max_model_len = "1024"
     cache_pressure_profile = resolve_cache_pressure_profile(
         os.environ.get("VLLM_CACHE_PRESSURE_PROFILE"),
         kv_fraction=kv_fraction,
@@ -513,7 +535,7 @@ def main() -> int:
         "device_ids": device_ids,
         "parsed_device_ids": parsed_device_ids,
         "detected_cuda_device_count": detected_cuda_device_count,
-        "max_model_len": int(max_model_len),
+        "max_model_len": int(max_model_len) if max_model_len is not None else None,
         "max_num_seqs": max_num_seqs,
         "seed": int(seed),
         "num_clients": num_clients,
@@ -638,8 +660,6 @@ def main() -> int:
             str(port),
             "--w",
             model_path,
-            "--max-model-len",
-            max_model_len,
             "--max-num-seqs",
             str(max_num_seqs),
             "--dtype",
@@ -648,6 +668,8 @@ def main() -> int:
             seed,
             *topology_args,
         ]
+        if max_model_len is not None:
+            server_command.extend(["--max-model-len", max_model_len])
         if effective_device_ids_str:
             server_command.extend(["--device-ids", effective_device_ids_str])
         if prefix_cache_enabled:
