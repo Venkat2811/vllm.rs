@@ -27,6 +27,10 @@ TRUNCATED_SUMMARY_ROW_RE = re.compile(
     r"^\s*(ttft_ms|tpot_ms|latency_ms)\s+[0-9.]+\s+([0-9.]+)\s+[0-9.]+\s+\.\.\.\s+[0-9.]+\s+[0-9.]+\s+([0-9.]+)$",
     re.MULTILINE,
 )
+CLIENT_DONE_RE = re.compile(r"Client \d+ is done \(num_successes=(\d+), num_failures=(\d+)\)")
+CLIENT_NO_MORE_WORK_RE = re.compile(r"Client \d+ has no more work")
+CLIENT_TERMINATION_SIGNAL_RE = re.compile(r"Client \d+ received a termination signal")
+HTTP_422_REJECTION_RE = re.compile(r"Received HTTP status 422 ")
 SCHEDULER_KVCACHE_RE = re.compile(
     r"GPU Kvcache: .* used ([0-9.]+)% \(([0-9.]+)GB/([0-9.]+)GB\); CPU swap used ([0-9.]+)% \(([0-9.]+)GB/([0-9.]+)GB\)"
 )
@@ -334,6 +338,34 @@ def build_case_rows(report: dict[str, object]) -> list[dict[str, object]]:
             )
             row["observed_cache_pressure_level"] = observed_cache_pressure.get(
                 "observed_cache_pressure_level"
+            )
+        observed_benchmark_outcome = (
+            case.get("observed_benchmark_outcome") if isinstance(case, dict) else None
+        )
+        if isinstance(observed_benchmark_outcome, dict):
+            row["observed_client_done_count"] = observed_benchmark_outcome.get(
+                "observed_client_done_count"
+            )
+            row["observed_successful_requests_total"] = observed_benchmark_outcome.get(
+                "observed_successful_requests_total"
+            )
+            row["observed_failed_requests_total"] = observed_benchmark_outcome.get(
+                "observed_failed_requests_total"
+            )
+            row["observed_clients_with_failures"] = observed_benchmark_outcome.get(
+                "observed_clients_with_failures"
+            )
+            row["observed_client_no_more_work_count"] = observed_benchmark_outcome.get(
+                "observed_client_no_more_work_count"
+            )
+            row["observed_client_termination_signal_count"] = observed_benchmark_outcome.get(
+                "observed_client_termination_signal_count"
+            )
+            row["observed_http_422_rejection_count"] = observed_benchmark_outcome.get(
+                "observed_http_422_rejection_count"
+            )
+            row["observed_request_rejections"] = observed_benchmark_outcome.get(
+                "observed_request_rejections"
             )
         rows.append(row)
     return rows
@@ -738,6 +770,53 @@ def _backfill_case_summary_from_benchmark_log(case: dict[str, object]) -> None:
         }
 
 
+def _backfill_case_benchmark_outcome_from_benchmark_log(case: dict[str, object]) -> None:
+    existing = case.get("observed_benchmark_outcome")
+    if isinstance(existing, dict) and existing:
+        return
+
+    benchmark_log_path = case.get("benchmark_log_path")
+    if not isinstance(benchmark_log_path, str) or not benchmark_log_path:
+        return
+
+    path = Path(benchmark_log_path)
+    if not path.is_file():
+        return
+
+    text = path.read_text(encoding="utf-8", errors="replace")
+    client_done_matches = CLIENT_DONE_RE.findall(text)
+    success_total = sum(int(successes) for successes, _ in client_done_matches)
+    failure_total = sum(int(failures) for _, failures in client_done_matches)
+    clients_with_failures = sum(
+        1 for _, failures in client_done_matches if int(failures) > 0
+    )
+    client_done_count = len(client_done_matches)
+    no_more_work_count = len(CLIENT_NO_MORE_WORK_RE.findall(text))
+    termination_signal_count = len(CLIENT_TERMINATION_SIGNAL_RE.findall(text))
+    http_422_rejection_count = len(HTTP_422_REJECTION_RE.findall(text))
+
+    if (
+        client_done_count == 0
+        and no_more_work_count == 0
+        and termination_signal_count == 0
+        and http_422_rejection_count == 0
+    ):
+        return
+
+    case["observed_benchmark_outcome"] = {
+        "observed_client_done_count": client_done_count,
+        "observed_successful_requests_total": success_total,
+        "observed_failed_requests_total": failure_total,
+        "observed_clients_with_failures": clients_with_failures,
+        "observed_client_no_more_work_count": no_more_work_count,
+        "observed_client_termination_signal_count": termination_signal_count,
+        "observed_http_422_rejection_count": http_422_rejection_count,
+        "observed_request_rejections": (
+            http_422_rejection_count > 0 or failure_total > 0
+        ),
+    }
+
+
 def _backfill_case_observed_cache_pressure(
     case: dict[str, object],
     default_requested_profile: str | None = None,
@@ -886,6 +965,7 @@ def normalize_report(report: dict[str, object]) -> dict[str, object]:
         if isinstance(case, dict):
             _backfill_case_summary_from_benchmark_log(case)
             _backfill_case_observed_cache_pressure(case, default_requested_profile)
+            _backfill_case_benchmark_outcome_from_benchmark_log(case)
     normalized["benchmark_contract"] = contract
     normalized["machine_profile"] = infer_machine_profile(report)
     normalized["model_capability"] = infer_model_capability(report)
@@ -933,6 +1013,10 @@ def build_side_by_side_rows(report: dict[str, object]) -> list[dict[str, object]
         "observed_prefix_cache_miss_count",
         "observed_prefix_cache_insert_count",
         "observed_prefix_cache_eviction_count",
+        "observed_successful_requests_total",
+        "observed_failed_requests_total",
+        "observed_clients_with_failures",
+        "observed_http_422_rejection_count",
     ]
     for metric in metrics:
         baseline_value = _to_float(baseline_case.get(metric))
@@ -1283,6 +1367,24 @@ def build_rollup_rows(report_path: Path, report: dict[str, object]) -> tuple[dic
             ),
             "myelon_observed_cpu_swap_usage_percent_max": myelon_case.get(
                 "observed_cpu_swap_usage_percent_max"
+            ),
+            "baseline_observed_successful_requests_total": baseline_case.get(
+                "observed_successful_requests_total"
+            ),
+            "myelon_observed_successful_requests_total": myelon_case.get(
+                "observed_successful_requests_total"
+            ),
+            "baseline_observed_failed_requests_total": baseline_case.get(
+                "observed_failed_requests_total"
+            ),
+            "myelon_observed_failed_requests_total": myelon_case.get(
+                "observed_failed_requests_total"
+            ),
+            "baseline_observed_http_422_rejection_count": baseline_case.get(
+                "observed_http_422_rejection_count"
+            ),
+            "myelon_observed_http_422_rejection_count": myelon_case.get(
+                "observed_http_422_rejection_count"
             ),
             "baseline_pressure_profile_outcome": baseline_case.get(
                 "pressure_profile_outcome"
