@@ -1,0 +1,51 @@
+{
+  "machine_profile": {
+    "hostname": "plain-bear-unfolds-fin-02",
+    "system": "Linux",
+    "release": "6.8.0-100-generic",
+    "platform": "Linux-6.8.0-100-generic-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "python_version": "3.12.3",
+    "cpu_count": 80,
+    "cuda_visible_devices": null,
+    "cuda_compute_cap_override": "90",
+    "detected_cuda_device_count": 2,
+    "effective_device_ids": [
+      0,
+      1
+    ],
+    "gpu_inventory": [
+      {
+        "index": 0,
+        "name": "NVIDIA H100 80GB HBM3",
+        "uuid": "GPU-3c2c0933-5b7b-0bc0-a5d6-db6edf878ca3",
+        "pci_bus_id": "00000000:04:00.0",
+        "memory_total_mib": 81559,
+        "driver_version": "580.126.09"
+      },
+      {
+        "index": 1,
+        "name": "NVIDIA H100 80GB HBM3",
+        "uuid": "GPU-95a9e106-0069-f78d-2e47-8fe5be687336",
+        "pci_bus_id": "00000000:05:00.0",
+        "memory_total_mib": 81559,
+        "driver_version": "580.126.09"
+      }
+    ]
+  },
+  "repo_state": {
+    "repo_path": "/root/Documents/myelon-launch/vllm.rs",
+    "branch": "myelon-integration-1",
+    "commit": "602c1c1e73633f989d6e22fb36c7e8e713263853",
+    "status": "M artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_shared_prefix_round_robin.json\n M artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_stress_round_robin.json\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/all_run_commands.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/current_findings.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/current_findings.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/per_model_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/per_model_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/rollup_run_index.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/rollup_run_index.md\n M scripts/myelon_report_common.py\n M scripts/run_myelon_server_benchmark_matrix.py\n M scripts/tests/test_benchmark_contract.py\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/"
+  },
+  "raw_captures": {
+    "hostnamectl.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/raw/system_info/hostnamectl.txt",
+    "lscpu.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/raw/system_info/lscpu.txt",
+    "free_h.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/raw/system_info/free_h.txt",
+    "df_h.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/raw/system_info/df_h.txt",
+    "uname.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/raw/system_info/uname.txt",
+    "nvidia_smi.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/raw/system_info/nvidia_smi.txt",
+    "nvidia_smi_topology.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/raw/system_info/nvidia_smi_topology.txt"
+  }
+}
