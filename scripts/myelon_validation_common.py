@@ -123,6 +123,37 @@ def classify_model_capability(model_path: str | Path) -> dict[str, object]:
     }
 
 
+def classify_pd_topology_capability(
+    server_device_ids: list[int] | None,
+    client_device_ids: list[int] | None,
+    detected_cuda_device_count: int | None,
+) -> dict[str, object]:
+    skip_reason = None
+    if server_device_ids is None or client_device_ids is None:
+        skip_reason = "unsupported_topology_pd_requires_explicit_single_device_roles"
+    elif len(server_device_ids) != 1 or len(client_device_ids) != 1:
+        skip_reason = "unsupported_topology_pd_requires_single_device_server_and_client"
+    elif server_device_ids[0] == client_device_ids[0]:
+        skip_reason = "unsupported_topology_pd_requires_distinct_server_client_devices"
+    elif detected_cuda_device_count is not None:
+        invalid_server = [
+            device_id for device_id in server_device_ids if device_id >= detected_cuda_device_count
+        ]
+        invalid_client = [
+            device_id for device_id in client_device_ids if device_id >= detected_cuda_device_count
+        ]
+        if invalid_server or invalid_client:
+            skip_reason = "unsupported_topology_insufficient_visible_cuda_devices"
+
+    return {
+        "server_device_ids": server_device_ids,
+        "client_device_ids": client_device_ids,
+        "detected_cuda_device_count": detected_cuda_device_count,
+        "pd_supported": skip_reason is None,
+        "pd_skip_reason": skip_reason,
+    }
+
+
 def detect_gpu_inventory() -> list[dict[str, object]] | None:
     try:
         completed = subprocess.run(
