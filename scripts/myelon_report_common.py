@@ -633,6 +633,7 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
     rollup_run_index_md = reports_dir / "rollup_run_index.md"
     per_model_side_by_side_csv = reports_dir / "per_model_side_by_side.csv"
     per_model_side_by_side_md = reports_dir / "per_model_side_by_side.md"
+    all_run_commands_md = reports_dir / "all_run_commands.md"
 
     run_index_rows: list[dict[str, object]] = []
     findings_rows: list[dict[str, object]] = []
@@ -755,6 +756,50 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         side_by_side_lines.append("No baseline/Myelon comparison pairs were available.")
     per_model_side_by_side_md.write_text("\n".join(side_by_side_lines) + "\n", encoding="utf-8")
 
+    command_lines = [
+        "# All Run Commands",
+        "",
+        f"- campaign_root: `{campaign_root}`",
+        "",
+    ]
+    if report_paths:
+        for report_path in report_paths:
+            report = load_report_json(report_path)
+            if not isinstance(report, dict):
+                continue
+            normalized_report = normalize_report(report)
+            run_index_row = build_run_index_rows(normalized_report, report_path)[0]
+            command_lines.extend(
+                [
+                    f"## {run_index_row.get('model_label')} / {run_index_row.get('benchmark_family')} / {run_index_row.get('topology_overlay')}",
+                    "",
+                    f"- report_json: `{report_path}`",
+                    f"- status: `{run_index_row.get('status')}`",
+                    "",
+                ]
+            )
+            for case in normalized_report.get("cases", []):
+                if not isinstance(case, dict):
+                    continue
+                command_lines.append(f"### {case.get('execution_variant', case.get('label'))}")
+                command_lines.append("")
+                for key in ("server_command", "pd_server_command", "client_server_command", "benchmark_command", "command"):
+                    value = case.get(key)
+                    if not value:
+                        continue
+                    if isinstance(value, list):
+                        rendered = " ".join(str(item) for item in value)
+                    else:
+                        rendered = str(value)
+                    command_lines.append(f"- {key}:")
+                    command_lines.append("```bash")
+                    command_lines.append(rendered)
+                    command_lines.append("```")
+                command_lines.append("")
+    else:
+        command_lines.append("No retained report.json files were found.")
+    all_run_commands_md.write_text("\n".join(command_lines) + "\n", encoding="utf-8")
+
     return {
         "current_findings_csv": str(current_findings_csv),
         "current_findings_md": str(current_findings_md),
@@ -762,4 +807,5 @@ def write_rollup_reports(campaign_root: Path) -> dict[str, str]:
         "rollup_run_index_md": str(rollup_run_index_md),
         "per_model_side_by_side_csv": str(per_model_side_by_side_csv),
         "per_model_side_by_side_md": str(per_model_side_by_side_md),
+        "all_run_commands_md": str(all_run_commands_md),
     }
