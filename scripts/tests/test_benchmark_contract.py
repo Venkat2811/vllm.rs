@@ -1736,6 +1736,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 "fixed_prompt_burst_bridge",
             )
             self.assertEqual(report["max_num_seqs"], 32)
+            self.assertEqual(report["max_model_len"], 4096)
             self.assertTrue(
                 report["workload_file"].endswith(
                     "synthetic_server_prefill_fixed_prompt_burst.json"
@@ -1747,8 +1748,9 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             server_command = report["cases"][0]["server_command"]
             self.assertIn("--max-num-seqs", server_command)
             self.assertIn("32", server_command)
-            self.assertIn("--kv-fraction", server_command)
-            self.assertNotIn("--max-model-len", server_command)
+            self.assertIn("--max-model-len", server_command)
+            self.assertIn("4096", server_command)
+            self.assertNotIn("--kv-fraction", server_command)
             benchmark_command = report["cases"][0]["benchmark_command"]
             self.assertIn("benchmark_server_fixed_prompt_burst.py", " ".join(benchmark_command))
             self.assertIn("--prompt-text", benchmark_command)
@@ -1810,9 +1812,13 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["max_active_conversations"], 256)
             self.assertEqual(report["max_num_requests"], 256)
             self.assertEqual(report["max_num_seqs"], 256)
+            self.assertEqual(report["max_model_len"], 4096)
             server_command = report["cases"][0]["server_command"]
             self.assertIn("--max-num-seqs", server_command)
             self.assertIn("256", server_command)
+            self.assertIn("--max-model-len", server_command)
+            self.assertIn("4096", server_command)
+            self.assertNotIn("--kv-fraction", server_command)
 
     def test_server_prefill_explicit_max_model_len_drops_default_kv_fraction(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

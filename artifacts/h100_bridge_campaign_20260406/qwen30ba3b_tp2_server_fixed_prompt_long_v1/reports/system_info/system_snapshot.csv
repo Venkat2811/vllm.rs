@@ -1,0 +1,18 @@
+section,key,value
+machine_profile,hostname,hazy-instance-completes-fin-02
+machine_profile,system,Linux
+machine_profile,release,6.8.0-100-generic
+machine_profile,platform,Linux-6.8.0-100-generic-x86_64-with-glibc2.39
+machine_profile,machine,x86_64
+machine_profile,python_version,3.12.3
+machine_profile,cpu_count,80
+machine_profile,cuda_visible_devices,
+machine_profile,cuda_compute_cap_override,90
+machine_profile,detected_cuda_device_count,2
+machine_profile,effective_device_ids,"[0, 1]"
+repo_state,repo_path,/root/Documents/myelon-launch/vllm.rs
+repo_state,branch,myelon-integration-1
+repo_state,commit,41c37a1d483b92ac09e4b90148fa63fc4223bb43
+repo_state,status,"M scripts/run_myelon_server_benchmark_matrix.py
+ M scripts/tests/test_benchmark_contract.py
+?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_long_v1/"
