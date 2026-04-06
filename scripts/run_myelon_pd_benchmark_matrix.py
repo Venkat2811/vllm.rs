@@ -138,10 +138,10 @@ def resolve_pd_benchmark_submode(
         candidate = explicit.strip()
     else:
         candidate = "warm_steady_state"
-    if candidate not in {"cold_turn", "warm_steady_state"}:
+    if candidate not in {"cold_turn", "cold_turn_idle_gap", "warm_steady_state"}:
         raise ValueError(
             f"unsupported pd_qos submode {candidate!r}; "
-            "expected one of ['cold_turn', 'first_transfer_control', 'warm_steady_state']"
+            "expected one of ['cold_turn', 'cold_turn_idle_gap', 'first_transfer_control', 'warm_steady_state']"
         )
     return candidate
 
@@ -153,6 +153,24 @@ def expected_pd_warmup_step(
     if workload_class == "pd_first_transfer_control" or benchmark_submode == "first_transfer_control":
         return False
     return benchmark_submode == "warm_steady_state"
+
+
+def resolve_pd_qos_defaults(benchmark_submode: str) -> dict[str, object]:
+    if benchmark_submode == "cold_turn_idle_gap":
+        return {
+            "num_clients": 1,
+            "max_active_conversations": 2,
+            "max_num_requests": 16,
+            "max_turns": 2,
+            "request_rate": "1.0",
+        }
+    return {
+        "num_clients": 1,
+        "max_active_conversations": 2,
+        "max_num_requests": 16,
+        "max_turns": 2,
+        "request_rate": "0",
+    }
 
 
 def main() -> int:
@@ -255,6 +273,31 @@ def main() -> int:
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 1
+    pd_defaults = (
+        {}
+        if benchmark_submode == "first_transfer_control"
+        else resolve_pd_qos_defaults(benchmark_submode)
+    )
+    num_clients = env_int(
+        "VLLM_SERVER_BENCH_NUM_CLIENTS",
+        int(pd_defaults.get("num_clients", num_clients)),
+    )
+    max_active_conversations = env_int(
+        "VLLM_SERVER_BENCH_MAX_ACTIVE_CONVERSATIONS",
+        int(pd_defaults.get("max_active_conversations", max_active_conversations)),
+    )
+    max_num_requests = env_int(
+        "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS",
+        int(pd_defaults.get("max_num_requests", max_num_requests)),
+    )
+    max_turns = env_int(
+        "VLLM_SERVER_BENCH_MAX_TURNS",
+        int(pd_defaults.get("max_turns", max_turns)),
+    )
+    request_rate = env_str(
+        "VLLM_SERVER_BENCH_REQUEST_RATE",
+        str(pd_defaults.get("request_rate", request_rate)),
+    )
     explicit_warmup_step = env_optional_bool("VLLM_SERVER_BENCH_WARMUP_STEP")
     default_warmup_step = expected_pd_warmup_step(workload_class, benchmark_submode)
     if explicit_warmup_step is not None and explicit_warmup_step != default_warmup_step:
