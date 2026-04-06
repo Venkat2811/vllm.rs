@@ -1,0 +1,6 @@
+baseline_variant,myelon_variant,metric,baseline_value,myelon_value,delta_percent,baseline_status,myelon_status
+runner,myelon,requests_per_sec,36.127,35.491,-1.7605,completed,completed
+runner,myelon,runtime_sec,14.172,14.426,1.7923,completed,completed
+runner,myelon,ttft_ms_mean,847.61,855.41,0.9202,completed,completed
+runner,myelon,tpot_ms_mean,0.0,0.0,,completed,completed
+runner,myelon,latency_ms_mean,876.9,892.82,1.8155,completed,completed

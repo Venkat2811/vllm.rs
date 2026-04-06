@@ -1,0 +1,352 @@
+{
+  "status": "completed",
+  "mode": "tp2",
+  "model_path": "/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca",
+  "workload_file": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_fixed_prompt_burst.json",
+  "build_profile": "release",
+  "build_features": "cuda,myelon,nccl",
+  "device_ids": "0,1",
+  "parsed_device_ids": [
+    0,
+    1
+  ],
+  "detected_cuda_device_count": 2,
+  "max_model_len": null,
+  "max_num_seqs": 256,
+  "seed": 123,
+  "num_clients": 1,
+  "max_active_conversations": 256,
+  "max_num_requests": 512,
+  "max_turns": 2,
+  "max_retries": 1,
+  "request_rate": 0.0,
+  "warmup_step": false,
+  "no_stream": false,
+  "conversation_sampling": "round_robin",
+  "limit_min_tokens": 1,
+  "limit_max_tokens": 1,
+  "server_ready_timeout_seconds": 300,
+  "benchmark_timeout_seconds": 1800,
+  "request_timeout_seconds": 300,
+  "myelon_rpc_depth": 8192,
+  "myelon_response_depth": 8192,
+  "myelon_busy_spin": false,
+  "benchmark_family": "server_prefill_stress",
+  "benchmark_submode": "fixed_prompt_burst",
+  "prefix_cache_enabled": false,
+  "prefix_cache_max_tokens": null,
+  "kv_fraction": 0.55,
+  "cpu_mem_fold": 0.5,
+  "cache_pressure_profile": "relaxed",
+  "expected_case_count": 2,
+  "expected_case_labels": [
+    "runner",
+    "myelon"
+  ],
+  "cases": [
+    {
+      "label": "runner",
+      "execution_variant": "runner",
+      "stop_point": "full_completion",
+      "skip_reason": null,
+      "cache_pressure_profile": "relaxed",
+      "conversation_sampling": "round_robin",
+      "limit_min_tokens": 1,
+      "limit_max_tokens": 1,
+      "server_port": 19720,
+      "server_command": [
+        "/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs",
+        "--server",
+        "--port",
+        "19720",
+        "--w",
+        "/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca",
+        "--max-num-seqs",
+        "256",
+        "--dtype",
+        "bf16",
+        "--seed",
+        "123",
+        "--num-shards",
+        "2",
+        "--force-runner",
+        "--device-ids",
+        "0,1",
+        "--kv-fraction",
+        "0.55",
+        "--cpu-mem-fold",
+        "0.5"
+      ],
+      "benchmark_command": [
+        "uv",
+        "run",
+        "--with",
+        "aiohttp",
+        "python3",
+        "/root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py",
+        "--url",
+        "http://127.0.0.1:19720",
+        "--output-file",
+        "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/runner/conversations.json",
+        "--prompt-text",
+        "Please talk about China in more details.",
+        "--num-requests",
+        "512",
+        "--concurrency",
+        "256",
+        "--max-tokens",
+        "1",
+        "--request-timeout-sec",
+        "300",
+        "--served-model-name",
+        "c1899de289a04d12100db370d81485cdf75e47ca"
+      ],
+      "server_log_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/runner/server.log",
+      "benchmark_log_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/runner/benchmark.log",
+      "benchmark_output_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/runner/conversations.json",
+      "served_model_name": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "allocator_plan": {
+        "planned_gpu_blocks": 12337,
+        "planned_usable_kvcache_tokens": 789568,
+        "planned_max_seqs": 8,
+        "planned_tokens_per_seq_limit": 40960
+      },
+      "benchmark_exit_code": 0,
+      "benchmark_elapsed_seconds": 16.869,
+      "summary": {
+        "runtime_sec": 16.63,
+        "requests_per_sec": 30.788,
+        "warmup_runtime_sec": null,
+        "total_runtime_incl_warmup_sec": null,
+        "table": {
+          "ttft_ms": {
+            "mean": 7243.3,
+            "min": 2974.05,
+            "max": 11666.54
+          },
+          "tpot_ms": {
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "latency_ms": {
+            "mean": 7278.36,
+            "min": 3521.3,
+            "max": 11677.62
+          }
+        }
+      },
+      "server_exit_code": -2
+    },
+    {
+      "label": "myelon",
+      "execution_variant": "myelon",
+      "stop_point": "full_completion",
+      "skip_reason": null,
+      "cache_pressure_profile": "relaxed",
+      "conversation_sampling": "round_robin",
+      "limit_min_tokens": 1,
+      "limit_max_tokens": 1,
+      "server_port": 19721,
+      "server_command": [
+        "/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs",
+        "--server",
+        "--port",
+        "19721",
+        "--w",
+        "/root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca",
+        "--max-num-seqs",
+        "256",
+        "--dtype",
+        "bf16",
+        "--seed",
+        "123",
+        "--num-shards",
+        "2",
+        "--myelon-ipc",
+        "--device-ids",
+        "0,1",
+        "--myelon-rpc-depth",
+        "8192",
+        "--myelon-response-depth",
+        "8192",
+        "--kv-fraction",
+        "0.55",
+        "--cpu-mem-fold",
+        "0.5"
+      ],
+      "benchmark_command": [
+        "uv",
+        "run",
+        "--with",
+        "aiohttp",
+        "python3",
+        "/root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py",
+        "--url",
+        "http://127.0.0.1:19721",
+        "--output-file",
+        "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/myelon/conversations.json",
+        "--prompt-text",
+        "Please talk about China in more details.",
+        "--num-requests",
+        "512",
+        "--concurrency",
+        "256",
+        "--max-tokens",
+        "1",
+        "--request-timeout-sec",
+        "300",
+        "--served-model-name",
+        "c1899de289a04d12100db370d81485cdf75e47ca"
+      ],
+      "server_log_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/myelon/server.log",
+      "benchmark_log_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/myelon/benchmark.log",
+      "benchmark_output_path": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/myelon/conversations.json",
+      "served_model_name": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "allocator_plan": {
+        "planned_gpu_blocks": 12337,
+        "planned_usable_kvcache_tokens": 789568,
+        "planned_max_seqs": 8,
+        "planned_tokens_per_seq_limit": 40960
+      },
+      "benchmark_exit_code": 0,
+      "benchmark_elapsed_seconds": 17.241,
+      "summary": {
+        "runtime_sec": 17.001,
+        "requests_per_sec": 30.117,
+        "warmup_runtime_sec": null,
+        "total_runtime_incl_warmup_sec": null,
+        "table": {
+          "ttft_ms": {
+            "mean": 7424.09,
+            "min": 358.37,
+            "max": 11732.72
+          },
+          "tpot_ms": {
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          },
+          "latency_ms": {
+            "mean": 7460.32,
+            "min": 3087.98,
+            "max": 11772.46
+          }
+        }
+      },
+      "server_exit_code": -2
+    }
+  ],
+  "effective_device_ids": [
+    0,
+    1
+  ],
+  "benchmark_contract": {
+    "benchmark_family": "server_prefill_stress",
+    "benchmark_submode": "fixed_prompt_burst",
+    "question_answered": "How much shared-memory gain survives when the full server path stays in the loop under cache-hostile, prefill-dominant conditions?",
+    "workload_class": "synthetic_server_fixed_prompt_burst",
+    "warmup_policy": "measure_first_turn",
+    "first_turn_measured": true,
+    "arrival_pattern": "saturation_zero_gap",
+    "concurrency_policy": {
+      "driver": "persistent_http_server",
+      "max_num_seqs": 256,
+      "num_clients": 1,
+      "max_active_conversations": 256,
+      "max_num_requests": 512,
+      "max_turns": 2,
+      "request_rate": 0.0,
+      "conversation_sampling": "round_robin",
+      "limit_min_tokens": 1,
+      "limit_max_tokens": 1,
+      "mode": "tp2"
+    },
+    "cache_pressure_profile": "relaxed",
+    "equivalence_group": "fixed_prompt_burst_bridge",
+    "topology_overlay": "tp2",
+    "transport_mode": "socket_vs_myelon_process_runner",
+    "run_class": "fullpass",
+    "stop_point": "full_completion",
+    "skip_reason": null
+  },
+  "machine_profile": {
+    "hostname": "hazy-instance-completes-fin-02",
+    "system": "Linux",
+    "release": "6.8.0-100-generic",
+    "platform": "Linux-6.8.0-100-generic-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "python_version": "3.12.3",
+    "cpu_count": 80,
+    "cuda_visible_devices": null,
+    "cuda_compute_cap_override": "90",
+    "detected_cuda_device_count": 2,
+    "effective_device_ids": [
+      0,
+      1
+    ],
+    "gpu_inventory": [
+      {
+        "index": 0,
+        "name": "NVIDIA H100 80GB HBM3",
+        "uuid": "GPU-4679f8ab-6634-0857-9596-656a31d20d55",
+        "pci_bus_id": "00000000:04:00.0",
+        "memory_total_mib": 81559,
+        "driver_version": "580.126.09"
+      },
+      {
+        "index": 1,
+        "name": "NVIDIA H100 80GB HBM3",
+        "uuid": "GPU-8ab41b77-bdd9-ec7c-f8e6-28b00e146ae0",
+        "pci_bus_id": "00000000:05:00.0",
+        "memory_total_mib": 81559,
+        "driver_version": "580.126.09"
+      }
+    ]
+  },
+  "model_capability": {
+    "model_label": "Qwen/Qwen3-0.6B",
+    "architecture": "Qwen3ForCausalLM",
+    "architectures": [
+      "Qwen3ForCausalLM"
+    ],
+    "model_type": "qwen3",
+    "layer_types": [],
+    "pd_supported": true,
+    "pd_skip_reason": null
+  },
+  "report_bundle": {
+    "manifest": {
+      "json": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/manifest.json",
+      "md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/manifest.md"
+    },
+    "system_info": {
+      "json": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/system_info/system_snapshot.json",
+      "csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/system_info/system_snapshot.csv",
+      "md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/system_info/system_snapshot.md"
+    },
+    "benchmarks": {
+      "summary_md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/run_summary.md",
+      "details_csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/run_details.csv",
+      "run_index_csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/run_index.csv",
+      "run_index_md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/run_index.md",
+      "side_by_side_csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/per_variant_side_by_side.csv",
+      "side_by_side_md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/reports/benchmarks/per_variant_side_by_side.md"
+    },
+    "repo_state": {
+      "repo_path": "/root/Documents/myelon-launch/vllm.rs",
+      "branch": "myelon-integration-1",
+      "commit": "387f3dc4d387e6ecae05d7ad1de49905a54ad908",
+      "status": "M scripts/myelon_report_common.py\n M scripts/tests/test_benchmark_contract.py\n?? artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/\n?? artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/\n?? artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/\n?? artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/"
+    },
+    "raw_captures": {
+      "hostnamectl.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/raw/system_info/hostnamectl.txt",
+      "lscpu.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/raw/system_info/lscpu.txt",
+      "free_h.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/raw/system_info/free_h.txt",
+      "df_h.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/raw/system_info/df_h.txt",
+      "uname.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/raw/system_info/uname.txt",
+      "nvidia_smi.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/raw/system_info/nvidia_smi.txt",
+      "nvidia_smi_topology.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/raw/system_info/nvidia_smi_topology.txt"
+    }
+  }
+}
