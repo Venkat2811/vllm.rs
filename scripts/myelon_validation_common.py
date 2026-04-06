@@ -426,6 +426,7 @@ def build_benchmark_contract(
     arrival_pattern: str,
     concurrency_policy: dict[str, object],
     cache_pressure_profile: str,
+    equivalence_group: str | None,
     topology_overlay: str,
     transport_mode: str,
     run_class: str,
@@ -454,6 +455,8 @@ def build_benchmark_contract(
             f"invalid cache pressure profile {cache_pressure_profile!r}; expected one of "
             f"{sorted(VALID_CACHE_PRESSURE_PROFILES)}"
         )
+    if equivalence_group is not None and not equivalence_group.strip():
+        raise ValueError("equivalence_group must be non-empty when provided")
     if not topology_overlay.strip():
         raise ValueError("topology_overlay must be non-empty")
     if not transport_mode.strip():
@@ -477,6 +480,7 @@ def build_benchmark_contract(
         "arrival_pattern": arrival_pattern,
         "concurrency_policy": concurrency_policy,
         "cache_pressure_profile": cache_pressure_profile,
+        "equivalence_group": equivalence_group,
         "topology_overlay": topology_overlay,
         "transport_mode": transport_mode,
         "run_class": run_class,

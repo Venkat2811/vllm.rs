@@ -201,6 +201,11 @@ def main() -> int:
             "expected_num_shards": expected_num_shards,
         },
         cache_pressure_profile="unspecified",
+        equivalence_group=(
+            "fixed_prompt_burst_bridge"
+            if workload_profile == "synthetic_short"
+            else None
+        ),
         topology_overlay=mode,
         transport_mode="socket_vs_myelon_process_runner",
         run_class=run_class,
