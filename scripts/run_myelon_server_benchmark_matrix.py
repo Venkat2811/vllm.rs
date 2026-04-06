@@ -207,6 +207,7 @@ def resolve_server_prefill_defaults(benchmark_submode: str) -> dict[str, object]
             "warmup_step": False,
             "num_clients": 1,
             "max_active_conversations": 32,
+            "max_num_seqs": 32,
             "max_num_requests": 32,
             "max_turns": 2,
             "request_rate": "0",
@@ -220,9 +221,10 @@ def resolve_server_prefill_defaults(benchmark_submode: str) -> dict[str, object]
     if benchmark_submode == "shared_prefix_round_robin_control":
         return {
             "warmup_step": False,
-            "num_clients": 1,
-            "max_active_conversations": 12,
-            "max_num_requests": 32,
+            "num_clients": 32,
+            "max_active_conversations": 64,
+            "max_num_seqs": 64,
+            "max_num_requests": 384,
             "max_turns": 6,
             "request_rate": "0",
             "conversation_sampling": "round_robin",
@@ -235,18 +237,19 @@ def resolve_server_prefill_defaults(benchmark_submode: str) -> dict[str, object]
         }
     return {
         "warmup_step": False,
-        "num_clients": 1,
-        "max_active_conversations": 16,
-        "max_num_requests": 32,
+        "num_clients": 32,
+        "max_active_conversations": 64,
+        "max_num_seqs": 64,
+        "max_num_requests": 384,
         "max_turns": 6,
         "request_rate": "0",
         "conversation_sampling": "round_robin",
         "limit_min_tokens": 8,
         "limit_max_tokens": 8,
         "prefix_cache_enabled": True,
-        "prefix_cache_max_tokens": 4096,
-        "kv_fraction": 0.35,
-        "cpu_mem_fold": 0.1,
+        "prefix_cache_max_tokens": 1024,
+        "kv_fraction": 0.08,
+        "cpu_mem_fold": 0.05,
     }
 
 
@@ -413,7 +416,6 @@ def main() -> int:
     build_features = env_str("VLLM_BUILD_FEATURES", "")
     device_ids = os.environ.get("VLLM_DEVICE_IDS")
     parsed_device_ids = parse_device_ids(device_ids)
-    max_num_seqs = env_int("VLLM_SERVER_MAX_NUM_SEQS", 8)
     server_ready_timeout_seconds = env_int("VLLM_SERVER_READY_TIMEOUT_SECONDS", 300)
     benchmark_timeout_seconds = env_int("VLLM_SERVER_BENCH_TIMEOUT_SECONDS", 900)
     request_timeout_seconds = env_int("VLLM_SERVER_REQUEST_TIMEOUT_SECONDS", 180)
@@ -440,6 +442,16 @@ def main() -> int:
         "VLLM_SERVER_BENCH_MAX_TURNS",
         int(prefill_defaults.get("max_turns", 4)),
     )
+    explicit_max_num_seqs = env_optional_int("VLLM_SERVER_MAX_NUM_SEQS")
+    if explicit_max_num_seqs is not None:
+        max_num_seqs = explicit_max_num_seqs
+    elif benchmark_family == "server_prefill_stress":
+        max_num_seqs = max(
+            max_active_conversations,
+            int(prefill_defaults.get("max_num_seqs", max_active_conversations)),
+        )
+    else:
+        max_num_seqs = 8
     max_retries = env_int("VLLM_SERVER_BENCH_MAX_RETRIES", 1)
     request_rate = env_or_default_float_string(
         "VLLM_SERVER_BENCH_REQUEST_RATE",

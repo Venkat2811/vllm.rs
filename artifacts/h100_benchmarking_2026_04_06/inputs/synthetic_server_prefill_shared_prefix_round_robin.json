@@ -1,8 +1,8 @@
 {
   "filetype": "generate_conversations",
-  "num_conversations": 32,
+  "num_conversations": 64,
   "text_files": [
-    "/root/Documents/myelon-launch/vllm/benchmarks/sonnet.txt"
+    "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_long_source.txt"
   ],
   "print_stats": true,
   "prompt_input": {
@@ -12,18 +12,18 @@
     },
     "common_prefix_num_tokens": {
       "distribution": "constant",
-      "value": 512
+      "value": 1024
     },
     "prefix_num_tokens": {
       "distribution": "uniform",
-      "min": 128,
-      "max": 256
+      "min": 512,
+      "max": 1024
     },
     "num_tokens": {
       "distribution": "lognormal",
-      "average": 640,
-      "median_ratio": 0.75,
-      "max": 1280
+      "average": 2048,
+      "median_ratio": 0.8,
+      "max": 4096
     }
   },
   "prompt_output": {

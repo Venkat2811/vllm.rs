@@ -1,12 +1,16 @@
 # H100 Benchmark Host Snapshot
 
 Date: 2026-04-06
-Host: `plain-bear-unfolds-fin-02`
+Hosts:
+
+- initial H100 host: `plain-bear-unfolds-fin-02`
+- resumed H100 host: `hazy-instance-completes-fin-02`
+
 Branch: `myelon-integration-1`
 
 ## Purpose
 
-Capture the current machine, GPU, and local model-cache state before the next retained `vllm.rs` benchmark wave.
+Capture the current machine, GPU, and local model-cache state before the next retained `vllm.rs` benchmark wave, including the later same-shape H100 host used after the first ondemand machine was shut down.
 
 ## Machine
 
@@ -16,7 +20,9 @@ Capture the current machine, GPU, and local model-cache state before the next re
 - CPU: `80` vCPUs, `AMD EPYC 9654 96-Core Processor`
 - RAM: `363 GiB`
 - swap: `0`
-- root disk free: about `104 GiB`
+- root disk free:
+  - initial host: about `104 GiB`
+  - resumed host: about `107 GiB`
 
 ## GPU
 
@@ -73,6 +79,8 @@ So the next retained benchmark wave on this host should start from:
 
 Carried-over binaries from the earlier hosts should not be treated as benchmark evidence.
 
+This gate was rerun after the later ondemand H100 host switch too.
+
 ## Next Benchmark-Planning Implication
 
 Use capability-based model selection by benchmark family:
@@ -108,6 +116,7 @@ See:
 - `artifacts/h100_benchmarking_2026_04_06/kvcache_pressure_server_bridge_note.md`
 - `artifacts/h100_benchmarking_2026_04_06/server_prefill_contract_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/server_prefill_workload_slice.md`
+- `artifacts/h100_benchmarking_2026_04_06/server_prefill_cache_pressure_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/server_prefill_kv_fraction_guard_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/server_prefill_bridge_results_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/model_workload_policy.md`
