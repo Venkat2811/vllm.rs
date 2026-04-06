@@ -187,6 +187,95 @@ def build_case_rows(report: dict[str, object]) -> list[dict[str, object]]:
     return rows
 
 
+def _to_float(value: object) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def build_run_index_rows(report: dict[str, object], report_path: Path) -> list[dict[str, object]]:
+    contract = report.get("benchmark_contract", {})
+    machine_profile = report.get("machine_profile", {})
+    model_capability = report.get("model_capability", {})
+    gpu_inventory = machine_profile.get("gpu_inventory", [])
+    gpu_names = []
+    if isinstance(gpu_inventory, list):
+        gpu_names = [item.get("name") for item in gpu_inventory if isinstance(item, dict)]
+
+    return [
+        {
+            "benchmark_family": contract.get("benchmark_family"),
+            "benchmark_submode": contract.get("benchmark_submode"),
+            "workload_class": contract.get("workload_class"),
+            "topology_overlay": contract.get("topology_overlay"),
+            "transport_mode": contract.get("transport_mode"),
+            "run_class": contract.get("run_class"),
+            "status": report.get("status"),
+            "stop_point": contract.get("stop_point"),
+            "skip_reason": contract.get("skip_reason"),
+            "host": machine_profile.get("hostname"),
+            "gpu_names": ",".join(str(item) for item in gpu_names if item),
+            "model_architecture": model_capability.get("architecture"),
+            "pd_supported": model_capability.get("pd_supported"),
+            "report_json": str(report_path),
+        }
+    ]
+
+
+def build_side_by_side_rows(report: dict[str, object]) -> list[dict[str, object]]:
+    case_rows = build_case_rows(report)
+    baseline_case = next(
+        (
+            row
+            for row in case_rows
+            if "myelon" not in str(row.get("execution_variant", "")).lower()
+        ),
+        None,
+    )
+    myelon_case = next(
+        (
+            row
+            for row in case_rows
+            if "myelon" in str(row.get("execution_variant", "")).lower()
+        ),
+        None,
+    )
+    if not baseline_case or not myelon_case:
+        return []
+
+    rows: list[dict[str, object]] = []
+    metrics = [
+        "requests_per_sec",
+        "runtime_sec",
+        "ttft_ms_mean",
+        "tpot_ms_mean",
+        "latency_ms_mean",
+        "prompt_seconds_mean",
+        "prompt_tps_mean",
+        "decode_seconds_mean",
+        "decode_tps_mean",
+    ]
+    for metric in metrics:
+        baseline_value = _to_float(baseline_case.get(metric))
+        myelon_value = _to_float(myelon_case.get(metric))
+        delta_percent = None
+        if baseline_value not in (None, 0.0) and myelon_value is not None:
+            delta_percent = ((myelon_value - baseline_value) / baseline_value) * 100.0
+        rows.append(
+            {
+                "baseline_variant": baseline_case.get("execution_variant"),
+                "myelon_variant": myelon_case.get("execution_variant"),
+                "metric": metric,
+                "baseline_value": baseline_value,
+                "myelon_value": myelon_value,
+                "delta_percent": round(delta_percent, 4) if delta_percent is not None else None,
+                "baseline_status": baseline_case.get("case_status"),
+                "myelon_status": myelon_case.get("case_status"),
+            }
+        )
+    return rows
+
+
 def write_benchmark_reports(
     output_root: Path,
     report: dict[str, object],
@@ -197,9 +286,15 @@ def write_benchmark_reports(
 
     summary_md_path = reports_dir / "run_summary.md"
     case_csv_path = reports_dir / "run_details.csv"
+    run_index_csv_path = reports_dir / "run_index.csv"
+    run_index_md_path = reports_dir / "run_index.md"
+    side_by_side_csv_path = reports_dir / "per_variant_side_by_side.csv"
+    side_by_side_md_path = reports_dir / "per_variant_side_by_side.md"
 
     contract = report.get("benchmark_contract", {})
     case_rows = build_case_rows(report)
+    run_index_rows = build_run_index_rows(report, report_path)
+    side_by_side_rows = build_side_by_side_rows(report)
     fieldnames = sorted({key for row in case_rows for key in row.keys()}) if case_rows else [
         "label",
         "execution_variant",
@@ -207,6 +302,24 @@ def write_benchmark_reports(
         "skip_reason",
     ]
     _write_csv(case_csv_path, case_rows, fieldnames)
+    _write_csv(
+        run_index_csv_path,
+        run_index_rows,
+        [key for key in run_index_rows[0].keys()],
+    )
+    side_by_side_fieldnames = (
+        [key for key in side_by_side_rows[0].keys()]
+        if side_by_side_rows
+        else [
+            "baseline_variant",
+            "myelon_variant",
+            "metric",
+            "baseline_value",
+            "myelon_value",
+            "delta_percent",
+        ]
+    )
+    _write_csv(side_by_side_csv_path, side_by_side_rows, side_by_side_fieldnames)
 
     lines = [
         "# Benchmark Summary",
@@ -237,9 +350,39 @@ def write_benchmark_reports(
         lines.append("No case rows were available.")
 
     summary_md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    run_index_lines = [
+        "# Run Index",
+        "",
+        "| Key | Value |",
+        "| --- | --- |",
+    ]
+    for key, value in run_index_rows[0].items():
+        run_index_lines.append(f"| {key} | {value} |")
+    run_index_md_path.write_text("\n".join(run_index_lines) + "\n", encoding="utf-8")
+
+    side_by_side_lines = [
+        "# Per-Variant Side By Side",
+        "",
+    ]
+    if side_by_side_rows:
+        side_header = side_by_side_fieldnames
+        side_by_side_lines.append("| " + " | ".join(side_header) + " |")
+        side_by_side_lines.append("| " + " | ".join("---" for _ in side_header) + " |")
+        for row in side_by_side_rows:
+            side_by_side_lines.append(
+                "| " + " | ".join(str(row.get(name, "")) for name in side_header) + " |"
+            )
+    else:
+        side_by_side_lines.append("No runner/Myelon comparison pair was available.")
+    side_by_side_md_path.write_text("\n".join(side_by_side_lines) + "\n", encoding="utf-8")
+
     return {
         "summary_md": str(summary_md_path),
         "details_csv": str(case_csv_path),
+        "run_index_csv": str(run_index_csv_path),
+        "run_index_md": str(run_index_md_path),
+        "side_by_side_csv": str(side_by_side_csv_path),
+        "side_by_side_md": str(side_by_side_md_path),
     }
 
 
