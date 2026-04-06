@@ -45,6 +45,13 @@ def env_bool(name: str, default: bool) -> bool:
     return value.lower() in {"1", "true", "yes"}
 
 
+def env_optional_bool(name: str) -> bool | None:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return None
+    return value.lower() in {"1", "true", "yes"}
+
+
 def wait_for_pd_server_ready(
     log_path: Path,
     process: subprocess.Popen[bytes],
@@ -115,6 +122,39 @@ def prepare_cases() -> list[tuple[str, list[str], list[str]]]:
     return cases
 
 
+def resolve_pd_benchmark_submode(
+    workload_class: str,
+    explicit: str | None,
+) -> str:
+    if workload_class == "pd_first_transfer_control":
+        candidate = explicit.strip() if explicit and explicit.strip() else "first_transfer_control"
+        if candidate != "first_transfer_control":
+            raise ValueError(
+                "unsupported pd_qos submode for pd_first_transfer_control workload; "
+                "expected 'first_transfer_control'"
+            )
+        return candidate
+    if explicit is not None and explicit.strip():
+        candidate = explicit.strip()
+    else:
+        candidate = "warm_steady_state"
+    if candidate not in {"cold_turn", "warm_steady_state"}:
+        raise ValueError(
+            f"unsupported pd_qos submode {candidate!r}; "
+            "expected one of ['cold_turn', 'first_transfer_control', 'warm_steady_state']"
+        )
+    return candidate
+
+
+def expected_pd_warmup_step(
+    workload_class: str,
+    benchmark_submode: str,
+) -> bool:
+    if workload_class == "pd_first_transfer_control" or benchmark_submode == "first_transfer_control":
+        return False
+    return benchmark_submode == "warm_steady_state"
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parent.parent
     upstream_repo_root = repo_root.parent / "vllm"
@@ -152,7 +192,13 @@ def main() -> int:
     pd_ready_timeout_seconds = env_int("VLLM_PD_READY_TIMEOUT_SECONDS", 300)
     client_port = env_int("VLLM_PD_CLIENT_PORT", 18080)
     max_num_seqs = env_int("VLLM_SERVER_MAX_NUM_SEQS", 8)
-    warmup_step = env_bool("VLLM_SERVER_BENCH_WARMUP_STEP", True)
+    myelon_rpc_depth = env_str("VLLM_MYELON_RPC_DEPTH", "8192")
+    myelon_response_depth = env_str("VLLM_MYELON_RESPONSE_DEPTH", "8192")
+    myelon_busy_spin = env_str("VLLM_MYELON_BUSY_SPIN", "1").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
     no_stream = env_bool("VLLM_SERVER_BENCH_NO_STREAM", False)
     prefix_cache = env_bool("VLLM_PD_PREFIX_CACHE", True)
     capture_raw_system = env_bool("VLLM_CAPTURE_RAW_SYSTEM_INFO", True)
@@ -201,6 +247,24 @@ def main() -> int:
     workload_class = infer_workload_class_from_path(str(workload_file))
     if workload_class == "file_defined" and "first_transfer" in str(workload_file).lower():
         workload_class = "pd_first_transfer_control"
+    try:
+        benchmark_submode = resolve_pd_benchmark_submode(
+            workload_class,
+            os.environ.get("VLLM_PD_BENCHMARK_SUBMODE"),
+        )
+    except ValueError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+    explicit_warmup_step = env_optional_bool("VLLM_SERVER_BENCH_WARMUP_STEP")
+    default_warmup_step = expected_pd_warmup_step(workload_class, benchmark_submode)
+    if explicit_warmup_step is not None and explicit_warmup_step != default_warmup_step:
+        print(
+            "VLLM_SERVER_BENCH_WARMUP_STEP conflicts with "
+            f"pd_qos.{benchmark_submode}",
+            file=sys.stderr,
+        )
+        return 1
+    warmup_step = explicit_warmup_step if explicit_warmup_step is not None else default_warmup_step
     warmup_policy = (
         "warmup_step_skips_first_turn" if warmup_step else "measure_first_turn"
     )
@@ -211,11 +275,7 @@ def main() -> int:
         effective_device_ids.extend(client_device_ids)
     benchmark_contract = build_benchmark_contract(
         benchmark_family="pd_qos",
-        benchmark_submode=(
-            "first_transfer_control"
-            if workload_class == "pd_first_transfer_control"
-            else ("warm_steady_state" if warmup_step else "cold_turn")
-        ),
+        benchmark_submode=benchmark_submode,
         question_answered="How does Myelon affect PD-capable serving paths on supported transports and models?",
         workload_class=workload_class,
         warmup_policy=warmup_policy,
@@ -292,6 +352,13 @@ def main() -> int:
         "pd_ready_timeout_seconds": pd_ready_timeout_seconds,
         "benchmark_timeout_seconds": benchmark_timeout_seconds,
         "request_timeout_seconds": request_timeout_seconds,
+        "myelon_rpc_depth": int(myelon_rpc_depth) if myelon_rpc_depth else None,
+        "myelon_response_depth": (
+            int(myelon_response_depth) if myelon_response_depth else None
+        ),
+        "myelon_busy_spin": myelon_busy_spin,
+        "expected_case_count": 0,
+        "expected_case_labels": [],
         "cases": [],
     }
 
@@ -371,6 +438,8 @@ def main() -> int:
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 1
+    report["expected_case_count"] = len(cases)
+    report["expected_case_labels"] = [label for label, _, _ in cases]
 
     for label, server_extra_args, client_extra_args in cases:
         case_dir = output_root / label
@@ -405,6 +474,15 @@ def main() -> int:
             pd_server_command.append("--prefix-cache")
         if pd_url:
             pd_server_command.extend(["--pd-url", pd_url])
+        if label == "myelon_pd":
+            if myelon_rpc_depth:
+                pd_server_command.extend(["--myelon-rpc-depth", myelon_rpc_depth])
+            if myelon_response_depth:
+                pd_server_command.extend(
+                    ["--myelon-response-depth", myelon_response_depth]
+                )
+            if myelon_busy_spin:
+                pd_server_command.append("--myelon-busy-spin")
 
         client_server_command = [
             str(binary_path),
@@ -432,6 +510,15 @@ def main() -> int:
             client_server_command.append("--prefix-cache")
         if pd_url:
             client_server_command.extend(["--pd-url", pd_url])
+        if label == "myelon_pd":
+            if myelon_rpc_depth:
+                client_server_command.extend(["--myelon-rpc-depth", myelon_rpc_depth])
+            if myelon_response_depth:
+                client_server_command.extend(
+                    ["--myelon-response-depth", myelon_response_depth]
+                )
+            if myelon_busy_spin:
+                client_server_command.append("--myelon-busy-spin")
 
         benchmark_command = [
             "uv",
