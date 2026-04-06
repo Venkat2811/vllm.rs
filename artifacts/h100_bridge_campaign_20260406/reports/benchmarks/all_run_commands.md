@@ -6,6 +6,8 @@
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix512/cpufold2.0`
 
 ### runner
 
@@ -33,6 +35,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/report.json`
 - status: `partial`
+- artifact_class: `fullpass/benchmark_failed/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix512/kv0.04/cpufold2.0`
 
 ### runner
 
@@ -49,6 +53,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/report.json`
 - status: `partial`
+- artifact_class: `fullpass/benchmark_failed/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix4096/kv0.35/cpufold0.1`
 
 ### runner
 
@@ -76,6 +82,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix4096/kv0.35/cpufold0.1`
 
 ### runner
 
@@ -103,6 +111,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix4096/kv0.35/cpufold0.1`
 
 ### runner
 
@@ -130,6 +140,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix4096/kv0.35/cpufold0.1`
 
 ### runner
 
@@ -157,6 +169,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix4096/kv0.35/cpufold0.1`
 
 ### runner
 
@@ -184,6 +198,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v6/report.json`
 - status: `partial`
+- artifact_class: `fullpass/benchmark_failed/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix1024/kv0.08/cpufold0.05`
 
 ### runner
 
@@ -200,6 +216,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v8/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix1024/kv0.08/cpufold0.05`
 
 ### runner
 
@@ -227,6 +245,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt/report.json`
 - status: `partial`
+- artifact_class: `fullpass/runtime_limited/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -241,8 +261,68 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 ## Qwen/Qwen3-30B-A3B / server_prefill_stress / tp2
 
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_long_v1/report.json`
+- status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off/kv0.55/cpufold0.5`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18080 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-30B-A3B/snapshots/ad44e777bcd18fa416d9da3bd8f70d33ebb85d39 --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 2 --force-runner --device-ids 0,1 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:18080 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_long_v1/runner/conversations.json --prompt-text Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. --num-requests 256 --concurrency 256 --max-tokens 1 --request-timeout-sec 1200 --served-model-name ad44e777bcd18fa416d9da3bd8f70d33ebb85d39
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18081 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-30B-A3B/snapshots/ad44e777bcd18fa416d9da3bd8f70d33ebb85d39 --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 2 --myelon-ipc --device-ids 0,1 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --myelon-busy-spin --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:18081 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_long_v1/myelon/conversations.json --prompt-text Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. --num-requests 256 --concurrency 256 --max-tokens 1 --request-timeout-sec 1200 --served-model-name ad44e777bcd18fa416d9da3bd8f70d33ebb85d39
+```
+
+## Qwen/Qwen3-30B-A3B / server_prefill_stress / tp2
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_long_v3/report.json`
+- status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off/cpufold0.5`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18080 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-30B-A3B/snapshots/ad44e777bcd18fa416d9da3bd8f70d33ebb85d39 --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 2 --force-runner --max-model-len 2560 --device-ids 0,1 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:18080 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_long_v3/runner/conversations.json --prompt-text Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. --num-requests 256 --concurrency 256 --max-tokens 1 --request-timeout-sec 1200 --served-model-name ad44e777bcd18fa416d9da3bd8f70d33ebb85d39
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 18081 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-30B-A3B/snapshots/ad44e777bcd18fa416d9da3bd8f70d33ebb85d39 --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 2 --myelon-ipc --max-model-len 2560 --device-ids 0,1 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --myelon-busy-spin --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:18081 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_long_v3/myelon/conversations.json --prompt-text Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. Please talk about China in more details. --num-requests 256 --concurrency 256 --max-tokens 1 --request-timeout-sec 1200 --served-model-name ad44e777bcd18fa416d9da3bd8f70d33ebb85d39
+```
+
+## Qwen/Qwen3-30B-A3B / server_prefill_stress / tp2
+
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v2/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/prefix_off/cpufold0.5`
 
 ### runner
 
@@ -270,6 +350,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/prefix_off/cpufold0.5`
 
 ### runner
 
@@ -297,6 +379,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256c/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off/cpufold0.5`
 
 ### runner
 
@@ -324,6 +408,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -351,6 +437,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v3/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/prefix_off/cpufold0.5`
 
 ### runner
 
@@ -378,6 +466,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v4/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off/cpufold0.5`
 
 ### runner
 
@@ -405,6 +495,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_low_decode_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -432,6 +524,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix32768/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -459,6 +553,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v2/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix32768/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -486,6 +582,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix32768/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -513,6 +611,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/blocking_wait/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -540,6 +640,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/blocking_wait/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -567,6 +669,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/blocking_wait/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -594,6 +698,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -621,6 +727,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -648,6 +756,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/blocking_wait/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -675,6 +785,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/blocking_wait/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -702,6 +814,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -729,6 +843,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -756,6 +872,8 @@ uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benc
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_server_cache_thrash_rr_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix1024/kv0.08/cpufold0.05`
 
 ### runner
 
@@ -783,6 +901,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_server_shared_prefix_rr_control_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix32768/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -810,6 +930,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_cache_thrash_rr_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix1024/kv0.08/cpufold0.05`
 
 ### runner
 
@@ -837,6 +959,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_cache_thrash_rr_v2/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix1024/kv0.08/cpufold0.05`
 
 ### runner
 
@@ -864,6 +988,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_low_decode_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix_off/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -891,6 +1017,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_shared_prefix_rr_control_v1/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix32768/kv0.55/cpufold0.5`
 
 ### runner
 
@@ -918,6 +1046,8 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 
 - report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_shared_prefix_rr_control_v2/report.json`
 - status: `completed`
+- artifact_class: `fullpass/benchmark_complete/full_completion`
+- transport_settings_profile: `socket_vs_myelon_process_runner/rpc8192/resp8192/busy_spin/prefix32768/kv0.55/cpufold0.5`
 
 ### runner
 
