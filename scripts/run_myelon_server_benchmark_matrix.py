@@ -600,6 +600,12 @@ def main() -> int:
             "mode": mode,
         },
         cache_pressure_profile=cache_pressure_profile,
+        equivalence_group=(
+            "fixed_prompt_burst_bridge"
+            if benchmark_family == "server_prefill_stress"
+            and benchmark_submode == "fixed_prompt_burst"
+            else None
+        ),
         topology_overlay=mode,
         transport_mode="socket_vs_myelon_process_runner",
         run_class=run_class,

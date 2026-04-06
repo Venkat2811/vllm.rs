@@ -92,3 +92,7 @@ New coverage proves:
   - `limit_min_tokens`
   - `limit_max_tokens`
   - `cache_pressure_profile`
+- matched CLI-vs-server comparison metadata now exists too:
+  - `fixed_prompt_burst` on CLI `prefill_stress`
+  - `fixed_prompt_burst` on server `server_prefill_stress`
+  - both now carry `equivalence_group=fixed_prompt_burst_bridge`
