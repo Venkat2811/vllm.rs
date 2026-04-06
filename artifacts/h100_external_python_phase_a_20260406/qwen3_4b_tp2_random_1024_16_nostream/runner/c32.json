@@ -1,0 +1,4098 @@
+[
+  {
+    "ttft_ms": 2078.823,
+    "latency_ms": 2078.832,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2039.176,
+    "latency_ms": 2039.182,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2041.743,
+    "latency_ms": 2041.746,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2040.675,
+    "latency_ms": 2040.68,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a poem and wants me to analyze it."
+  },
+  {
+    "ttft_ms": 2042.272,
+    "latency_ms": 2042.277,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and asked"
+  },
+  {
+    "ttft_ms": 2039.534,
+    "latency_ms": 2039.542,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2038.363,
+    "latency_ms": 2038.378,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2039.383,
+    "latency_ms": 2039.385,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2041.039,
+    "latency_ms": 2041.041,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2040.822,
+    "latency_ms": 2040.825,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2038.134,
+    "latency_ms": 2038.137,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2039.774,
+    "latency_ms": 2039.776,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2039.692,
+    "latency_ms": 2039.694,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2041.208,
+    "latency_ms": 2041.211,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2039.383,
+    "latency_ms": 2039.386,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2041.512,
+    "latency_ms": 2041.514,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2040.102,
+    "latency_ms": 2040.104,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2039.8,
+    "latency_ms": 2039.805,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a lengthy poem, and I need to"
+  },
+  {
+    "ttft_ms": 2038.882,
+    "latency_ms": 2038.885,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2037.003,
+    "latency_ms": 2037.007,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2039.454,
+    "latency_ms": 2039.456,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2040.74,
+    "latency_ms": 2040.743,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2039.308,
+    "latency_ms": 2039.311,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2037.893,
+    "latency_ms": 2037.9,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2036.426,
+    "latency_ms": 2036.429,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2039.006,
+    "latency_ms": 2039.009,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and asked"
+  },
+  {
+    "ttft_ms": 2040.16,
+    "latency_ms": 2040.164,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2040.107,
+    "latency_ms": 2040.11,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2039.493,
+    "latency_ms": 2039.495,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2036.741,
+    "latency_ms": 2036.744,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2040.146,
+    "latency_ms": 2040.15,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2082.702,
+    "latency_ms": 2082.707,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2077.623,
+    "latency_ms": 2077.625,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2078.643,
+    "latency_ms": 2078.647,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2076.117,
+    "latency_ms": 2076.119,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a large block of text that looks like"
+  },
+  {
+    "ttft_ms": 2076.481,
+    "latency_ms": 2076.486,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2075.463,
+    "latency_ms": 2075.465,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2076.185,
+    "latency_ms": 2076.188,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2074.55,
+    "latency_ms": 2074.56,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2077.403,
+    "latency_ms": 2077.406,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2074.589,
+    "latency_ms": 2074.596,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2075.711,
+    "latency_ms": 2075.715,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2075.634,
+    "latency_ms": 2075.636,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2081.712,
+    "latency_ms": 2081.719,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2074.244,
+    "latency_ms": 2074.249,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2074.804,
+    "latency_ms": 2074.807,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2074.409,
+    "latency_ms": 2074.411,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2075.24,
+    "latency_ms": 2075.244,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2073.608,
+    "latency_ms": 2073.611,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2074.074,
+    "latency_ms": 2074.077,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2084.896,
+    "latency_ms": 2084.899,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2083.054,
+    "latency_ms": 2083.062,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2087.584,
+    "latency_ms": 2087.589,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2084.472,
+    "latency_ms": 2084.476,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2098.733,
+    "latency_ms": 2098.742,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2089.376,
+    "latency_ms": 2089.381,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2090.562,
+    "latency_ms": 2090.567,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2084.034,
+    "latency_ms": 2084.037,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a large block of text that looks like"
+  },
+  {
+    "ttft_ms": 2098.259,
+    "latency_ms": 2098.262,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2091.418,
+    "latency_ms": 2091.424,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2083.3,
+    "latency_ms": 2083.305,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2082.113,
+    "latency_ms": 2082.118,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2052.974,
+    "latency_ms": 2052.979,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2039.838,
+    "latency_ms": 2039.842,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2082.411,
+    "latency_ms": 2082.415,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2081.714,
+    "latency_ms": 2081.716,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2078.21,
+    "latency_ms": 2078.216,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2080.089,
+    "latency_ms": 2080.092,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, likely from"
+  },
+  {
+    "ttft_ms": 2078.578,
+    "latency_ms": 2078.583,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2082.078,
+    "latency_ms": 2082.082,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2081.349,
+    "latency_ms": 2081.351,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2080.889,
+    "latency_ms": 2080.892,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of Shakespeare's sonnet"
+  },
+  {
+    "ttft_ms": 2081.707,
+    "latency_ms": 2081.709,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2076.303,
+    "latency_ms": 2076.312,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a large block of text that looks like"
+  },
+  {
+    "ttft_ms": 2076.291,
+    "latency_ms": 2076.294,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2080.774,
+    "latency_ms": 2080.776,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2081.149,
+    "latency_ms": 2081.152,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2079.826,
+    "latency_ms": 2079.83,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2078.762,
+    "latency_ms": 2078.763,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2079.947,
+    "latency_ms": 2079.949,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2077.758,
+    "latency_ms": 2077.762,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2072.512,
+    "latency_ms": 2072.516,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a poem and wants me"
+  },
+  {
+    "ttft_ms": 2071.211,
+    "latency_ms": 2071.215,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2069.68,
+    "latency_ms": 2069.682,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2068.865,
+    "latency_ms": 2068.87,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a poem and wants me to analyze it."
+  },
+  {
+    "ttft_ms": 2068.563,
+    "latency_ms": 2068.567,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2070.704,
+    "latency_ms": 2070.708,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2068.736,
+    "latency_ms": 2068.738,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2065.146,
+    "latency_ms": 2065.157,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2064.964,
+    "latency_ms": 2064.967,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2062.035,
+    "latency_ms": 2062.042,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2063.77,
+    "latency_ms": 2063.772,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2062.537,
+    "latency_ms": 2062.539,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2061.906,
+    "latency_ms": 2061.908,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2088.504,
+    "latency_ms": 2088.513,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2088.606,
+    "latency_ms": 2088.609,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2097.749,
+    "latency_ms": 2097.751,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2092.68,
+    "latency_ms": 2092.691,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a poem and wants me to analyze it."
+  },
+  {
+    "ttft_ms": 2096.639,
+    "latency_ms": 2096.642,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2095.943,
+    "latency_ms": 2095.946,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2094.716,
+    "latency_ms": 2094.719,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2095.62,
+    "latency_ms": 2095.623,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2092.564,
+    "latency_ms": 2092.573,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2092.749,
+    "latency_ms": 2092.754,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2095.152,
+    "latency_ms": 2095.155,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2092.913,
+    "latency_ms": 2092.915,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2093.198,
+    "latency_ms": 2093.201,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a lengthy poem, and I need to"
+  },
+  {
+    "ttft_ms": 2094.818,
+    "latency_ms": 2094.821,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2094.407,
+    "latency_ms": 2094.41,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2092.521,
+    "latency_ms": 2092.525,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2092.959,
+    "latency_ms": 2092.964,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2092.987,
+    "latency_ms": 2092.989,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2091.465,
+    "latency_ms": 2091.468,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2092.089,
+    "latency_ms": 2092.091,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2093.992,
+    "latency_ms": 2093.995,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's tackle this. The user provided a poem and wants"
+  },
+  {
+    "ttft_ms": 2093.837,
+    "latency_ms": 2093.839,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2092.79,
+    "latency_ms": 2092.793,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and asked"
+  },
+  {
+    "ttft_ms": 2092.019,
+    "latency_ms": 2092.022,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2090.903,
+    "latency_ms": 2090.908,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2102.183,
+    "latency_ms": 2102.187,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2112.257,
+    "latency_ms": 2112.283,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2098.127,
+    "latency_ms": 2098.131,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2101.751,
+    "latency_ms": 2101.755,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2099.117,
+    "latency_ms": 2099.121,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2116.634,
+    "latency_ms": 2116.643,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2096.924,
+    "latency_ms": 2096.929,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2065.412,
+    "latency_ms": 2065.416,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2065.932,
+    "latency_ms": 2065.935,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a poem and asked for help. Let me"
+  },
+  {
+    "ttft_ms": 2091.663,
+    "latency_ms": 2091.665,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2090.442,
+    "latency_ms": 2090.445,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a poem and asked for"
+  },
+  {
+    "ttft_ms": 2090.041,
+    "latency_ms": 2090.045,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, likely from Shakespeare's"
+  },
+  {
+    "ttft_ms": 2091.432,
+    "latency_ms": 2091.434,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2090.139,
+    "latency_ms": 2090.143,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2089.576,
+    "latency_ms": 2089.579,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2092.757,
+    "latency_ms": 2092.76,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2091.115,
+    "latency_ms": 2091.118,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2089.862,
+    "latency_ms": 2089.865,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2091.451,
+    "latency_ms": 2091.453,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2096.133,
+    "latency_ms": 2096.139,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2090.579,
+    "latency_ms": 2090.582,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2088.587,
+    "latency_ms": 2088.589,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2089.531,
+    "latency_ms": 2089.534,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2087.035,
+    "latency_ms": 2087.043,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2088.837,
+    "latency_ms": 2088.841,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2086.966,
+    "latency_ms": 2086.973,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2085.973,
+    "latency_ms": 2085.993,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2089.951,
+    "latency_ms": 2089.954,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2089.902,
+    "latency_ms": 2089.904,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2088.688,
+    "latency_ms": 2088.69,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2086.82,
+    "latency_ms": 2086.826,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2088.485,
+    "latency_ms": 2088.488,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2082.023,
+    "latency_ms": 2082.025,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and asked"
+  },
+  {
+    "ttft_ms": 2083.974,
+    "latency_ms": 2083.977,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2083.423,
+    "latency_ms": 2083.425,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2084.269,
+    "latency_ms": 2084.271,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2083.139,
+    "latency_ms": 2083.142,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2081.208,
+    "latency_ms": 2081.211,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2124.451,
+    "latency_ms": 2124.459,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2114.531,
+    "latency_ms": 2114.534,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2109.945,
+    "latency_ms": 2109.948,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2079.805,
+    "latency_ms": 2079.809,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2079.305,
+    "latency_ms": 2079.308,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2078.675,
+    "latency_ms": 2078.679,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a large block of text that looks like"
+  },
+  {
+    "ttft_ms": 2077.549,
+    "latency_ms": 2077.555,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2079.479,
+    "latency_ms": 2079.481,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2077.373,
+    "latency_ms": 2077.378,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2077.488,
+    "latency_ms": 2077.491,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2078.426,
+    "latency_ms": 2078.429,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2075.407,
+    "latency_ms": 2075.418,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a poem and is asking for help."
+  },
+  {
+    "ttft_ms": 2075.402,
+    "latency_ms": 2075.406,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2075.917,
+    "latency_ms": 2075.919,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2075.546,
+    "latency_ms": 2075.552,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2078.082,
+    "latency_ms": 2078.085,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2075.229,
+    "latency_ms": 2075.231,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2077.196,
+    "latency_ms": 2077.199,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2076.761,
+    "latency_ms": 2076.765,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2075.797,
+    "latency_ms": 2075.801,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2074.598,
+    "latency_ms": 2074.601,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2075.354,
+    "latency_ms": 2075.356,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2075.445,
+    "latency_ms": 2075.447,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2083.168,
+    "latency_ms": 2083.178,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2084.714,
+    "latency_ms": 2084.717,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2084.36,
+    "latency_ms": 2084.362,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2083.537,
+    "latency_ms": 2083.542,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2083.69,
+    "latency_ms": 2083.694,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2083.932,
+    "latency_ms": 2083.935,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2083.089,
+    "latency_ms": 2083.093,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2083.612,
+    "latency_ms": 2083.616,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2080.399,
+    "latency_ms": 2080.402,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2039.375,
+    "latency_ms": 2039.381,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2039.804,
+    "latency_ms": 2039.806,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2056.257,
+    "latency_ms": 2056.265,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2052.126,
+    "latency_ms": 2052.13,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2051.947,
+    "latency_ms": 2051.949,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2051.787,
+    "latency_ms": 2051.79,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2048.39,
+    "latency_ms": 2048.395,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2051.19,
+    "latency_ms": 2051.193,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2050.13,
+    "latency_ms": 2050.133,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2049.991,
+    "latency_ms": 2049.993,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2050.561,
+    "latency_ms": 2050.563,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a poem and asked for help. Let me"
+  },
+  {
+    "ttft_ms": 2046.76,
+    "latency_ms": 2046.767,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2048.666,
+    "latency_ms": 2048.668,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2048.539,
+    "latency_ms": 2048.541,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2044.974,
+    "latency_ms": 2044.986,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2048.203,
+    "latency_ms": 2048.207,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2047.212,
+    "latency_ms": 2047.216,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2047.939,
+    "latency_ms": 2047.941,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2048.589,
+    "latency_ms": 2048.592,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2045.577,
+    "latency_ms": 2045.58,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2044.713,
+    "latency_ms": 2044.727,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2045.696,
+    "latency_ms": 2045.702,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2045.619,
+    "latency_ms": 2045.622,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2039.802,
+    "latency_ms": 2039.807,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and asked"
+  },
+  {
+    "ttft_ms": 2041.801,
+    "latency_ms": 2041.804,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2039.76,
+    "latency_ms": 2039.763,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2040.695,
+    "latency_ms": 2040.697,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2040.404,
+    "latency_ms": 2040.407,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2040.386,
+    "latency_ms": 2040.388,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2036.824,
+    "latency_ms": 2036.827,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2038.682,
+    "latency_ms": 2038.685,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2037.137,
+    "latency_ms": 2037.139,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2038.996,
+    "latency_ms": 2038.998,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2037.852,
+    "latency_ms": 2037.854,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2068.818,
+    "latency_ms": 2068.826,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2072.406,
+    "latency_ms": 2072.408,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2070.89,
+    "latency_ms": 2070.9,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2088.12,
+    "latency_ms": 2088.122,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, likely from"
+  },
+  {
+    "ttft_ms": 2086.462,
+    "latency_ms": 2086.464,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2086.268,
+    "latency_ms": 2086.27,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2070.704,
+    "latency_ms": 2070.707,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2070.507,
+    "latency_ms": 2070.51,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2069.98,
+    "latency_ms": 2069.985,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2070.125,
+    "latency_ms": 2070.129,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2070.41,
+    "latency_ms": 2070.414,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2086.387,
+    "latency_ms": 2086.391,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2085.492,
+    "latency_ms": 2085.496,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2083.073,
+    "latency_ms": 2083.077,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2084.059,
+    "latency_ms": 2084.064,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2083.268,
+    "latency_ms": 2083.273,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2082.917,
+    "latency_ms": 2082.924,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2084.951,
+    "latency_ms": 2084.953,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2084.018,
+    "latency_ms": 2084.02,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a poem and wants me to help them understand"
+  },
+  {
+    "ttft_ms": 2085.738,
+    "latency_ms": 2085.742,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2085.874,
+    "latency_ms": 2085.877,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2085.366,
+    "latency_ms": 2085.369,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2083.064,
+    "latency_ms": 2083.068,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2084.65,
+    "latency_ms": 2084.652,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2085.4,
+    "latency_ms": 2085.403,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2084.097,
+    "latency_ms": 2084.1,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2083.093,
+    "latency_ms": 2083.096,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2082.701,
+    "latency_ms": 2082.705,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2084.281,
+    "latency_ms": 2084.284,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, likely from Shakespeare's"
+  },
+  {
+    "ttft_ms": 2085.043,
+    "latency_ms": 2085.047,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2082.507,
+    "latency_ms": 2082.509,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2080.678,
+    "latency_ms": 2080.688,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2037.904,
+    "latency_ms": 2037.906,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2051.944,
+    "latency_ms": 2051.952,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of Shakespeare's sonnet"
+  },
+  {
+    "ttft_ms": 2055.227,
+    "latency_ms": 2055.229,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2054.998,
+    "latency_ms": 2055.0,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2051.257,
+    "latency_ms": 2051.26,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2050.497,
+    "latency_ms": 2050.531,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2054.651,
+    "latency_ms": 2054.653,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2051.905,
+    "latency_ms": 2051.909,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2040.04,
+    "latency_ms": 2040.042,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2039.809,
+    "latency_ms": 2039.812,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2039.218,
+    "latency_ms": 2039.221,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and asked"
+  },
+  {
+    "ttft_ms": 2038.404,
+    "latency_ms": 2038.407,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2037.438,
+    "latency_ms": 2037.442,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2038.091,
+    "latency_ms": 2038.093,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a poem and wants me"
+  },
+  {
+    "ttft_ms": 2039.012,
+    "latency_ms": 2039.014,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, likely from"
+  },
+  {
+    "ttft_ms": 2038.647,
+    "latency_ms": 2038.651,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2039.264,
+    "latency_ms": 2039.266,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2037.163,
+    "latency_ms": 2037.166,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2039.152,
+    "latency_ms": 2039.154,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2035.392,
+    "latency_ms": 2035.395,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2037.777,
+    "latency_ms": 2037.78,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2035.164,
+    "latency_ms": 2035.167,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a poem and wants me"
+  },
+  {
+    "ttft_ms": 2036.247,
+    "latency_ms": 2036.25,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2037.772,
+    "latency_ms": 2037.774,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2037.51,
+    "latency_ms": 2037.512,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2036.467,
+    "latency_ms": 2036.47,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2035.002,
+    "latency_ms": 2035.008,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2035.37,
+    "latency_ms": 2035.374,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2037.629,
+    "latency_ms": 2037.631,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2037.433,
+    "latency_ms": 2037.436,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2037.305,
+    "latency_ms": 2037.307,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2031.958,
+    "latency_ms": 2031.971,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2897.338,
+    "latency_ms": 2897.347,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2110.191,
+    "latency_ms": 2110.195,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a lengthy poem, and I need to"
+  },
+  {
+    "ttft_ms": 2110.871,
+    "latency_ms": 2110.874,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and asked"
+  },
+  {
+    "ttft_ms": 2119.408,
+    "latency_ms": 2119.411,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2109.444,
+    "latency_ms": 2109.447,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2107.593,
+    "latency_ms": 2107.596,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2107.426,
+    "latency_ms": 2107.436,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2107.809,
+    "latency_ms": 2107.812,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2107.58,
+    "latency_ms": 2107.585,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2108.123,
+    "latency_ms": 2108.125,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2107.822,
+    "latency_ms": 2107.826,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a poem and wants me"
+  },
+  {
+    "ttft_ms": 2108.068,
+    "latency_ms": 2108.072,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2108.544,
+    "latency_ms": 2108.548,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a lengthy poem, and I need to"
+  },
+  {
+    "ttft_ms": 2107.288,
+    "latency_ms": 2107.29,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2119.133,
+    "latency_ms": 2119.135,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2117.991,
+    "latency_ms": 2117.993,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2106.783,
+    "latency_ms": 2106.785,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2117.342,
+    "latency_ms": 2117.344,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2117.272,
+    "latency_ms": 2117.274,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2116.109,
+    "latency_ms": 2116.118,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2118.245,
+    "latency_ms": 2118.247,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a poem and wants me to analyze it"
+  },
+  {
+    "ttft_ms": 2115.919,
+    "latency_ms": 2115.925,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2116.686,
+    "latency_ms": 2116.688,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2117.977,
+    "latency_ms": 2117.98,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2117.268,
+    "latency_ms": 2117.271,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2117.889,
+    "latency_ms": 2117.892,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2116.809,
+    "latency_ms": 2116.813,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2117.098,
+    "latency_ms": 2117.101,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and asked"
+  },
+  {
+    "ttft_ms": 2115.973,
+    "latency_ms": 2115.977,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2116.057,
+    "latency_ms": 2116.059,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2116.611,
+    "latency_ms": 2116.614,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2115.338,
+    "latency_ms": 2115.342,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 3092.634,
+    "latency_ms": 3092.645,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2117.627,
+    "latency_ms": 2117.63,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2114.393,
+    "latency_ms": 2114.396,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2113.137,
+    "latency_ms": 2113.14,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2113.954,
+    "latency_ms": 2113.958,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2113.768,
+    "latency_ms": 2113.77,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2115.691,
+    "latency_ms": 2115.694,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2111.349,
+    "latency_ms": 2111.359,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2113.962,
+    "latency_ms": 2113.965,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2100.054,
+    "latency_ms": 2100.063,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2114.87,
+    "latency_ms": 2114.873,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2115.629,
+    "latency_ms": 2115.632,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2112.398,
+    "latency_ms": 2112.4,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2111.217,
+    "latency_ms": 2111.222,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2101.984,
+    "latency_ms": 2101.991,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2104.877,
+    "latency_ms": 2104.879,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2101.555,
+    "latency_ms": 2101.561,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2102.509,
+    "latency_ms": 2102.513,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2104.734,
+    "latency_ms": 2104.736,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2103.882,
+    "latency_ms": 2103.885,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2103.191,
+    "latency_ms": 2103.193,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2104.9,
+    "latency_ms": 2104.903,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2101.233,
+    "latency_ms": 2101.235,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2101.572,
+    "latency_ms": 2101.577,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and asked"
+  },
+  {
+    "ttft_ms": 2103.156,
+    "latency_ms": 2103.159,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2102.619,
+    "latency_ms": 2102.623,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2102.069,
+    "latency_ms": 2102.072,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2103.367,
+    "latency_ms": 2103.369,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2102.575,
+    "latency_ms": 2102.579,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2103.919,
+    "latency_ms": 2103.921,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2103.3,
+    "latency_ms": 2103.302,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2103.239,
+    "latency_ms": 2103.241,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2169.805,
+    "latency_ms": 2169.815,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2149.746,
+    "latency_ms": 2149.75,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2136.443,
+    "latency_ms": 2136.447,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2136.408,
+    "latency_ms": 2136.41,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2137.186,
+    "latency_ms": 2137.19,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2144.936,
+    "latency_ms": 2144.945,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2134.597,
+    "latency_ms": 2134.607,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2134.832,
+    "latency_ms": 2134.837,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, likely from Shakespeare's"
+  },
+  {
+    "ttft_ms": 2135.139,
+    "latency_ms": 2135.141,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2136.962,
+    "latency_ms": 2136.965,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2135.996,
+    "latency_ms": 2136.0,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2136.124,
+    "latency_ms": 2136.128,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2136.579,
+    "latency_ms": 2136.582,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2144.65,
+    "latency_ms": 2144.654,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2136.556,
+    "latency_ms": 2136.559,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2134.021,
+    "latency_ms": 2134.025,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2135.409,
+    "latency_ms": 2135.412,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2145.353,
+    "latency_ms": 2145.356,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a poem and wants me"
+  },
+  {
+    "ttft_ms": 2143.221,
+    "latency_ms": 2143.227,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2145.278,
+    "latency_ms": 2145.281,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2143.463,
+    "latency_ms": 2143.465,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2142.929,
+    "latency_ms": 2142.935,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2143.733,
+    "latency_ms": 2143.735,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2144.463,
+    "latency_ms": 2144.465,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2143.263,
+    "latency_ms": 2143.265,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2143.665,
+    "latency_ms": 2143.667,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, likely from Shakespeare's"
+  },
+  {
+    "ttft_ms": 2143.562,
+    "latency_ms": 2143.565,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2142.42,
+    "latency_ms": 2142.422,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2144.07,
+    "latency_ms": 2144.074,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2142.2,
+    "latency_ms": 2142.203,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2142.665,
+    "latency_ms": 2142.669,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2142.606,
+    "latency_ms": 2142.608,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a poem and is asking for help."
+  },
+  {
+    "ttft_ms": 2142.232,
+    "latency_ms": 2142.241,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2149.281,
+    "latency_ms": 2149.284,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2135.043,
+    "latency_ms": 2135.046,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a poem and is asking for help."
+  },
+  {
+    "ttft_ms": 2136.274,
+    "latency_ms": 2136.278,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2147.605,
+    "latency_ms": 2147.609,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2147.929,
+    "latency_ms": 2147.933,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2134.221,
+    "latency_ms": 2134.224,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2147.14,
+    "latency_ms": 2147.143,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2148.096,
+    "latency_ms": 2148.1,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2144.778,
+    "latency_ms": 2144.784,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2147.047,
+    "latency_ms": 2147.049,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2132.273,
+    "latency_ms": 2132.278,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2143.966,
+    "latency_ms": 2143.973,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2144.235,
+    "latency_ms": 2144.238,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2143.056,
+    "latency_ms": 2143.066,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2124.475,
+    "latency_ms": 2124.484,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2136.067,
+    "latency_ms": 2136.074,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2125.81,
+    "latency_ms": 2125.814,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2137.804,
+    "latency_ms": 2137.807,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2138.154,
+    "latency_ms": 2138.157,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2138.833,
+    "latency_ms": 2138.835,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2138.779,
+    "latency_ms": 2138.781,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2136.672,
+    "latency_ms": 2136.674,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2137.642,
+    "latency_ms": 2137.644,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2136.138,
+    "latency_ms": 2136.141,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2135.241,
+    "latency_ms": 2135.243,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a lengthy passage that seems to be from"
+  },
+  {
+    "ttft_ms": 2136.264,
+    "latency_ms": 2136.267,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2135.453,
+    "latency_ms": 2135.458,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2137.428,
+    "latency_ms": 2137.432,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2135.475,
+    "latency_ms": 2135.48,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2135.031,
+    "latency_ms": 2135.034,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2137.073,
+    "latency_ms": 2137.076,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2114.977,
+    "latency_ms": 2114.987,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and asked"
+  },
+  {
+    "ttft_ms": 2088.771,
+    "latency_ms": 2088.781,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2091.317,
+    "latency_ms": 2091.32,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2088.951,
+    "latency_ms": 2088.96,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2089.372,
+    "latency_ms": 2089.399,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2089.247,
+    "latency_ms": 2089.25,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, likely from Shakespeare's"
+  },
+  {
+    "ttft_ms": 2089.264,
+    "latency_ms": 2089.267,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2078.251,
+    "latency_ms": 2078.258,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2076.992,
+    "latency_ms": 2076.995,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a poem and wants me to analyze it."
+  },
+  {
+    "ttft_ms": 2080.471,
+    "latency_ms": 2080.474,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2078.268,
+    "latency_ms": 2078.272,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2079.77,
+    "latency_ms": 2079.772,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2079.623,
+    "latency_ms": 2079.627,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2076.97,
+    "latency_ms": 2076.973,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2078.716,
+    "latency_ms": 2078.72,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2091.516,
+    "latency_ms": 2091.52,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2077.464,
+    "latency_ms": 2077.467,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2078.183,
+    "latency_ms": 2078.185,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2078.112,
+    "latency_ms": 2078.114,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2078.452,
+    "latency_ms": 2078.455,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2076.452,
+    "latency_ms": 2076.457,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2077.234,
+    "latency_ms": 2077.237,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2091.331,
+    "latency_ms": 2091.333,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2090.66,
+    "latency_ms": 2090.664,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, likely from Shakespeare's \""
+  },
+  {
+    "ttft_ms": 2089.463,
+    "latency_ms": 2089.467,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a large block of text that looks like"
+  },
+  {
+    "ttft_ms": 2090.46,
+    "latency_ms": 2090.462,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2088.695,
+    "latency_ms": 2088.699,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a poem and is asking for help."
+  },
+  {
+    "ttft_ms": 2088.058,
+    "latency_ms": 2088.064,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2087.635,
+    "latency_ms": 2087.643,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2088.04,
+    "latency_ms": 2088.044,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2089.796,
+    "latency_ms": 2089.799,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, likely from"
+  },
+  {
+    "ttft_ms": 2090.047,
+    "latency_ms": 2090.051,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2159.56,
+    "latency_ms": 2159.57,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2140.083,
+    "latency_ms": 2140.086,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2138.959,
+    "latency_ms": 2138.962,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a large block of text that seems to"
+  },
+  {
+    "ttft_ms": 2150.197,
+    "latency_ms": 2150.199,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2151.755,
+    "latency_ms": 2151.757,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2138.02,
+    "latency_ms": 2138.03,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2149.588,
+    "latency_ms": 2149.59,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2138.289,
+    "latency_ms": 2138.292,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2150.73,
+    "latency_ms": 2150.732,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2149.353,
+    "latency_ms": 2149.355,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2137.344,
+    "latency_ms": 2137.346,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2137.448,
+    "latency_ms": 2137.451,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to analyze"
+  },
+  {
+    "ttft_ms": 2147.179,
+    "latency_ms": 2147.188,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2149.389,
+    "latency_ms": 2149.393,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2149.389,
+    "latency_ms": 2149.393,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2149.326,
+    "latency_ms": 2149.329,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2136.286,
+    "latency_ms": 2136.29,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a poem and wants me to analyze it."
+  },
+  {
+    "ttft_ms": 2146.826,
+    "latency_ms": 2146.834,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2147.121,
+    "latency_ms": 2147.128,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2147.759,
+    "latency_ms": 2147.765,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2149.39,
+    "latency_ms": 2149.394,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2136.633,
+    "latency_ms": 2136.635,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long passage of poetry, and I"
+  },
+  {
+    "ttft_ms": 2136.968,
+    "latency_ms": 2136.971,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2138.989,
+    "latency_ms": 2138.991,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2137.809,
+    "latency_ms": 2137.811,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a lengthy poem, and I need to"
+  },
+  {
+    "ttft_ms": 2136.084,
+    "latency_ms": 2136.086,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2137.524,
+    "latency_ms": 2137.528,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2135.189,
+    "latency_ms": 2135.191,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 2137.039,
+    "latency_ms": 2137.041,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2135.347,
+    "latency_ms": 2135.352,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2136.423,
+    "latency_ms": 2136.426,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2136.324,
+    "latency_ms": 2136.326,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2150.735,
+    "latency_ms": 2150.745,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2141.304,
+    "latency_ms": 2141.307,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2139.232,
+    "latency_ms": 2139.236,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2140.993,
+    "latency_ms": 2140.996,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2141.808,
+    "latency_ms": 2141.81,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2142.584,
+    "latency_ms": 2142.587,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2139.515,
+    "latency_ms": 2139.517,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a poem and wants me to analyze it."
+  },
+  {
+    "ttft_ms": 2141.471,
+    "latency_ms": 2141.473,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2129.163,
+    "latency_ms": 2129.168,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2128.263,
+    "latency_ms": 2128.265,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2127.177,
+    "latency_ms": 2127.187,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, likely from Shakespeare's"
+  },
+  {
+    "ttft_ms": 2128.394,
+    "latency_ms": 2128.397,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2128.226,
+    "latency_ms": 2128.228,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2127.297,
+    "latency_ms": 2127.304,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's tackle this. The user provided a poem and wants"
+  },
+  {
+    "ttft_ms": 2115.588,
+    "latency_ms": 2115.597,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2127.137,
+    "latency_ms": 2127.141,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a poem and wants me to analyze it."
+  },
+  {
+    "ttft_ms": 2127.805,
+    "latency_ms": 2127.807,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2128.829,
+    "latency_ms": 2128.832,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2127.502,
+    "latency_ms": 2127.505,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2129.799,
+    "latency_ms": 2129.802,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2129.11,
+    "latency_ms": 2129.113,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a poem and wants me"
+  },
+  {
+    "ttft_ms": 2129.037,
+    "latency_ms": 2129.039,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a large block of text that looks like"
+  },
+  {
+    "ttft_ms": 2126.899,
+    "latency_ms": 2126.902,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2129.767,
+    "latency_ms": 2129.77,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2129.57,
+    "latency_ms": 2129.573,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2128.256,
+    "latency_ms": 2128.259,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2129.104,
+    "latency_ms": 2129.107,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2127.915,
+    "latency_ms": 2127.919,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2127.116,
+    "latency_ms": 2127.12,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  },
+  {
+    "ttft_ms": 2127.734,
+    "latency_ms": 2127.737,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to help"
+  },
+  {
+    "ttft_ms": 2125.646,
+    "latency_ms": 2125.65,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user provided a long poem, and I need to figure"
+  },
+  {
+    "ttft_ms": 2127.021,
+    "latency_ms": 2127.024,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, let's see. The user provided a long poem and wants"
+  },
+  {
+    "ttft_ms": 264.775,
+    "latency_ms": 264.784,
+    "output_chunks": 0,
+    "output_tokens": 1,
+    "success": true,
+    "output_text": "<think>\nOkay, the user has provided a long poem, and I need to"
+  }
+]
