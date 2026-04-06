@@ -198,9 +198,13 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("report_bundle", report)
             summary_md = Path(report["report_bundle"]["benchmarks"]["summary_md"])
             details_csv = Path(report["report_bundle"]["benchmarks"]["details_csv"])
+            run_index_md = Path(report["report_bundle"]["benchmarks"]["run_index_md"])
+            side_by_side_md = Path(report["report_bundle"]["benchmarks"]["side_by_side_md"])
             system_md = Path(report["report_bundle"]["system_info"]["md"])
             self.assertTrue(summary_md.is_file())
             self.assertTrue(details_csv.is_file())
+            self.assertTrue(run_index_md.is_file())
+            self.assertTrue(side_by_side_md.is_file())
             self.assertTrue(system_md.is_file())
 
     def test_server_benchmark_report_includes_contract_and_case_metadata(self) -> None:
@@ -270,6 +274,8 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("report_bundle", report)
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["details_csv"]).is_file())
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["run_index_md"]).is_file())
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["side_by_side_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["system_info"]["md"]).is_file())
 
     def test_pd_benchmark_report_includes_contract_and_case_metadata(self) -> None:
@@ -345,6 +351,8 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("report_bundle", report)
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["details_csv"]).is_file())
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["run_index_md"]).is_file())
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["side_by_side_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["system_info"]["md"]).is_file())
 
     def test_pd_benchmark_unsupported_model_writes_skip_report(self) -> None:
@@ -411,6 +419,8 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             )
             self.assertFalse(report["model_capability"]["pd_supported"])
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["run_index_md"]).is_file())
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["side_by_side_md"]).is_file())
 
 
 if __name__ == "__main__":
