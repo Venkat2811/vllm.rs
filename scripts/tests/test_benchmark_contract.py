@@ -156,6 +156,24 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             "unsupported_topology_insufficient_visible_cuda_devices",
         )
 
+    def test_pd_transport_capability_detects_missing_localipc_peer_access(self) -> None:
+        with mock.patch.object(
+            validation_common,
+            "query_gpu_p2p_status",
+            side_effect=["NS", "OK"],
+        ):
+            capability = validation_common.classify_pd_transport_capability(
+                "pd_localipc_default",
+                server_device_ids=[0],
+                client_device_ids=[1],
+            )
+
+        self.assertFalse(capability["pd_supported"])
+        self.assertEqual(
+            capability["pd_skip_reason"],
+            "unsupported_transport_localipc_missing_p2p_read",
+        )
+
     def test_infer_model_label_handles_hf_cache_path(self) -> None:
         label = validation_common.infer_model_label(
             "/root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/abcdef"
@@ -347,6 +365,18 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                     return_value={"data": [{"id": "served-model"}]},
                 ), mock.patch.object(
                     pd_matrix,
+                    "classify_pd_transport_capability",
+                    return_value={
+                        "transport_mode": "pd_localipc_default",
+                        "server_device_ids": [0],
+                        "client_device_ids": [1],
+                        "peer_read_status": "OK",
+                        "peer_write_status": "OK",
+                        "pd_supported": True,
+                        "pd_skip_reason": None,
+                    },
+                ), mock.patch.object(
+                    pd_matrix,
                     "terminate_process",
                     return_value=0,
                 ), mock.patch.object(
@@ -500,6 +530,78 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 "unsupported_topology_insufficient_visible_cuda_devices",
             )
             self.assertFalse(report["topology_capability"]["pd_supported"])
+            self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
+
+    def test_pd_benchmark_unsupported_transport_writes_skip_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            (model_dir / "config.json").write_text(
+                json.dumps(
+                    {
+                        "architectures": ["Qwen3ForCausalLM"],
+                        "model_type": "qwen3",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            workload_file = tmp_path / "pd_transfer_first_request.json"
+            workload_file.write_text("{}\n", encoding="utf-8")
+            output_dir = tmp_path / "pd_transport_skip_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_INPUT_FILE": str(workload_file),
+                "VLLM_PD_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_PD_SERVER_DEVICE_IDS": "0",
+                "VLLM_PD_CLIENT_DEVICE_IDS": "1",
+                "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    pd_matrix.subprocess,
+                    "run",
+                ) as mocked_run, mock.patch.object(
+                    pd_matrix,
+                    "detect_cuda_device_count",
+                    return_value=2,
+                ), mock.patch.object(
+                    pd_matrix,
+                    "classify_pd_transport_capability",
+                    return_value={
+                        "transport_mode": "pd_localipc_default",
+                        "server_device_ids": [0],
+                        "client_device_ids": [1],
+                        "peer_read_status": "NS",
+                        "peer_write_status": "OK",
+                        "pd_supported": False,
+                        "pd_skip_reason": "unsupported_transport_localipc_missing_p2p_read",
+                    },
+                ):
+                    rc = pd_matrix.main()
+
+            self.assertEqual(rc, 0)
+            cargo_build_calls = [
+                call_args
+                for call_args in mocked_run.call_args_list
+                if call_args.args
+                and call_args.args[0]
+                and call_args.args[0][0:2] == ["cargo", "build"]
+            ]
+            self.assertEqual(cargo_build_calls, [])
+            report_path = output_dir / "report.json"
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "skipped_unsupported_transport")
+            self.assertEqual(
+                report["benchmark_contract"]["skip_reason"],
+                "unsupported_transport_localipc_missing_p2p_read",
+            )
+            self.assertFalse(report["transport_capability"]["pd_supported"])
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["summary_md"]).is_file())
 
     def test_rollup_reports_aggregate_retained_campaigns(self) -> None:
