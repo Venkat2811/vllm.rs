@@ -109,6 +109,7 @@ See:
 - `artifacts/h100_benchmarking_2026_04_06/report_manifest_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/tabulate_report_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/idle_gap_semantics_slice.md`
+- `artifacts/h100_benchmarking_2026_04_06/idle_gap_results_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/unsupported_skip_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/side_by_side_report_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/pd_topology_skip_slice.md`

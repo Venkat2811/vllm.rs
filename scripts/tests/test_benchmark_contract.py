@@ -353,6 +353,23 @@ class BenchmarkContractHelperTests(unittest.TestCase):
 
 
 class BenchmarkScriptReportTests(unittest.TestCase):
+    def test_server_parse_summary_extracts_prefixed_avg_lines(self) -> None:
+        summary = server_matrix.parse_summary(
+            "\n".join(
+                [
+                    "runtime_sec = 25.203",
+                    "requests_per_sec = 1.270",
+                    "06-04-2026 12:32:11 [INFO] - [ttft_ms                  ] avg:    340.742, min:    174.289, max:    936.404",
+                    "06-04-2026 12:32:11 [INFO] - [tpot_ms                  ] avg:     12.217, min:     12.058, max:     13.709",
+                    "06-04-2026 12:32:11 [INFO] - [latency_ms               ] avg:    426.262, min:    259.640, max:   1032.370",
+                ]
+            )
+        )
+        self.assertEqual(summary["requests_per_sec"], 1.270)
+        self.assertEqual(summary["table"]["ttft_ms"]["mean"], 340.742)
+        self.assertEqual(summary["table"]["tpot_ms"]["mean"], 12.217)
+        self.assertEqual(summary["table"]["latency_ms"]["mean"], 426.262)
+
     def test_cli_benchmark_report_includes_contract_and_machine_profile(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
