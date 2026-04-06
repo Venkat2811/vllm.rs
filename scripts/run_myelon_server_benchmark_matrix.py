@@ -245,7 +245,7 @@ def resolve_server_prefill_defaults(benchmark_submode: str) -> dict[str, object]
             "conversation_sampling": "round_robin",
             "limit_min_tokens": 1,
             "limit_max_tokens": 1,
-            "max_model_len": 4096,
+            "max_model_len": 2560,
             "prefix_cache_enabled": False,
             "cpu_mem_fold": 0.5,
         }
@@ -391,12 +391,22 @@ def parse_summary(log_text: str) -> dict:
     return summary
 
 
-def wait_for_server_ready(base_url: str, timeout_seconds: int) -> dict:
+def wait_for_server_ready(
+    base_url: str,
+    timeout_seconds: int,
+    server_process: subprocess.Popen[bytes] | None = None,
+) -> dict:
     deadline = time.time() + timeout_seconds
     models_url = f"{base_url}/v1/models"
     last_error: str | None = None
 
     while time.time() < deadline:
+        if server_process is not None:
+            exit_code = server_process.poll()
+            if exit_code is not None:
+                raise RuntimeError(
+                    f"server exited before readiness with code {exit_code}"
+                )
         try:
             with urllib.request.urlopen(models_url, timeout=2) as response:
                 payload = json.loads(response.read().decode("utf-8"))
@@ -982,7 +992,11 @@ def main() -> int:
             )
 
         try:
-            ready_payload = wait_for_server_ready(base_url, server_ready_timeout_seconds)
+            ready_payload = wait_for_server_ready(
+                base_url,
+                server_ready_timeout_seconds,
+                server_process=server,
+            )
             models = ready_payload.get("data", [])
             served_model_name = models[0]["id"]
             case_report["served_model_name"] = served_model_name
