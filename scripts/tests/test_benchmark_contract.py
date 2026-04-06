@@ -30,6 +30,17 @@ BENCHMARK_TEXT = "\n".join(
     ]
 )
 
+BENCHMARK_TEXT_WITH_OUTCOME = "\n".join(
+    [
+        BENCHMARK_TEXT,
+        "06-04-2026 12:32:11 [INFO] - Client 0 received a termination signal",
+        "06-04-2026 12:32:11 [INFO] - Client 0 is done (num_successes=2, num_failures=1)",
+        "06-04-2026 12:32:11 [INFO] - Client 1 has no more work",
+        "06-04-2026 12:32:11 [INFO] - Client 1 is done (num_successes=3, num_failures=0)",
+        "06-04-2026 12:32:11 [WARN] - Received HTTP status 422 for request 7",
+    ]
+)
+
 SERVER_LOG_TEXT = "\n".join(
     [
         "2026-04-06T12:25:52.000000Z  WARN vllm_rs::utils::kvcache_allocator: KVCache Allocation: 662 GPU blocks (1.94 GB x 2), max usable kvcache tokens 42368 (48k bytes per token), scheduling limits [4 seqs x 10240 tokens]",
@@ -41,6 +52,21 @@ SERVER_LOG_TEXT = "\n".join(
         "2026-04-06T12:25:57.353794Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 0 (1632 tokens, 25 blocks)",
         "2026-04-06T12:25:57.403174Z  INFO vllm_rs::core::block_manager: Prefix cache miss seq 1 (1891 tokens, 25 cached blocks, raw_match=0 blocks)",
         "2026-04-06T12:25:58.282825Z  INFO vllm_rs::core::block_manager: Prefix cache insert seq 1 (1899 tokens, 29 blocks)",
+    ]
+)
+
+SERVER_ATTRIBUTION_LOG_TEXT = "\n".join(
+    [
+        "2026-04-06T12:25:57.365547Z  INFO vllm_rs::core::engine: Prefilling [seq_id 0]: 100 tokens in 1.00s (100.00 tokens/s)",
+        "2026-04-06T12:25:58.365547Z  INFO vllm_rs::core::engine: Prefilling [seq_id 1]: 200 tokens in 2.00s (100.00 tokens/s, cache included)",
+        "2026-04-06T12:25:59.365547Z  INFO vllm_rs::server::server: [Seq 0] ⏱️ Prompt: 90 tokens in 0.90s (100.00 t/s)",
+        "2026-04-06T12:26:00.365547Z  INFO vllm_rs::server::server: [Seq 1] ⏱️ Prompt: 180 tokens in 1.80s (100.00 t/s)",
+        "2026-04-06T12:26:01.365547Z  INFO vllm_rs::server::server: [Seq 0] ⏱️ Decoded: 8 tokens in 4.00s (2.00 t/s)",
+        "2026-04-06T12:26:02.365547Z  INFO vllm_rs::core::block_manager: Prefix cache hit seq 2 (1024 cached tokens, 16 blocks)",
+        "2026-04-06T12:26:03.365547Z  INFO vllm_rs::core::block_manager: Prefix cache hit seq 3 (512 cached tokens, 8 blocks)",
+        "2026-04-06T12:26:04.365547Z  WARN vllm_rs::core::scheduler: Trying to swap out preempt Seq 5",
+        "2026-04-06T12:26:05.365547Z ERROR vllm_rs::core::engine: Unable to schedule task(s), drop the oldest active request (seq_id: 5)",
+        "2026-04-06T12:26:06.365547Z ERROR vllm_rs::server::server: Stream generation failed: insufficient remaining kvcache",
     ]
 )
 
@@ -480,6 +506,72 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             self.assertEqual(observed["observed_cache_pressure_level"], "high_gpu_pressure_no_swap")
             self.assertEqual(observed["pressure_profile_outcome"], "requested_swap_reduced_to_gpu_pressure")
 
+    def test_normalize_report_backfills_server_path_attribution_from_server_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            benchmark_log = tmp_path / "benchmark.log"
+            server_log = tmp_path / "server.log"
+            benchmark_log.write_text(BENCHMARK_TEXT, encoding="utf-8")
+            server_log.write_text(SERVER_ATTRIBUTION_LOG_TEXT, encoding="utf-8")
+
+            normalized = report_common.normalize_report(
+                {
+                    "benchmark_contract": {
+                        "benchmark_family": "server_prefill_stress",
+                        "benchmark_submode": "cache_thrash_round_robin",
+                        "question_answered": "bridge",
+                        "workload_class": "synthetic_server_prefill_stress",
+                        "warmup_policy": "measure_first_turn",
+                        "first_turn_measured": True,
+                        "arrival_pattern": "saturation_zero_gap",
+                        "concurrency_policy": {"driver": "persistent_http_server"},
+                        "cache_pressure_profile": "hard_thrash",
+                        "equivalence_group": None,
+                        "topology_overlay": "tp2",
+                        "transport_mode": "socket_vs_myelon_process_runner",
+                        "run_class": "fullpass",
+                        "stop_point": "full_completion",
+                        "skip_reason": None,
+                    },
+                    "cases": [
+                        {
+                            "label": "runner",
+                            "execution_variant": "runner",
+                            "benchmark_log_path": str(benchmark_log),
+                            "server_log_path": str(server_log),
+                        }
+                    ],
+                }
+            )
+
+            attribution = normalized["cases"][0]["observed_server_path_attribution"]
+            self.assertEqual(attribution["observed_prefill_event_count"], 2)
+            self.assertEqual(attribution["observed_prefill_tokens_total"], 300)
+            self.assertEqual(attribution["observed_prefill_seconds_total"], 3.0)
+            self.assertEqual(attribution["observed_prefill_tps_mean"], 100.0)
+            self.assertEqual(attribution["observed_prompt_metric_event_count"], 2)
+            self.assertEqual(attribution["observed_prompt_tokens_total"], 270)
+            self.assertEqual(attribution["observed_prompt_seconds_total"], 2.7)
+            self.assertEqual(attribution["observed_decode_metric_event_count"], 1)
+            self.assertEqual(attribution["observed_decode_tokens_total"], 8)
+            self.assertEqual(attribution["observed_decode_seconds_total"], 4.0)
+            self.assertEqual(attribution["observed_decode_tps_mean"], 2.0)
+            self.assertEqual(attribution["observed_prefix_cache_hit_count"], 2)
+            self.assertEqual(attribution["observed_prefix_cache_hit_tokens_total"], 1536)
+            self.assertEqual(attribution["observed_swap_out_attempt_count"], 1)
+            self.assertEqual(attribution["observed_dropped_request_count"], 1)
+            self.assertEqual(attribution["observed_stream_generation_failed_count"], 1)
+
+            summary_attribution = normalized["cases"][0]["summary"][
+                "observed_server_path_attribution"
+            ]
+            self.assertEqual(summary_attribution["observed_prefill_event_count"], 2)
+
+            case_rows = report_common.build_case_rows(normalized)
+            self.assertEqual(case_rows[0]["observed_prefill_event_count"], 2)
+            self.assertEqual(case_rows[0]["observed_prompt_seconds_total"], 2.7)
+            self.assertEqual(case_rows[0]["observed_swap_out_attempt_count"], 1)
+
 
 class BenchmarkScriptReportTests(unittest.TestCase):
     def test_server_parse_summary_extracts_prefixed_avg_lines(self) -> None:
@@ -587,7 +679,7 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                 command = args[0]
                 if command[0] == "cargo":
                     return CompletedProcess(command, 0, "", "")
-                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT_WITH_OUTCOME, "")
 
             with mock.patch.dict(os.environ, env, clear=False):
                 with mock.patch.object(
@@ -631,6 +723,13 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertEqual(report["myelon_response_depth"], 8192)
             self.assertTrue(report["myelon_busy_spin"])
             self.assertEqual(report["cases"][0]["stop_point"], "full_completion")
+            observed_outcome = report["cases"][0]["summary"]["observed_benchmark_outcome"]
+            self.assertEqual(observed_outcome["observed_successful_requests_total"], 5)
+            self.assertEqual(observed_outcome["observed_failed_requests_total"], 1)
+            self.assertEqual(observed_outcome["observed_clients_with_failures"], 1)
+            self.assertEqual(observed_outcome["observed_client_no_more_work_count"], 1)
+            self.assertEqual(observed_outcome["observed_client_termination_signal_count"], 1)
+            self.assertEqual(observed_outcome["observed_http_422_rejection_count"], 1)
             myelon_server_command = report["cases"][1]["server_command"]
             self.assertIn("--myelon-rpc-depth", myelon_server_command)
             self.assertIn("8192", myelon_server_command)

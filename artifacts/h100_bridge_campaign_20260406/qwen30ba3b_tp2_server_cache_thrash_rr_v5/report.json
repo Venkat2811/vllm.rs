@@ -137,9 +137,129 @@
         "requests_per_sec": 1.325,
         "warmup_runtime_sec": null,
         "total_runtime_incl_warmup_sec": null,
-        "table": {}
+        "table": {
+          "ttft_ms": {
+            "mean": 5048.022,
+            "min": 1213.837,
+            "max": 10122.545
+          },
+          "tpot_ms": {
+            "mean": 94.156,
+            "min": 26.336,
+            "max": 550.098
+          },
+          "latency_ms": {
+            "mean": 5707.112,
+            "min": 3741.4,
+            "max": 10321.077
+          }
+        },
+        "observed_cache_pressure": {
+          "requested_cache_pressure_profile": "hard_thrash",
+          "planned_gpu_blocks": 5799,
+          "planned_usable_kvcache_tokens": 371136,
+          "planned_max_seqs": 8,
+          "planned_tokens_per_seq_limit": 40960,
+          "configured_prefix_cache_blocks": 64,
+          "configured_prefix_cache_tokens": 4096,
+          "observed_gpu_kv_usage_percent_max": 3.0,
+          "observed_gpu_kv_usage_gb_max": 0.5,
+          "observed_gpu_kv_budget_gb": 16.99,
+          "observed_cpu_swap_usage_percent_max": 0.0,
+          "observed_cpu_swap_usage_gb_max": 0.0,
+          "observed_cpu_swap_budget_gb": 1.7,
+          "observed_prefix_cache_miss_count": 72,
+          "observed_prefix_cache_insert_count": 72,
+          "observed_prefix_cache_eviction_count": 0,
+          "observed_cache_pressure_level": "minimal_pressure",
+          "pressure_profile_outcome": "requested_thrash_not_observed"
+        },
+        "observed_benchmark_outcome": {
+          "observed_client_done_count": 8,
+          "observed_successful_requests_total": 72,
+          "observed_failed_requests_total": 0,
+          "observed_clients_with_failures": 0,
+          "observed_client_no_more_work_count": 1,
+          "observed_client_termination_signal_count": 7,
+          "observed_http_422_rejection_count": 0,
+          "observed_request_rejections": false
+        },
+        "observed_server_path_attribution": {
+          "observed_swap_out_attempt_count": 0,
+          "observed_dropped_request_count": 0,
+          "observed_stream_generation_failed_count": 0,
+          "observed_prefix_cache_hit_count": 0,
+          "observed_prefix_cache_hit_tokens_total": 0,
+          "observed_prefill_event_count": 72,
+          "observed_prefill_tokens_total": 124711,
+          "observed_prefill_seconds_total": 346.31,
+          "observed_prefill_seconds_mean": 4.81,
+          "observed_prefill_tps_mean": 496.562,
+          "observed_prompt_metric_event_count": 72,
+          "observed_prompt_tokens_total": 124639,
+          "observed_prompt_seconds_total": 346.31,
+          "observed_prompt_seconds_mean": 4.81,
+          "observed_prompt_tps_mean": 496.239,
+          "observed_decode_metric_event_count": 72,
+          "observed_decode_tokens_total": 576,
+          "observed_decode_seconds_total": 45.44,
+          "observed_decode_seconds_mean": 0.631,
+          "observed_decode_tps_mean": 21.775
+        }
       },
-      "server_exit_code": -2
+      "server_exit_code": -2,
+      "observed_cache_pressure": {
+        "requested_cache_pressure_profile": "hard_thrash",
+        "planned_gpu_blocks": 5799,
+        "planned_usable_kvcache_tokens": 371136,
+        "planned_max_seqs": 8,
+        "planned_tokens_per_seq_limit": 40960,
+        "configured_prefix_cache_blocks": 64,
+        "configured_prefix_cache_tokens": 4096,
+        "observed_gpu_kv_usage_percent_max": 3.0,
+        "observed_gpu_kv_usage_gb_max": 0.5,
+        "observed_gpu_kv_budget_gb": 16.99,
+        "observed_cpu_swap_usage_percent_max": 0.0,
+        "observed_cpu_swap_usage_gb_max": 0.0,
+        "observed_cpu_swap_budget_gb": 1.7,
+        "observed_prefix_cache_miss_count": 72,
+        "observed_prefix_cache_insert_count": 72,
+        "observed_prefix_cache_eviction_count": 0,
+        "observed_cache_pressure_level": "minimal_pressure",
+        "pressure_profile_outcome": "requested_thrash_not_observed"
+      },
+      "observed_benchmark_outcome": {
+        "observed_client_done_count": 8,
+        "observed_successful_requests_total": 72,
+        "observed_failed_requests_total": 0,
+        "observed_clients_with_failures": 0,
+        "observed_client_no_more_work_count": 1,
+        "observed_client_termination_signal_count": 7,
+        "observed_http_422_rejection_count": 0,
+        "observed_request_rejections": false
+      },
+      "observed_server_path_attribution": {
+        "observed_swap_out_attempt_count": 0,
+        "observed_dropped_request_count": 0,
+        "observed_stream_generation_failed_count": 0,
+        "observed_prefix_cache_hit_count": 0,
+        "observed_prefix_cache_hit_tokens_total": 0,
+        "observed_prefill_event_count": 72,
+        "observed_prefill_tokens_total": 124711,
+        "observed_prefill_seconds_total": 346.31,
+        "observed_prefill_seconds_mean": 4.81,
+        "observed_prefill_tps_mean": 496.562,
+        "observed_prompt_metric_event_count": 72,
+        "observed_prompt_tokens_total": 124639,
+        "observed_prompt_seconds_total": 346.31,
+        "observed_prompt_seconds_mean": 4.81,
+        "observed_prompt_tps_mean": 496.239,
+        "observed_decode_metric_event_count": 72,
+        "observed_decode_tokens_total": 576,
+        "observed_decode_seconds_total": 45.44,
+        "observed_decode_seconds_mean": 0.631,
+        "observed_decode_tps_mean": 21.775
+      }
     },
     {
       "label": "myelon",
@@ -239,9 +359,129 @@
         "requests_per_sec": 1.336,
         "warmup_runtime_sec": null,
         "total_runtime_incl_warmup_sec": null,
-        "table": {}
+        "table": {
+          "ttft_ms": {
+            "mean": 4614.248,
+            "min": 367.924,
+            "max": 8414.697
+          },
+          "tpot_ms": {
+            "mean": 150.585,
+            "min": 26.023,
+            "max": 951.469
+          },
+          "latency_ms": {
+            "mean": 5668.341,
+            "min": 3591.203,
+            "max": 10144.038
+          }
+        },
+        "observed_cache_pressure": {
+          "requested_cache_pressure_profile": "hard_thrash",
+          "planned_gpu_blocks": 5799,
+          "planned_usable_kvcache_tokens": 371136,
+          "planned_max_seqs": 8,
+          "planned_tokens_per_seq_limit": 40960,
+          "configured_prefix_cache_blocks": 64,
+          "configured_prefix_cache_tokens": 4096,
+          "observed_gpu_kv_usage_percent_max": 5.3,
+          "observed_gpu_kv_usage_gb_max": 0.91,
+          "observed_gpu_kv_budget_gb": 16.99,
+          "observed_cpu_swap_usage_percent_max": 0.0,
+          "observed_cpu_swap_usage_gb_max": 0.0,
+          "observed_cpu_swap_budget_gb": 1.7,
+          "observed_prefix_cache_miss_count": 72,
+          "observed_prefix_cache_insert_count": 72,
+          "observed_prefix_cache_eviction_count": 0,
+          "observed_cache_pressure_level": "minimal_pressure",
+          "pressure_profile_outcome": "requested_thrash_not_observed"
+        },
+        "observed_benchmark_outcome": {
+          "observed_client_done_count": 8,
+          "observed_successful_requests_total": 72,
+          "observed_failed_requests_total": 0,
+          "observed_clients_with_failures": 0,
+          "observed_client_no_more_work_count": 1,
+          "observed_client_termination_signal_count": 7,
+          "observed_http_422_rejection_count": 0,
+          "observed_request_rejections": false
+        },
+        "observed_server_path_attribution": {
+          "observed_swap_out_attempt_count": 0,
+          "observed_dropped_request_count": 0,
+          "observed_stream_generation_failed_count": 0,
+          "observed_prefix_cache_hit_count": 0,
+          "observed_prefix_cache_hit_tokens_total": 0,
+          "observed_prefill_event_count": 72,
+          "observed_prefill_tokens_total": 124433,
+          "observed_prefill_seconds_total": 295.58,
+          "observed_prefill_seconds_mean": 4.105,
+          "observed_prefill_tps_mean": 590.596,
+          "observed_prompt_metric_event_count": 72,
+          "observed_prompt_tokens_total": 124361,
+          "observed_prompt_seconds_total": 295.58,
+          "observed_prompt_seconds_mean": 4.105,
+          "observed_prompt_tps_mean": 590.209,
+          "observed_decode_metric_event_count": 72,
+          "observed_decode_tokens_total": 576,
+          "observed_decode_seconds_total": 77.85,
+          "observed_decode_seconds_mean": 1.081,
+          "observed_decode_tps_mean": 16.707
+        }
       },
-      "server_exit_code": -2
+      "server_exit_code": -2,
+      "observed_cache_pressure": {
+        "requested_cache_pressure_profile": "hard_thrash",
+        "planned_gpu_blocks": 5799,
+        "planned_usable_kvcache_tokens": 371136,
+        "planned_max_seqs": 8,
+        "planned_tokens_per_seq_limit": 40960,
+        "configured_prefix_cache_blocks": 64,
+        "configured_prefix_cache_tokens": 4096,
+        "observed_gpu_kv_usage_percent_max": 5.3,
+        "observed_gpu_kv_usage_gb_max": 0.91,
+        "observed_gpu_kv_budget_gb": 16.99,
+        "observed_cpu_swap_usage_percent_max": 0.0,
+        "observed_cpu_swap_usage_gb_max": 0.0,
+        "observed_cpu_swap_budget_gb": 1.7,
+        "observed_prefix_cache_miss_count": 72,
+        "observed_prefix_cache_insert_count": 72,
+        "observed_prefix_cache_eviction_count": 0,
+        "observed_cache_pressure_level": "minimal_pressure",
+        "pressure_profile_outcome": "requested_thrash_not_observed"
+      },
+      "observed_benchmark_outcome": {
+        "observed_client_done_count": 8,
+        "observed_successful_requests_total": 72,
+        "observed_failed_requests_total": 0,
+        "observed_clients_with_failures": 0,
+        "observed_client_no_more_work_count": 1,
+        "observed_client_termination_signal_count": 7,
+        "observed_http_422_rejection_count": 0,
+        "observed_request_rejections": false
+      },
+      "observed_server_path_attribution": {
+        "observed_swap_out_attempt_count": 0,
+        "observed_dropped_request_count": 0,
+        "observed_stream_generation_failed_count": 0,
+        "observed_prefix_cache_hit_count": 0,
+        "observed_prefix_cache_hit_tokens_total": 0,
+        "observed_prefill_event_count": 72,
+        "observed_prefill_tokens_total": 124433,
+        "observed_prefill_seconds_total": 295.58,
+        "observed_prefill_seconds_mean": 4.105,
+        "observed_prefill_tps_mean": 590.596,
+        "observed_prompt_metric_event_count": 72,
+        "observed_prompt_tokens_total": 124361,
+        "observed_prompt_seconds_total": 295.58,
+        "observed_prompt_seconds_mean": 4.105,
+        "observed_prompt_tps_mean": 590.209,
+        "observed_decode_metric_event_count": 72,
+        "observed_decode_tokens_total": 576,
+        "observed_decode_seconds_total": 77.85,
+        "observed_decode_seconds_mean": 1.081,
+        "observed_decode_tps_mean": 16.707
+      }
     }
   ],
   "effective_device_ids": [
@@ -323,6 +563,10 @@
     "pd_skip_reason": null
   },
   "report_bundle": {
+    "manifest": {
+      "json": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/manifest.json",
+      "md": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/manifest.md"
+    },
     "system_info": {
       "json": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/system_info/system_snapshot.json",
       "csv": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/reports/system_info/system_snapshot.csv",
@@ -339,17 +583,10 @@
     "repo_state": {
       "repo_path": "/root/Documents/myelon-launch/vllm.rs",
       "branch": "myelon-integration-1",
-      "commit": "602c1c1e73633f989d6e22fb36c7e8e713263853",
-      "status": "M artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_shared_prefix_round_robin.json\n M artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_stress_round_robin.json\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/all_run_commands.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/current_findings.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/current_findings.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/per_model_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/per_model_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/rollup_run_index.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/rollup_run_index.md\n M scripts/myelon_report_common.py\n M scripts/run_myelon_server_benchmark_matrix.py\n M scripts/tests/test_benchmark_contract.py\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_fixed_prompt_v256d/\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v1/"
+      "commit": "5d2400d757e9cbfe0f653d8b4be10c2481559d72",
+      "status": "M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/report.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/per_variant_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/per_variant_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/run_details.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/run_index.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/run_index.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/benchmarks/run_summary.md\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/system_info/system_snapshot.csv\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/system_info/system_snapshot.json\n M artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/system_info/system_snapshot.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/all_run_commands.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/current_findings.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/current_findings.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/high_level_summary.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/per_model_side_by_side.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/per_model_side_by_side.md\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/rollup_run_index.csv\n M artifacts/h100_bridge_campaign_20260406/reports/benchmarks/rollup_run_index.md\n M scripts/myelon_report_common.py\n M scripts/run_myelon_benchmark_matrix.py\n M scripts/run_myelon_pd_benchmark_matrix.py\n M scripts/run_myelon_server_benchmark_matrix.py\n M scripts/tests/test_benchmark_contract.py\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v10/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_swap_v9/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v1/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v2/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v3/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/manifest.json\n?? artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v4/reports/manifest.md\n?? artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_cache_thrash_rr_v1/\n?? artifacts/h100_bridge_campaign_20260406/qwen3_4b_tp2_server_shared_prefix_rr_control_v1/"
     },
-    "raw_captures": {
-      "hostnamectl.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/raw/system_info/hostnamectl.txt",
-      "lscpu.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/raw/system_info/lscpu.txt",
-      "free_h.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/raw/system_info/free_h.txt",
-      "df_h.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/raw/system_info/df_h.txt",
-      "uname.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/raw/system_info/uname.txt",
-      "nvidia_smi.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/raw/system_info/nvidia_smi.txt",
-      "nvidia_smi_topology.txt": "/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_cache_thrash_rr_v5/raw/system_info/nvidia_smi_topology.txt"
-    }
-  }
+    "raw_captures": {}
+  },
+  "result_boundary": "benchmark_complete"
 }

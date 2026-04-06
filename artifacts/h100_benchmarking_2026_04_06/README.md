@@ -123,5 +123,6 @@ See:
 - `artifacts/h100_benchmarking_2026_04_06/server_prefill_kv_fraction_guard_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/server_prefill_bridge_results_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/server_prefill_06b_attribution_slice.md`
+- `artifacts/h100_benchmarking_2026_04_06/server_path_attribution_4b_bridge_slice.md`
 - `artifacts/h100_benchmarking_2026_04_06/model_workload_policy.md`
 - `artifacts/h100_benchmarking_2026_04_06/blocker_registry.md`
