@@ -1,0 +1,3 @@
+benchmark_exit_code,case_status,execution_variant,label,latency_ms_mean,requests_per_sec,runtime_sec,skip_reason,stop_point,tpot_ms_mean,ttft_ms_mean
+0,completed,runner_pd,runner_pd,396.31,1.378,5.081,,full_completion,3.5,291.125
+0,completed,myelon_pd,myelon_pd,395.17,1.362,5.14,,full_completion,3.454,291.329
