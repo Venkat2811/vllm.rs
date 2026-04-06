@@ -2818,6 +2818,9 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             all_run_commands_md = Path(outputs["all_run_commands_md"])
             family_root = tmp_path / "reports" / "benchmarks" / "by_family"
             equivalence_root = tmp_path / "reports" / "benchmarks" / "by_equivalence"
+            workload_root = tmp_path / "reports" / "benchmarks" / "by_workload"
+            topology_root = tmp_path / "reports" / "benchmarks" / "by_topology"
+            run_class_root = tmp_path / "reports" / "benchmarks" / "by_run_class"
             self.assertTrue(current_findings_md.is_file())
             self.assertTrue(high_level_summary_md.is_file())
             self.assertTrue(rollup_run_index_md.is_file())
@@ -2834,6 +2837,15 @@ class BenchmarkScriptReportTests(unittest.TestCase):
                     / "matched_runs.md"
                 ).is_file()
             )
+            self.assertTrue(
+                (
+                    workload_root
+                    / "synthetic_server_prefill_fixed_prompt_burst"
+                    / "findings.md"
+                ).is_file()
+            )
+            self.assertTrue((topology_root / "tp2" / "findings.md").is_file())
+            self.assertTrue((run_class_root / "fullpass" / "findings.md").is_file())
 
             findings_text = current_findings_md.read_text(encoding="utf-8")
             self.assertIn("Qwen/Qwen3-4B", findings_text)
@@ -2869,6 +2881,26 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertIn("fixed_prompt_burst_bridge", equivalence_text)
             self.assertIn("prefill_stress", equivalence_text)
             self.assertIn("server_prefill_stress", equivalence_text)
+
+            workload_text = (
+                workload_root
+                / "synthetic_server_prefill_fixed_prompt_burst"
+                / "findings.md"
+            ).read_text(encoding="utf-8")
+            self.assertIn("synthetic_server_prefill_fixed_prompt_burst", workload_text)
+            self.assertIn("Qwen/Qwen3-30B-A3B", workload_text)
+
+            topology_text = (
+                topology_root / "tp2" / "findings.md"
+            ).read_text(encoding="utf-8")
+            self.assertIn("tp2", topology_text)
+            self.assertIn("Qwen/Qwen3-30B-A3B", topology_text)
+
+            run_class_text = (
+                run_class_root / "fullpass" / "findings.md"
+            ).read_text(encoding="utf-8")
+            self.assertIn("fullpass", run_class_text)
+            self.assertIn("Qwen/Qwen3-30B-A3B", run_class_text)
 
     def test_normalize_report_backfills_summary_means_from_benchmark_log(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
