@@ -234,6 +234,7 @@ def main() -> int:
             "pd_url": pd_url,
         },
         cache_pressure_profile="unspecified",
+        equivalence_group=None,
         topology_overlay="pd_tp1",
         transport_mode=infer_pd_transport_mode(pd_url),
         run_class=run_class,
