@@ -83,3 +83,15 @@ Use capability-based model selection by benchmark family:
   - keep a stable small / medium / large serving ladder
 - `pd_qos`
   - restrict to PD-compatible cached models
+
+## Current Harness-Hardening Slice
+
+The first `VR01` contract slice is now landed and validated:
+
+- all three retained harness wrappers emit shared `benchmark_contract` metadata
+- all three retained harness wrappers emit `machine_profile`
+- serving and PD case reports now carry explicit `stop_point` and `skip_reason` fields
+
+See:
+
+- `artifacts/h100_benchmarking_2026_04_06/benchmark_contract_slice.md`
