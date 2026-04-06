@@ -482,3 +482,246 @@ uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm
 uv run --with aiohttp --with numpy --with pandas --with transformers --with tqdm python3 /root/Documents/myelon-launch/vllm/benchmarks/multi_turn/benchmark_serving_multi_turn.py --input-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_benchmarking_2026_04_06/inputs/synthetic_server_prefill_shared_prefix_round_robin.json --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen30ba3b_tp2_server_shared_prefix_rr_control_v3/myelon/conversations.json --model /root/.cache/huggingface/hub/models--Qwen--Qwen3-30B-A3B/snapshots/ad44e777bcd18fa416d9da3bd8f70d33ebb85d39 --url http://127.0.0.1:19121 --num-clients 32 --max-active-conversations 64 --max-turns 6 --max-retries 1 --request-timeout-sec 600 --request-rate 0.0 --conversation-sampling round_robin --max-num-requests 384 --limit-min-tokens 8 --limit-max-tokens 8 --served-model-name ad44e777bcd18fa416d9da3bd8f70d33ebb85d39
 ```
 
+## Qwen/Qwen3-0.6B / server_prefill_stress / single_gpu
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/report.json`
+- status: `completed`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 20020 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 1 --dtype bf16 --seed 123 --num-shards 1 --force-runner --device-ids 0 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:20020 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/runner/conversations.json --prompt-text Please talk about China in more details. --num-requests 256 --concurrency 1 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 20021 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 1 --dtype bf16 --seed 123 --num-shards 1 --myelon-ipc --device-ids 0 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:20021 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c1_v1/myelon/conversations.json --prompt-text Please talk about China in more details. --num-requests 256 --concurrency 1 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+## Qwen/Qwen3-0.6B / server_prefill_stress / single_gpu
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/report.json`
+- status: `completed`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19820 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 32 --dtype bf16 --seed 123 --num-shards 1 --force-runner --device-ids 0 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19820 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/runner/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 32 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19821 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 32 --dtype bf16 --seed 123 --num-shards 1 --myelon-ipc --device-ids 0 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19821 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_c32_v1/myelon/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 32 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+## Qwen/Qwen3-0.6B / server_prefill_stress / single_gpu
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/report.json`
+- status: `completed`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19620 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 1 --force-runner --device-ids 0 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19620 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/runner/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 256 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19621 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 1 --myelon-ipc --device-ids 0 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19621 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_nospin_v1/myelon/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 256 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+## Qwen/Qwen3-0.6B / server_prefill_stress / single_gpu
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/report.json`
+- status: `completed`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 20120 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 32 --dtype bf16 --seed 123 --num-shards 1 --force-runner --device-ids 0 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:20120 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/runner/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 32 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 20121 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 32 --dtype bf16 --seed 123 --num-shards 1 --myelon-ipc --device-ids 0 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --myelon-busy-spin --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:20121 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_spin_c32_v1/myelon/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 32 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+## Qwen/Qwen3-0.6B / server_prefill_stress / single_gpu
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/report.json`
+- status: `completed`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19420 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 1 --force-runner --device-ids 0 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19420 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/runner/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 256 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19421 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 1 --myelon-ipc --device-ids 0 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --myelon-busy-spin --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19421 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_singlegpu_fixed_prompt_v1/myelon/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 256 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+## Qwen/Qwen3-0.6B / server_prefill_stress / tp2
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/report.json`
+- status: `completed`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19920 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 32 --dtype bf16 --seed 123 --num-shards 2 --force-runner --device-ids 0,1 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19920 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/runner/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 32 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19921 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 32 --dtype bf16 --seed 123 --num-shards 2 --myelon-ipc --device-ids 0,1 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19921 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_c32_v1/myelon/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 32 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+## Qwen/Qwen3-0.6B / server_prefill_stress / tp2
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/report.json`
+- status: `completed`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19720 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 2 --force-runner --device-ids 0,1 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19720 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/runner/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 256 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19721 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 2 --myelon-ipc --device-ids 0,1 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19721 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_nospin_v1/myelon/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 256 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+## Qwen/Qwen3-0.6B / server_prefill_stress / tp2
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/report.json`
+- status: `completed`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 20220 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 32 --dtype bf16 --seed 123 --num-shards 2 --force-runner --device-ids 0,1 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:20220 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/runner/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 32 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 20221 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 32 --dtype bf16 --seed 123 --num-shards 2 --myelon-ipc --device-ids 0,1 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --myelon-busy-spin --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:20221 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_spin_c32_v1/myelon/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 32 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+## Qwen/Qwen3-0.6B / server_prefill_stress / tp2
+
+- report_json: `/root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/report.json`
+- status: `completed`
+
+### runner
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19520 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 2 --force-runner --device-ids 0,1 --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19520 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/runner/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 256 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
+### myelon
+
+- server_command:
+```bash
+/root/Documents/myelon-launch/vllm.rs/target/release/vllm-rs --server --port 19521 --w /root/.cache/huggingface/hub/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca --max-num-seqs 256 --dtype bf16 --seed 123 --num-shards 2 --myelon-ipc --device-ids 0,1 --myelon-rpc-depth 8192 --myelon-response-depth 8192 --myelon-busy-spin --kv-fraction 0.55 --cpu-mem-fold 0.5
+```
+- benchmark_command:
+```bash
+uv run --with aiohttp python3 /root/Documents/myelon-launch/vllm.rs/scripts/benchmark_server_fixed_prompt_burst.py --url http://127.0.0.1:19521 --output-file /root/Documents/myelon-launch/vllm.rs/artifacts/h100_bridge_campaign_20260406/qwen3_06b_tp2_fixed_prompt_v1/myelon/conversations.json --prompt-text Please talk about China in more details. --num-requests 512 --concurrency 256 --max-tokens 1 --request-timeout-sec 300 --served-model-name c1899de289a04d12100db370d81485cdf75e47ca
+```
+
