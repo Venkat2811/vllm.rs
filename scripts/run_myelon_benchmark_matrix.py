@@ -12,6 +12,7 @@ from myelon_benchmark_common import (
     run_case_with_retries,
     summarize_numeric_runs,
 )
+from myelon_report_common import write_report_bundle
 from myelon_validation_common import (
     build_benchmark_contract,
     build_machine_profile,
@@ -123,6 +124,11 @@ def main() -> int:
         "true",
         "yes",
     }
+    capture_raw_system = env_str("VLLM_CAPTURE_RAW_SYSTEM_INFO", "1").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
     run_class = resolve_run_class(
         os.environ.get("VLLM_RUN_CLASS"),
         infer_cli_run_class(measured_runs),
@@ -207,21 +213,27 @@ def main() -> int:
     def write_failure_report(status: str, failed_case: str, failed_run: dict, stop_point: str) -> int:
         failure_contract = dict(benchmark_contract)
         failure_contract["stop_point"] = stop_point
+        failure_report = {
+            "benchmark_contract": failure_contract,
+            "machine_profile": machine_profile,
+            "mode": mode,
+            "workload_profile": workload_profile,
+            "prompt_source": prompt_source,
+            "status": status,
+            "failed_case": failed_case,
+            "failed_run": failed_run,
+        }
+        output_root = output_path.parent / f"{output_path.stem}_reports"
+        failure_report["report_bundle"] = write_report_bundle(
+            output_root=output_root,
+            report=failure_report,
+            report_path=output_path,
+            repo_root=repo_root,
+            capture_raw_system=capture_raw_system,
+        )
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
-            json.dumps(
-                {
-                    "benchmark_contract": failure_contract,
-                    "machine_profile": machine_profile,
-                    "mode": mode,
-                    "workload_profile": workload_profile,
-                    "prompt_source": prompt_source,
-                    "status": status,
-                    "failed_case": failed_case,
-                    "failed_run": failed_run,
-                },
-                indent=2,
-            )
+            json.dumps(failure_report, indent=2)
             + "\n",
             encoding="utf-8",
         )
@@ -376,6 +388,15 @@ def main() -> int:
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    output_root = output_path.parent / f"{output_path.stem}_reports"
+    report["report_bundle"] = write_report_bundle(
+        output_root=output_root,
+        report=report,
+        report_path=output_path,
+        repo_root=repo_root,
+        capture_raw_system=capture_raw_system,
+    )
     output_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(output_path)
 
