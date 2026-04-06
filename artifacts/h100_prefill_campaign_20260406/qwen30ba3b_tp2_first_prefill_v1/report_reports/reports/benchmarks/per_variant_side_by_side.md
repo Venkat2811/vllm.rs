@@ -1,0 +1,8 @@
+# Per-Variant Side By Side
+
+| baseline_variant   | myelon_variant   | metric                     |   baseline_value |   myelon_value |   delta_percent | baseline_status          | myelon_status            |
+|--------------------|------------------|----------------------------|------------------|----------------|-----------------|--------------------------|--------------------------|
+| runner             | myelon           | first_prefill_seconds_mean |            2.42  |           2.42 |          0      | first_prefill_completion | first_prefill_completion |
+| runner             | myelon           | first_prefill_tps_mean     |            7.022 |           7.03 |          0.1139 | first_prefill_completion | first_prefill_completion |
+| runner             | myelon           | prompt_seconds_mean        |            2.42  |           2.42 |          0      | first_prefill_completion | first_prefill_completion |
+| runner             | myelon           | prompt_tps_mean            |            7.022 |           7.03 |          0.1139 | first_prefill_completion | first_prefill_completion |

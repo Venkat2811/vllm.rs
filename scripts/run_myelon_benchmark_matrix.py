@@ -8,8 +8,7 @@ from pathlib import Path
 from myelon_benchmark_common import (
     build_command,
     metrics_are_complete,
-    run_case,
-    run_case_with_retries,
+    run_case_for_stop_point_with_retries,
     summarize_numeric_runs,
 )
 from myelon_report_common import normalize_report, write_report_bundle
@@ -84,14 +83,46 @@ def resolve_workload() -> tuple[str, str, str]:
     raise ValueError(f"unsupported VLLM_WORKLOAD_PROFILE '{profile}'")
 
 
-def workload_class_for_profile(workload_profile: str, prompt_source: str) -> str:
+def workload_class_for_profile(
+    workload_profile: str, prompt_source: str, batch_size: int
+) -> str:
     if prompt_source == "custom_env":
-        return "custom_prompt_env"
+        return "custom_prompt_env_burst" if batch_size > 1 else "custom_prompt_env"
     if workload_profile == "synthetic_short":
-        return "synthetic_prompt_short"
+        return (
+            "synthetic_prompt_short_burst"
+            if batch_size > 1
+            else "synthetic_prompt_short"
+        )
     if workload_profile == "synthetic_long_stress":
-        return "synthetic_prompt_long_stress"
+        return (
+            "synthetic_prompt_long_stress_burst"
+            if batch_size > 1
+            else "synthetic_prompt_long_stress"
+        )
     return "prompt_profile_defined"
+
+
+def resolve_prefill_stop_point(max_tokens: str) -> str:
+    explicit = os.environ.get("VLLM_PREFILL_STRESS_STOP_POINT")
+    allowed = {
+        "first_prefill_completion",
+        "minimal_decode_completion",
+        "full_completion",
+    }
+    if explicit:
+        if explicit not in allowed:
+            raise ValueError(
+                f"unsupported VLLM_PREFILL_STRESS_STOP_POINT '{explicit}'"
+            )
+        return explicit
+    try:
+        parsed_max_tokens = int(max_tokens)
+    except ValueError as error:
+        raise ValueError(f"invalid VLLM_MAX_TOKENS '{max_tokens}'") from error
+    if parsed_max_tokens <= 1:
+        return "minimal_decode_completion"
+    return "full_completion"
 
 
 def main() -> int:
@@ -100,13 +131,15 @@ def main() -> int:
         "VLLM_MODEL_PATH",
         "/root/.cache/huggingface/hub/models--Qwen--Qwen3-4B/snapshots/1cfa9a7208912126459214e8b04321603b3df60c",
     )
+    max_model_len = env_str("VLLM_MAX_MODEL_LEN", "1024")
+    max_tokens = env_str("VLLM_MAX_TOKENS", "64")
+    batch_size = env_int("VLLM_BENCHMARK_BATCH_SIZE", 256)
     try:
         prompt, workload_profile, prompt_source = resolve_workload()
+        stop_point = resolve_prefill_stop_point(max_tokens)
     except ValueError as error:
         print(str(error), file=sys.stderr)
         return 1
-    max_model_len = env_str("VLLM_MAX_MODEL_LEN", "1024")
-    max_tokens = env_str("VLLM_MAX_TOKENS", "64")
     seed = env_str("VLLM_SEED", "123")
     mode = env_str("VLLM_BENCHMARK_MODE", "single_gpu")
     warmup_runs = env_int("VLLM_BENCHMARK_WARMUP_RUNS", 1)
@@ -149,6 +182,9 @@ def main() -> int:
     if warmup_runs < 0 or measured_runs <= 0:
         print("warmup runs must be >= 0 and measured runs must be > 0", file=sys.stderr)
         return 1
+    if batch_size <= 0:
+        print("batch size must be > 0", file=sys.stderr)
+        return 1
     if max_attempts <= 0:
         print("max attempts must be > 0", file=sys.stderr)
         return 1
@@ -183,17 +219,20 @@ def main() -> int:
     binary_path = repo_root / "target" / build_profile / "vllm-rs"
     cases = prepare_cases(mode, device_ids)
     report_cases = []
+    require_response = batch_size <= 1
     benchmark_contract = build_benchmark_contract(
         benchmark_family="prefill_stress",
         benchmark_submode="fixed_prompt_burst",
         question_answered="Does Myelon reduce transport-sensitive prompt and prefill cost?",
-        workload_class=workload_class_for_profile(workload_profile, prompt_source),
+        workload_class=workload_class_for_profile(
+            workload_profile, prompt_source, batch_size
+        ),
         warmup_policy=f"cli_warmup_runs:{warmup_runs}",
         first_turn_measured=True,
         arrival_pattern="prompt_burst_serial_runs",
         concurrency_policy={
-            "driver": "cli_repeated_invocation",
-            "max_num_seqs": 1,
+            "driver": "cli_batch_burst_repeated_invocation",
+            "batch_size": batch_size,
             "warmup_runs": warmup_runs,
             "measured_runs": measured_runs,
             "max_attempts": max_attempts,
@@ -209,7 +248,7 @@ def main() -> int:
         topology_overlay=mode,
         transport_mode="socket_vs_myelon_process_runner",
         run_class=run_class,
-        stop_point="full_completion",
+        stop_point=stop_point,
         skip_reason=None,
     )
     machine_profile = build_machine_profile(
@@ -255,6 +294,7 @@ def main() -> int:
             binary_path,
             model_path,
             prompt,
+            batch_size,
             max_model_len,
             max_tokens,
             seed,
@@ -267,19 +307,22 @@ def main() -> int:
 
         warmups = []
         for index in range(warmup_runs):
-            warmup = run_case_with_retries(
+            warmup = run_case_for_stop_point_with_retries(
                 repo_root,
                 f"{label}-warmup-{index + 1}",
                 case_command,
                 timeout_seconds,
                 max_attempts,
                 retry_sleep_seconds,
+                stop_point,
             )
             warmups.append(warmup)
             if warmup["exit_code"] != 0:
                 print(f"warmup failed for case {label}", file=sys.stderr)
                 return write_failure_report("warmup_failed", label, warmup, "warmup_failure")
-            if not metrics_are_complete(warmup["metrics"]):
+            if not metrics_are_complete(
+                warmup["metrics"], stop_point, require_response=require_response
+            ):
                 print(f"warmup produced incomplete metrics for case {label}", file=sys.stderr)
                 return write_failure_report(
                     "warmup_incomplete_metrics",
@@ -290,13 +333,14 @@ def main() -> int:
 
         measured = []
         for index in range(measured_runs):
-            run = run_case_with_retries(
+            run = run_case_for_stop_point_with_retries(
                 repo_root,
                 f"{label}-measured-{index + 1}",
                 case_command,
                 timeout_seconds,
                 max_attempts,
                 retry_sleep_seconds,
+                stop_point,
             )
             measured.append(run)
             if run["exit_code"] != 0:
@@ -307,7 +351,9 @@ def main() -> int:
                     run,
                     "measured_failure",
                 )
-            if not metrics_are_complete(run["metrics"]):
+            if not metrics_are_complete(
+                run["metrics"], stop_point, require_response=require_response
+            ):
                 print(f"measured run produced incomplete metrics for case {label}", file=sys.stderr)
                 return write_failure_report(
                     "measured_incomplete_metrics",
@@ -316,13 +362,16 @@ def main() -> int:
                     "measured_incomplete_metrics",
                 )
 
-        baseline_response = measured[0]["metrics"]["response"]
-        all_responses_match = all(
-            run["metrics"]["response"] == baseline_response for run in measured
+        baseline_response = measured[0]["metrics"].get("response")
+        all_responses_match = baseline_response is not None and all(
+            run["metrics"].get("response") == baseline_response for run in measured
         )
         report_cases.append(
             {
                 "label": label,
+                "execution_variant": label,
+                "stop_point": stop_point,
+                "benchmark_exit_code": 0,
                 "command": case_command,
                 "warmups": warmups,
                 "measured": measured,
@@ -334,9 +383,12 @@ def main() -> int:
         )
 
     cases_by_label = {case["label"]: case for case in report_cases}
-    cross_case_response_match = (
-        cases_by_label["runner"]["sample_response"] == cases_by_label["myelon"]["sample_response"]
-    )
+    cross_case_response_match = True
+    if stop_point != "first_prefill_completion":
+        cross_case_response_match = (
+            cases_by_label["runner"]["sample_response"]
+            == cases_by_label["myelon"]["sample_response"]
+        )
     report = {
         "benchmark_contract": benchmark_contract,
         "machine_profile": machine_profile,
@@ -350,6 +402,7 @@ def main() -> int:
         "prompt_preview": prompt[:160],
         "max_model_len": int(max_model_len),
         "max_tokens": int(max_tokens),
+        "batch_size": batch_size,
         "seed": int(seed),
         "warmup_runs": warmup_runs,
         "measured_runs": measured_runs,
@@ -368,6 +421,18 @@ def main() -> int:
         "cases": report_cases,
         "all_cross_case_responses_match": cross_case_response_match,
         "comparisons": {
+            "myelon_first_prefill_seconds_ratio_vs_runner": compare_ratio(
+                {label: case["measured_summary"] for label, case in cases_by_label.items()},
+                "runner",
+                "myelon",
+                "first_prefill_seconds",
+            ),
+            "myelon_first_prefill_tps_ratio_vs_runner": compare_ratio(
+                {label: case["measured_summary"] for label, case in cases_by_label.items()},
+                "runner",
+                "myelon",
+                "first_prefill_tokens_per_second",
+            ),
             "myelon_prompt_seconds_ratio_vs_runner": compare_ratio(
                 {label: case["measured_summary"] for label, case in cases_by_label.items()},
                 "runner",
@@ -395,6 +460,7 @@ def main() -> int:
         },
         "notes": [
             "This harness reuses the existing vllm-rs CLI metric parsing and adds warmup plus repeated measured runs.",
+            f"stop_point={stop_point}",
             "TTFT and TPOT are not emitted by this binary path yet; use serving benchmarks for those metrics later.",
         ],
     }
@@ -413,7 +479,7 @@ def main() -> int:
     output_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(output_path)
 
-    if not cross_case_response_match:
+    if stop_point != "first_prefill_completion" and not cross_case_response_match:
         return 4
     if not cases_by_label["myelon"]["measured"][0]["metrics"]["myelon_enabled"]:
         return 5
