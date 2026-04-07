@@ -1,0 +1,16 @@
+section,key,value
+machine_profile,hostname,loud-rain-thinks-fin-03
+machine_profile,system,Linux
+machine_profile,release,6.8.0-100-generic
+machine_profile,platform,Linux-6.8.0-100-generic-x86_64-with-glibc2.39
+machine_profile,machine,x86_64
+machine_profile,python_version,3.12.3
+machine_profile,cpu_count,176
+machine_profile,cuda_visible_devices,
+machine_profile,cuda_compute_cap_override,90
+machine_profile,detected_cuda_device_count,4
+machine_profile,effective_device_ids,"[0, 1]"
+repo_state,repo_path,/root/Documents/myelon-launch/vllm.rs
+repo_state,branch,myelon-integration-1
+repo_state,commit,8462f4214626c7be8b4aed3ab3fcae23a8e83908
+repo_state,status,?? artifacts/h200_external_python_phase_a_20260407/
