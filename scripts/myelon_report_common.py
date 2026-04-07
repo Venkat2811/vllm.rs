@@ -11,6 +11,7 @@ from myelon_validation_common import (
     classify_arrival_pattern,
     classify_model_capability,
     extract_server_kvcache_plan,
+    infer_pd_topology_overlay,
     infer_pd_transport_mode,
     infer_request_run_class,
     infer_tp_scale_contract_fields,
@@ -918,6 +919,18 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
     request_rate = report.get("request_rate", 0)
 
     if report.get("pd_url") is not None or report.get("server_device_ids") is not None:
+        server_device_ids = report.get("server_device_ids")
+        client_device_ids = report.get("client_device_ids")
+        prefill_tp_size = (
+            len(server_device_ids)
+            if isinstance(server_device_ids, list) and server_device_ids
+            else 1
+        )
+        decode_tp_size = (
+            len(client_device_ids)
+            if isinstance(client_device_ids, list) and client_device_ids
+            else 1
+        )
         return {
             "benchmark_family": "pd_qos",
             "benchmark_submode": (
@@ -939,10 +952,13 @@ def infer_benchmark_contract(report: dict[str, object]) -> dict[str, object]:
                 "max_turns": report.get("max_turns"),
                 "request_rate": request_rate,
             },
-            "topology_overlay": "pd_tp1",
-            "tp_scale_overlay": "pd(tp1/tp1)",
-            "prefill_tp_size": 1,
-            "decode_tp_size": 1,
+            "topology_overlay": infer_pd_topology_overlay(
+                server_device_ids if isinstance(server_device_ids, list) else None,
+                client_device_ids if isinstance(client_device_ids, list) else None,
+            ),
+            "tp_scale_overlay": f"pd(tp{prefill_tp_size}/tp{decode_tp_size})",
+            "prefill_tp_size": prefill_tp_size,
+            "decode_tp_size": decode_tp_size,
             "pd_enabled": True,
             "pd_role_layout": "same_host_split_roles",
             "transport_mode": infer_pd_transport_mode(report.get("pd_url")),
