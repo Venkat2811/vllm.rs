@@ -397,6 +397,15 @@ class BenchmarkContractHelperTests(unittest.TestCase):
             "unsupported_topology_insufficient_visible_cuda_devices",
         )
 
+    def test_pd_topology_capability_supports_disjoint_multidevice_roles(self) -> None:
+        capability = validation_common.classify_pd_topology_capability(
+            server_device_ids=[0, 1],
+            client_device_ids=[2, 3],
+            detected_cuda_device_count=4,
+        )
+        self.assertTrue(capability["pd_supported"])
+        self.assertIsNone(capability["pd_skip_reason"])
+
     def test_pd_transport_capability_detects_missing_localipc_peer_access(self) -> None:
         with mock.patch.object(
             validation_common,
@@ -413,6 +422,18 @@ class BenchmarkContractHelperTests(unittest.TestCase):
         self.assertEqual(
             capability["pd_skip_reason"],
             "unsupported_transport_localipc_missing_p2p_read",
+        )
+
+    def test_pd_transport_capability_rejects_localipc_multidevice_roles(self) -> None:
+        capability = validation_common.classify_pd_transport_capability(
+            "pd_localipc_default",
+            server_device_ids=[0, 1],
+            client_device_ids=[2, 3],
+        )
+        self.assertFalse(capability["pd_supported"])
+        self.assertEqual(
+            capability["pd_skip_reason"],
+            "unsupported_transport_localipc_multidevice_roles_unqualified",
         )
 
     def test_infer_model_label_handles_hf_cache_path(self) -> None:
@@ -2322,6 +2343,80 @@ class BenchmarkScriptReportTests(unittest.TestCase):
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["run_index_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["benchmarks"]["side_by_side_md"]).is_file())
             self.assertTrue(Path(report["report_bundle"]["system_info"]["md"]).is_file())
+
+    def test_pd_benchmark_report_supports_tp2_per_role(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            model_dir = tmp_path / "model"
+            model_dir.mkdir()
+            workload_file = tmp_path / "pd_transfer_first_request.json"
+            workload_file.write_text("{}\n", encoding="utf-8")
+            output_dir = tmp_path / "pd_tp2_out"
+
+            env = {
+                "VLLM_MODEL_PATH": str(model_dir),
+                "VLLM_BENCHMARK_INPUT_FILE": str(workload_file),
+                "VLLM_PD_BENCHMARK_OUT_DIR": str(output_dir),
+                "VLLM_BUILD_FEATURES": "cuda,myelon,nccl",
+                "VLLM_PD_SERVER_DEVICE_IDS": "0,1",
+                "VLLM_PD_CLIENT_DEVICE_IDS": "2,3",
+                "VLLM_PD_URL": "tcp://127.0.0.1:18081",
+                "VLLM_SERVER_BENCH_MAX_NUM_REQUESTS": "10",
+                "VLLM_RUN_CLASS": "quickpass",
+                "VLLM_CAPTURE_RAW_SYSTEM_INFO": "0",
+            }
+
+            def fake_run(*args, **kwargs):
+                command = args[0]
+                if command[0] == "cargo":
+                    return CompletedProcess(command, 0, "", "")
+                return CompletedProcess(command, 0, BENCHMARK_TEXT, "")
+
+            with mock.patch.dict(os.environ, env, clear=False):
+                with mock.patch.object(
+                    pd_matrix.subprocess,
+                    "run",
+                    side_effect=fake_run,
+                ), mock.patch.object(
+                    pd_matrix.subprocess,
+                    "Popen",
+                    return_value=FakeProcess(),
+                ), mock.patch.object(
+                    pd_matrix,
+                    "wait_for_pd_server_ready",
+                    return_value=None,
+                ), mock.patch.object(
+                    pd_matrix,
+                    "wait_for_server_ready",
+                    return_value={"data": [{"id": "served-model"}]},
+                ), mock.patch.object(
+                    pd_matrix,
+                    "terminate_process",
+                    return_value=0,
+                ), mock.patch.object(
+                    pd_matrix,
+                    "detect_cuda_device_count",
+                    return_value=4,
+                ):
+                    rc = pd_matrix.main()
+
+            self.assertEqual(rc, 0)
+            report_path = output_dir / "report.json"
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["benchmark_contract"]["topology_overlay"], "pd_tp2")
+            self.assertEqual(report["benchmark_contract"]["tp_scale_overlay"], "pd(tp2/tp2)")
+            self.assertEqual(report["benchmark_contract"]["prefill_tp_size"], 2)
+            self.assertEqual(report["benchmark_contract"]["decode_tp_size"], 2)
+            self.assertEqual(report["benchmark_contract"]["transport_mode"], "pd_tcp")
+            for case in report["cases"]:
+                self.assertEqual(
+                    case["pd_server_command"][case["pd_server_command"].index("--num-shards") + 1],
+                    "2",
+                )
+                self.assertEqual(
+                    case["client_server_command"][case["client_server_command"].index("--num-shards") + 1],
+                    "2",
+                )
 
     def test_pd_cold_turn_mode_disables_warmup_step(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

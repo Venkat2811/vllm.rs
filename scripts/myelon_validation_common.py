@@ -240,9 +240,9 @@ def classify_pd_topology_capability(
     skip_reason = None
     if server_device_ids is None or client_device_ids is None:
         skip_reason = "unsupported_topology_pd_requires_explicit_single_device_roles"
-    elif len(server_device_ids) != 1 or len(client_device_ids) != 1:
-        skip_reason = "unsupported_topology_pd_requires_single_device_server_and_client"
-    elif server_device_ids[0] == client_device_ids[0]:
+    elif len(server_device_ids) == 0 or len(client_device_ids) == 0:
+        skip_reason = "unsupported_topology_pd_requires_nonempty_server_and_client_roles"
+    elif set(server_device_ids) & set(client_device_ids):
         skip_reason = "unsupported_topology_pd_requires_distinct_server_client_devices"
     elif detected_cuda_device_count is not None:
         invalid_server = [
@@ -367,6 +367,12 @@ def classify_pd_transport_capability(
                 skip_reason = "unsupported_transport_localipc_missing_p2p_read"
             elif peer_write_status != "OK":
                 skip_reason = "unsupported_transport_localipc_missing_p2p_write"
+        elif (
+            server_device_ids is not None
+            and client_device_ids is not None
+            and (len(server_device_ids) > 1 or len(client_device_ids) > 1)
+        ):
+            skip_reason = "unsupported_transport_localipc_multidevice_roles_unqualified"
     elif transport_mode == "pd_custom_url":
         skip_reason = "unsupported_transport_unknown_pd_url_scheme"
     else:
@@ -443,6 +449,18 @@ def build_machine_profile(
         "effective_device_ids": effective_device_ids,
         "gpu_inventory": detect_gpu_inventory(),
     }
+
+
+def infer_pd_topology_overlay(
+    server_device_ids: list[int] | None,
+    client_device_ids: list[int] | None,
+) -> str:
+    prefill_tp = len(server_device_ids) if server_device_ids is not None else 1
+    decode_tp = len(client_device_ids) if client_device_ids is not None else 1
+
+    if prefill_tp == decode_tp:
+        return f"pd_tp{prefill_tp}"
+    return f"pd_tp{prefill_tp}_tp{decode_tp}"
 
 
 def infer_tp_scale_contract_fields(
