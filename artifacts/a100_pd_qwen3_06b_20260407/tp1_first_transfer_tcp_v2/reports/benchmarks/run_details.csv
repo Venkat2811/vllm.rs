@@ -1,0 +1,3 @@
+benchmark_exit_code,case_status,execution_variant,label,latency_ms_mean,observed_client_done_count,observed_client_no_more_work_count,observed_client_termination_signal_count,observed_clients_with_failures,observed_failed_requests_total,observed_http_422_rejection_count,observed_request_rejections,observed_successful_requests_total,requests_per_sec,result_boundary,runtime_sec,skip_reason,stop_point,tpot_ms_mean,ttft_ms_mean
+0,completed,runner_pd,runner_pd,,1,1,0,0,0,0,False,1,0.527,benchmark_complete,1.898,,full_completion,,
+0,completed,myelon_pd,myelon_pd,,1,1,0,0,0,0,False,1,0.576,benchmark_complete,1.735,,full_completion,,

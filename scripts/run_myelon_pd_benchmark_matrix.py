@@ -18,6 +18,7 @@ from myelon_validation_common import (
     default_build_features,
     detect_cuda_device_count,
     env_str,
+    infer_pd_topology_overlay,
     infer_pd_transport_mode,
     infer_request_run_class,
     infer_workload_class_from_path,
@@ -80,14 +81,14 @@ def validate_device_roles(
     client_device_ids: list[int] | None,
 ) -> None:
     if server_device_ids is None or client_device_ids is None:
-        raise ValueError("PD benchmark requires explicit single-device assignments for server and client")
-    if len(server_device_ids) != 1 or len(client_device_ids) != 1:
+        raise ValueError("PD benchmark requires explicit device assignments for server and client")
+    if len(server_device_ids) == 0 or len(client_device_ids) == 0:
         raise ValueError(
-            "PD benchmark currently requires exactly one device id for the PD server "
-            "and exactly one device id for the PD client"
+            "PD benchmark requires at least one device id for the PD server "
+            "and at least one device id for the PD client"
         )
-    if server_device_ids[0] == client_device_ids[0]:
-        raise ValueError("PD server and PD client must use different CUDA devices")
+    if set(server_device_ids) & set(client_device_ids):
+        raise ValueError("PD server and PD client must use disjoint CUDA device sets")
 
     detected_count = detect_cuda_device_count()
     if detected_count is None:
@@ -316,6 +317,9 @@ def main() -> int:
         effective_device_ids.extend(server_device_ids)
     if client_device_ids is not None:
         effective_device_ids.extend(client_device_ids)
+    prefill_tp_size = len(server_device_ids) if server_device_ids is not None else None
+    decode_tp_size = len(client_device_ids) if client_device_ids is not None else None
+    topology_overlay = infer_pd_topology_overlay(server_device_ids, client_device_ids)
     benchmark_contract = build_benchmark_contract(
         benchmark_family="pd_qos",
         benchmark_submode=benchmark_submode,
@@ -338,10 +342,14 @@ def main() -> int:
         },
         cache_pressure_profile="unspecified",
         equivalence_group=None,
-        topology_overlay="pd_tp1",
-        tp_scale_overlay="pd(tp1/tp1)",
-        prefill_tp_size=1,
-        decode_tp_size=1,
+        topology_overlay=topology_overlay,
+        tp_scale_overlay=(
+            f"pd(tp{prefill_tp_size}/tp{decode_tp_size})"
+            if prefill_tp_size is not None and decode_tp_size is not None
+            else topology_overlay
+        ),
+        prefill_tp_size=prefill_tp_size,
+        decode_tp_size=decode_tp_size,
         pd_enabled=True,
         pd_role_layout="same_host_split_roles",
         transport_mode=infer_pd_transport_mode(pd_url),
@@ -516,7 +524,7 @@ def main() -> int:
             "--seed",
             seed,
             "--num-shards",
-            "1",
+            str(prefill_tp_size or 1),
             "--device-ids",
             server_device_ids_raw,
             *server_extra_args,
@@ -552,7 +560,7 @@ def main() -> int:
             "--seed",
             seed,
             "--num-shards",
-            "1",
+            str(decode_tp_size or 1),
             "--device-ids",
             client_device_ids_raw,
             *client_extra_args,
