@@ -14,8 +14,14 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+use once_cell::sync::Lazy;
 use url::Url;
+
+/// Check MYELON_INSTRUMENT=1 once at startup.
+static MYELON_INSTRUMENT: Lazy<bool> = Lazy::new(|| {
+    std::env::var("MYELON_INSTRUMENT").map(|v| v == "1").unwrap_or(false)
+});
 /// An internal enum to abstract over the two stream types.
 /// It implements Read and Write to be used generically.
 enum CommStream {
@@ -383,17 +389,39 @@ impl Communicator {
 /// Generic, standardized function to send a message.
 /// Uses a 4-byte LE length prefix followed by bincode data.
 fn send_message_generic(stream: &mut (impl Read + Write), msg: &TransferMessage) -> Result<bool> {
+    let instrument = *MYELON_INSTRUMENT;
+
+    let t_ser = Instant::now();
     let serialized: Vec<u8> = bincode::serialize(msg).map_err(candle_core::Error::wrap)?;
-    let len = serialized.len() as u32;
+    let ser_us = t_ser.elapsed().as_micros();
+
+    let payload_size = serialized.len();
+    let len = payload_size as u32;
+
+    let t_io = Instant::now();
     stream.write_all(&len.to_le_bytes())?;
     stream.write_all(&serialized)?;
     stream.flush()?;
+    let io_us = t_io.elapsed().as_micros();
+
+    if instrument {
+        println!(
+            "[MyelonInstr] send_message: payload={} bytes, serialize={} us, io={} us, total={} us",
+            payload_size,
+            ser_us,
+            io_us,
+            ser_us + io_us,
+        );
+    }
+
     Ok(true)
 }
 
 /// Generic, standardized function to receive a message.
 /// Reads a 4-byte LE length prefix then bincode data.
 fn receive_message_generic(stream: &mut (impl Read + Write)) -> Result<TransferMessage> {
+    let instrument = *MYELON_INSTRUMENT;
+
     let mut len_buf = [0u8; 4];
     stream.read_exact(&mut len_buf)?;
     let len = u32::from_le_bytes(len_buf) as usize;
@@ -403,9 +431,24 @@ fn receive_message_generic(stream: &mut (impl Read + Write)) -> Result<TransferM
         candle_core::bail!("Message size too large: {} bytes", len);
     }
 
+    let t_io = Instant::now();
     let mut msg_buf = vec![0u8; len];
     stream.read_exact(&mut msg_buf)?;
+    let io_us = t_io.elapsed().as_micros();
 
+    let t_deser = Instant::now();
     let msg = bincode::deserialize(&msg_buf).map_err(candle_core::Error::wrap)?;
+    let deser_us = t_deser.elapsed().as_micros();
+
+    if instrument {
+        println!(
+            "[MyelonInstr] recv_message: payload={} bytes, io={} us, deserialize={} us, total={} us",
+            len,
+            io_us,
+            deser_us,
+            io_us + deser_us,
+        );
+    }
+
     Ok(msg)
 }

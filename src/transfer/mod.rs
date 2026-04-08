@@ -16,7 +16,13 @@ mod cuda_remote;
 use candle_core::cuda_backend::CudaDType as MsgDtype;
 #[cfg(feature = "python")]
 use pyo3::pyclass;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use once_cell::sync::Lazy;
+
+/// Check MYELON_INSTRUMENT=1 once at startup.
+static MYELON_INSTRUMENT: Lazy<bool> = Lazy::new(|| {
+    std::env::var("MYELON_INSTRUMENT").map(|v| v == "1").unwrap_or(false)
+});
 #[cfg(not(feature = "cuda"))]
 use Sized as MsgDtype;
 
@@ -216,6 +222,9 @@ impl Transfer {
         seq: &Sequence,
         local_gpu_cache: &Vec<(Tensor, Tensor)>,
     ) -> Result<(bool, u32, usize)> {
+        let instrument = *MYELON_INSTRUMENT;
+        let t_total = Instant::now();
+
         let status = self.check_prefill_finished(seq.id)?;
         if !status {
             candle_core::bail!("Unable to receive kvcache from the PD server since this sequence is not prefill completed!")
@@ -225,6 +234,7 @@ impl Transfer {
             sf: &Transfer,
             seq: &Sequence,
             local_gpu_cache: &Vec<(Tensor, Tensor)>,
+            instrument: bool,
         ) -> Result<(bool, u32, usize)> {
             let local_gpu_ids = seq.block_table.clone();
             let local_device = local_gpu_cache[0].0.device();
@@ -281,6 +291,7 @@ impl Transfer {
                         .map(|(i, local_id)| (i, local_id as usize))
                         .collect();
 
+                    let t_cpu_to_gpu = Instant::now();
                     for (i, (k_bytes, v_bytes)) in layer_data.into_iter().enumerate() {
                         // Reconstruct CPU tensors from raw bytes
                         let (local_k_cache, local_v_cache) = &local_gpu_cache[i];
@@ -309,18 +320,37 @@ impl Transfer {
                             &mapping,
                         )?;
                     }
+                    if instrument {
+                        let cpu_gpu_us = t_cpu_to_gpu.elapsed().as_micros();
+                        println!(
+                            "[MyelonInstr] receive_kvcache: cpu_to_gpu={} us, layers={}, blocks={}",
+                            cpu_gpu_us,
+                            local_gpu_cache.len(),
+                            num_blocks,
+                        );
+                    }
                 }
             }
             Ok((true, token, data.sending_time))
         }
 
         let dtype = local_gpu_cache[0].0.dtype();
-        match dtype {
-            DType::F16 => read_data::<half::f16>(&self, seq, local_gpu_cache),
-            DType::BF16 => read_data::<half::bf16>(&self, seq, local_gpu_cache),
-            DType::U8 => read_data::<u8>(&self, seq, local_gpu_cache),
+        let result = match dtype {
+            DType::F16 => read_data::<half::f16>(&self, seq, local_gpu_cache, instrument),
+            DType::BF16 => read_data::<half::bf16>(&self, seq, local_gpu_cache, instrument),
+            DType::U8 => read_data::<u8>(&self, seq, local_gpu_cache, instrument),
             _ => candle_core::bail!("Invalid kvcache dtype!"),
+        };
+
+        if instrument {
+            println!(
+                "[MyelonInstr] receive_kvcache: seq_id={}, total={} us",
+                seq.id,
+                t_total.elapsed().as_micros(),
+            );
         }
+
+        result
     }
 
     /// (Client) Notify the server to release kvcache
@@ -363,12 +393,16 @@ impl Transfer {
         server_gpu_cache: &Vec<(Tensor, Tensor)>,
         first_token: u32,
     ) -> Result<bool> {
+        let instrument = *MYELON_INSTRUMENT;
+        let t_total = Instant::now();
+
         fn transfer_data<T: WithDType + MsgDtype>(
             sf: &Transfer,
             config: &PdConfig,
             seq: &Sequence,
             server_gpu_cache: &Vec<(Tensor, Tensor)>,
             first_token: u32,
+            instrument: bool,
         ) -> Result<bool> {
             let sending_time = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -401,6 +435,7 @@ impl Transfer {
                         .map(|(i, &server_id)| (server_id as usize, i))
                         .collect();
 
+                    let t_gpu_to_cpu = Instant::now();
                     for (k_tensor, v_tensor) in server_gpu_cache.iter() {
                         // Copy blocks from GPU to a new contiguous CPU tensor
                         let k_cpu_tensor = super::transfer::copy_blocks_to_cpu(
@@ -420,6 +455,16 @@ impl Transfer {
                             super::transfer::cpu_tensor_to_bytes::<T>(&v_cpu_tensor)?,
                         ));
                     }
+                    if instrument {
+                        let gpu_cpu_us = t_gpu_to_cpu.elapsed().as_micros();
+                        println!(
+                            "[MyelonInstr] send_kvcache: gpu_to_cpu={} us, layers={}, blocks={}",
+                            gpu_cpu_us,
+                            server_gpu_cache.len(),
+                            server_block_ids.len(),
+                        );
+                    }
+
                     KVTransferHandle::RemoteTcp {
                         layer_data,
                         num_blocks: seq.block_table.len(),
@@ -440,7 +485,7 @@ impl Transfer {
         let dtype = server_gpu_cache[0].0.dtype();
         match dtype {
             DType::F16 => {
-                transfer_data::<half::f16>(&self, &self.config, seq, server_gpu_cache, first_token)?
+                transfer_data::<half::f16>(&self, &self.config, seq, server_gpu_cache, first_token, instrument)?
             }
             DType::BF16 => transfer_data::<half::bf16>(
                 &self,
@@ -448,12 +493,22 @@ impl Transfer {
                 seq,
                 server_gpu_cache,
                 first_token,
+                instrument,
             )?,
             DType::U8 => {
-                transfer_data::<u8>(&self, &self.config, seq, server_gpu_cache, first_token)?
+                transfer_data::<u8>(&self, &self.config, seq, server_gpu_cache, first_token, instrument)?
             }
             _ => candle_core::bail!("Invalid kvcache dtype!"),
         };
+
+        if instrument {
+            println!(
+                "[MyelonInstr] send_kvcache: seq_id={}, total={} us",
+                seq.id,
+                t_total.elapsed().as_micros(),
+            );
+        }
+
         Ok(true)
     }
 
