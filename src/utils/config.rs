@@ -535,7 +535,7 @@ pub struct TokenizerConfig {
 
 #[cfg(not(feature = "python"))]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "myelon-rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+#[cfg_attr(feature = "codec-rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct SamplingParams {
     pub temperature: Option<f32>,
     pub max_tokens: Option<usize>,
@@ -548,7 +548,7 @@ pub struct SamplingParams {
     #[serde(default)]
     pub stop_sequences: Option<Vec<String>>,
     #[serde(skip)]
-    #[cfg_attr(feature = "myelon-rkyv", rkyv(with = rkyv::with::Skip))]
+    #[cfg_attr(feature = "codec-rkyv", rkyv(with = rkyv::with::Skip))]
     pub stop_token_ids: Option<Vec<Vec<u32>>>,
     #[serde(alias = "enable_thinking")]
     pub thinking: Option<bool>, // enable reasoning
@@ -564,7 +564,7 @@ pub struct SamplingParams {
         serialize_with = "serialize_optional_grammar",
         deserialize_with = "deserialize_optional_grammar"
     )]
-    #[cfg_attr(feature = "myelon-rkyv", rkyv(with = rkyv::with::Skip))]
+    #[cfg_attr(feature = "codec-rkyv", rkyv(with = rkyv::with::Skip))]
     pub grammar: Option<TopLevelGrammar>,
     #[serde(default)]
     pub grammar_json: Option<String>,

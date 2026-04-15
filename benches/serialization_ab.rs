@@ -127,7 +127,7 @@ fn bench_encode_run_prefill(c: &mut Criterion) {
             b.iter(|| black_box(bincode_encode_prefill(seqs)))
         });
 
-        #[cfg(feature = "myelon-rkyv")]
+        #[cfg(feature = "codec-rkyv")]
         group.bench_with_input(BenchmarkId::new("rkyv", n), &sequences, |b, seqs| {
             b.iter(|| {
                 black_box(
@@ -138,7 +138,7 @@ fn bench_encode_run_prefill(c: &mut Criterion) {
             })
         });
 
-        #[cfg(feature = "myelon-flatbuf")]
+        #[cfg(feature = "codec-flatbuf")]
         group.bench_with_input(BenchmarkId::new("flatbuf", n), &sequences, |b, seqs| {
             b.iter(|| {
                 let req = vllm_rs::ipc::myelon_ipc::MyelonRequest::RunPrefill {
@@ -163,7 +163,7 @@ fn bench_decode_run_prefill(c: &mut Criterion) {
             |b, bytes| b.iter(|| black_box(bincode_decode_prefill(bytes))),
         );
 
-        #[cfg(feature = "myelon-rkyv")]
+        #[cfg(feature = "codec-rkyv")]
         {
             let rkyv_bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&sequences)
                 .unwrap()
@@ -206,7 +206,7 @@ fn bench_decode_run_prefill(c: &mut Criterion) {
             );
         }
 
-        #[cfg(feature = "myelon-flatbuf")]
+        #[cfg(feature = "codec-flatbuf")]
         {
             let req = vllm_rs::ipc::myelon_ipc::MyelonRequest::RunPrefill {
                 sequences: sequences.clone(),
@@ -237,7 +237,7 @@ fn bench_encode_run_decode(c: &mut Criterion) {
             b.iter(|| black_box(bincode_encode_decode(seqs)))
         });
 
-        #[cfg(feature = "myelon-rkyv")]
+        #[cfg(feature = "codec-rkyv")]
         group.bench_with_input(BenchmarkId::new("rkyv", n), &sequences, |b, seqs| {
             b.iter(|| {
                 black_box(
@@ -248,7 +248,7 @@ fn bench_encode_run_decode(c: &mut Criterion) {
             })
         });
 
-        #[cfg(feature = "myelon-flatbuf")]
+        #[cfg(feature = "codec-flatbuf")]
         group.bench_with_input(BenchmarkId::new("flatbuf", n), &sequences, |b, seqs| {
             b.iter(|| {
                 let req = vllm_rs::ipc::myelon_ipc::MyelonRequest::RunDecode {
@@ -273,7 +273,7 @@ fn bench_decode_run_decode(c: &mut Criterion) {
             |b, bytes| b.iter(|| black_box(bincode_decode_decode(bytes))),
         );
 
-        #[cfg(feature = "myelon-rkyv")]
+        #[cfg(feature = "codec-rkyv")]
         {
             let rkyv_bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&sequences)
                 .unwrap()
@@ -296,7 +296,7 @@ fn bench_decode_run_decode(c: &mut Criterion) {
             );
         }
 
-        #[cfg(feature = "myelon-flatbuf")]
+        #[cfg(feature = "codec-flatbuf")]
         {
             let req = vllm_rs::ipc::myelon_ipc::MyelonRequest::RunDecode {
                 sequences: sequences.clone(),
@@ -327,7 +327,7 @@ fn bench_encode_run_response(c: &mut Criterion) {
             b.iter(|| black_box(bincode_encode_response(ids)))
         });
 
-        #[cfg(feature = "myelon-rkyv")]
+        #[cfg(feature = "codec-rkyv")]
         group.bench_with_input(BenchmarkId::new("rkyv", n), &ids, |b, ids| {
             b.iter(|| {
                 black_box(
@@ -338,7 +338,7 @@ fn bench_encode_run_response(c: &mut Criterion) {
             })
         });
 
-        #[cfg(feature = "myelon-flatbuf")]
+        #[cfg(feature = "codec-flatbuf")]
         group.bench_with_input(BenchmarkId::new("flatbuf", n), &ids, |b, ids| {
             b.iter(|| {
                 let resp = vllm_rs::ipc::myelon_ipc::MyelonResponse::RunResponse(ids.clone());
@@ -361,7 +361,7 @@ fn bench_decode_run_response(c: &mut Criterion) {
             |b, bytes| b.iter(|| black_box(bincode_decode_response(bytes))),
         );
 
-        #[cfg(feature = "myelon-rkyv")]
+        #[cfg(feature = "codec-rkyv")]
         {
             let rkyv_bytes = rkyv::to_bytes::<rkyv::rancor::Error>(&ids).unwrap().to_vec();
             group.bench_with_input(
@@ -378,7 +378,7 @@ fn bench_decode_run_response(c: &mut Criterion) {
             );
         }
 
-        #[cfg(feature = "myelon-flatbuf")]
+        #[cfg(feature = "codec-flatbuf")]
         {
             let resp = vllm_rs::ipc::myelon_ipc::MyelonResponse::RunResponse(ids.clone());
             let fb_bytes = vllm_rs::ipc::flatbuf_codec::encode_response(&resp).unwrap();
@@ -409,7 +409,7 @@ fn bench_payload_sizes(c: &mut Criterion) {
     let bc = bincode_encode_prefill(&sequences);
     println!("RunPrefill/256 bincode: {} bytes", bc.len());
 
-    #[cfg(feature = "myelon-rkyv")]
+    #[cfg(feature = "codec-rkyv")]
     {
         let rk = rkyv::to_bytes::<rkyv::rancor::Error>(&sequences)
             .unwrap()
@@ -417,7 +417,7 @@ fn bench_payload_sizes(c: &mut Criterion) {
         println!("RunPrefill/256 rkyv: {} bytes", rk.len());
     }
 
-    #[cfg(feature = "myelon-flatbuf")]
+    #[cfg(feature = "codec-flatbuf")]
     {
         let req = vllm_rs::ipc::myelon_ipc::MyelonRequest::RunPrefill {
             sequences: sequences.clone(),

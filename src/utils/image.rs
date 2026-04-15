@@ -8,7 +8,7 @@ pub const IMAGE_PLACEHOLDER: &str = "<|VLLM-RS-IMAGE|>";
 pub const PLACEHOLDER: &str = "<|VLLM-RS-PLACEHOLDER|>";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "myelon-rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+#[cfg_attr(feature = "codec-rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct ImageData {
     pub raw: Vec<u8>,
     pub shape: Vec<usize>,

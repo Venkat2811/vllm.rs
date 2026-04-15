@@ -91,8 +91,8 @@ metal = ["candle-core/metal", "candle-nn/metal", "attention-rs/metal", "dep:meta
 python = ["pyo3"]
 nvtx = ["dep:nvtx"]
 myelon = ["dep:myelon-playground"]
-myelon-rkyv = ["myelon", "dep:rkyv"]
-myelon-flatbuf = ["myelon", "dep:flatbuffers"]
+codec-rkyv = ["myelon", "myelon-playground/rkyv", "dep:rkyv"]
+codec-flatbuf = ["myelon", "myelon-playground/flatbuffers", "dep:flatbuffers"]
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

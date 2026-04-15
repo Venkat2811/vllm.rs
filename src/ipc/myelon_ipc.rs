@@ -311,13 +311,13 @@ impl MyelonRequest {
     }
 
     pub fn encode(&self) -> CandleResult<Vec<u8>> {
-        #[cfg(feature = "myelon-rkyv")]
+        #[cfg(feature = "codec-rkyv")]
         return crate::ipc::rkyv_codec::encode_request(self);
 
-        #[cfg(feature = "myelon-flatbuf")]
+        #[cfg(feature = "codec-flatbuf")]
         return crate::ipc::flatbuf_codec::encode_request(self);
 
-        #[cfg(not(any(feature = "myelon-rkyv", feature = "myelon-flatbuf")))]
+        #[cfg(not(any(feature = "codec-rkyv", feature = "codec-flatbuf")))]
         match self {
             Self::RunPrefill { sequences } => {
                 bincode::serialize(&(sequences, true)).map_err(myelon_to_candle)
@@ -351,13 +351,13 @@ impl MyelonRequest {
     }
 
     pub fn decode(kind: u8, payload: &[u8]) -> CandleResult<Self> {
-        #[cfg(feature = "myelon-rkyv")]
+        #[cfg(feature = "codec-rkyv")]
         return crate::ipc::rkyv_codec::decode_request(kind, payload);
 
-        #[cfg(feature = "myelon-flatbuf")]
+        #[cfg(feature = "codec-flatbuf")]
         return crate::ipc::flatbuf_codec::decode_request(kind, payload);
 
-        #[cfg(not(any(feature = "myelon-rkyv", feature = "myelon-flatbuf")))]
+        #[cfg(not(any(feature = "codec-rkyv", feature = "codec-flatbuf")))]
         match MsgKind::from_u8(kind)? {
             MsgKind::RunPrefill => {
                 let (sequences, is_prefill): (Vec<Sequence>, bool) =
@@ -473,13 +473,13 @@ impl MyelonResponse {
     }
 
     pub fn encode(&self) -> CandleResult<Vec<u8>> {
-        #[cfg(feature = "myelon-rkyv")]
+        #[cfg(feature = "codec-rkyv")]
         return crate::ipc::rkyv_codec::encode_response(self);
 
-        #[cfg(feature = "myelon-flatbuf")]
+        #[cfg(feature = "codec-flatbuf")]
         return crate::ipc::flatbuf_codec::encode_response(self);
 
-        #[cfg(not(any(feature = "myelon-rkyv", feature = "myelon-flatbuf")))]
+        #[cfg(not(any(feature = "codec-rkyv", feature = "codec-flatbuf")))]
         match self {
             Self::RunResponse(output_ids) => Ok(encode_u32_slice(output_ids)),
             Self::TransferPrefillResponse(value)
@@ -501,13 +501,13 @@ impl MyelonResponse {
     }
 
     pub fn decode(kind: u8, payload: &[u8]) -> CandleResult<Self> {
-        #[cfg(feature = "myelon-rkyv")]
+        #[cfg(feature = "codec-rkyv")]
         return crate::ipc::rkyv_codec::decode_response(kind, payload);
 
-        #[cfg(feature = "myelon-flatbuf")]
+        #[cfg(feature = "codec-flatbuf")]
         return crate::ipc::flatbuf_codec::decode_response(kind, payload);
 
-        #[cfg(not(any(feature = "myelon-rkyv", feature = "myelon-flatbuf")))]
+        #[cfg(not(any(feature = "codec-rkyv", feature = "codec-flatbuf")))]
         match MsgKind::from_u8(kind)? {
             MsgKind::RunResponse => Ok(Self::RunResponse(decode_u32_slice(payload)?)),
             MsgKind::TransferPrefillResponse => {

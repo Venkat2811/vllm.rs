@@ -1,6 +1,6 @@
 //! FlatBuffers-based serialization for Myelon IPC messages.
 //! Enabled by the `myelon-flatbuf` feature flag.
-#![cfg(feature = "myelon-flatbuf")]
+#![cfg(feature = "codec-flatbuf")]
 
 use crate::core::sequence::{
     DecodeSequence as RustDecodeSequence, Sequence as RustSequence,

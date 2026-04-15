@@ -1,6 +1,6 @@
 //! rkyv-based zero-copy serialization for Myelon IPC messages.
-//! Enabled by the `myelon-rkyv` feature flag.
-#![cfg(feature = "myelon-rkyv")]
+//! Enabled by the `codec-rkyv` feature flag.
+#![cfg(feature = "codec-rkyv")]
 
 use crate::core::sequence::{DecodeSequence, Sequence};
 use crate::ipc::myelon_ipc::{MsgKind, MyelonRequest, MyelonResponse};
