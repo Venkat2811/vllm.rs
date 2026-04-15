@@ -6,7 +6,7 @@ use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[cfg_attr(feature = "myelon-rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+#[cfg_attr(feature = "codec-rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub enum SequenceStatus {
     Waiting,
     Running,
@@ -31,7 +31,7 @@ impl fmt::Display for SequenceStatus {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "myelon-rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+#[cfg_attr(feature = "codec-rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct Sequence {
     pub id: usize,
     pub created_time: usize,
@@ -53,7 +53,7 @@ pub struct Sequence {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[cfg_attr(feature = "myelon-rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
+#[cfg_attr(feature = "codec-rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 pub struct DecodeSequence {
     pub id: usize,
     pub last_token: u32,

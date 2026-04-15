@@ -1,6 +1,6 @@
 //! rkyv round-trip tests for Myelon IPC wire types.
 //! Run with: cargo test --test rkyv_roundtrip --features metal,myelon-rkyv
-#![cfg(feature = "myelon-rkyv")]
+#![cfg(feature = "codec-rkyv")]
 
 use vllm_rs::core::sequence::{DecodeSequence, Sequence, SequenceStatus};
 use vllm_rs::utils::config::SamplingParams;
