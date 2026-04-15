@@ -1,11 +1,11 @@
 #[cfg(feature = "myelon")]
 pub mod myelon_ipc;
 
-#[cfg(feature = "myelon-rkyv")]
+#[cfg(feature = "codec-rkyv")]
 pub mod rkyv_codec;
 
-#[cfg(feature = "myelon-flatbuf")]
+#[cfg(feature = "codec-flatbuf")]
 pub mod schema;
 
-#[cfg(feature = "myelon-flatbuf")]
+#[cfg(feature = "codec-flatbuf")]
 pub mod flatbuf_codec;

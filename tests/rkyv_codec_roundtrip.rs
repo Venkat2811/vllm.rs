@@ -1,7 +1,7 @@
 //! Tests that all MyelonRequest and MyelonResponse variants round-trip
 //! through the rkyv codec (encode → decode).
 //! Run with: cargo test --test rkyv_codec_roundtrip --features metal,myelon-rkyv
-#![cfg(feature = "myelon-rkyv")]
+#![cfg(feature = "codec-rkyv")]
 
 use std::collections::HashMap;
 use vllm_rs::core::sequence::{DecodeSequence, Sequence, SequenceStatus};

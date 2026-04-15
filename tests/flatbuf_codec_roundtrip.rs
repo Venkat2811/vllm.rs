@@ -1,7 +1,7 @@
 //! Tests that all MyelonRequest and MyelonResponse variants round-trip
 //! through the flatbuf codec (encode -> decode).
 //! Run with: cargo test --test flatbuf_codec_roundtrip --features metal,myelon-flatbuf
-#![cfg(feature = "myelon-flatbuf")]
+#![cfg(feature = "codec-flatbuf")]
 
 use std::collections::HashMap;
 use vllm_rs::core::sequence::{DecodeSequence, Sequence, SequenceStatus};
