@@ -11,6 +11,7 @@ use llguidance::api::TopLevelGrammar;
 /// Optimized for specific reasoning strategies based on current research (2024-2025)
 /// Note: For Python builds, this enum is passed via serde serialization, not pyo3
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "myelon-rkyv", derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize))]
 #[serde(rename_all = "lowercase")]
 pub enum ReasoningEffort {
     /// No structured reasoning - direct output only
