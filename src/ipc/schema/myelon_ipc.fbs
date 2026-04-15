@@ -1,0 +1,137 @@
+// FlatBuffers schema for Myelon IPC messages in vllm.rs
+// Generated bindings: flatc --rust -o src/ipc/schema/ src/ipc/schema/myelon_ipc.fbs
+
+namespace myelon.ipc;
+
+enum SequenceStatus : byte {
+  Waiting = 0,
+  Running = 1,
+  Finished = 2,
+  Cached = 3,
+  Swapped = 4,
+  FinishSwapped = 5,
+}
+
+table SamplingParams {
+  temperature: float;
+  has_temperature: bool;
+  max_tokens: uint64;
+  has_max_tokens: bool;
+  ignore_eos: bool;
+  top_k: int64;
+  has_top_k: bool;
+  top_p: float;
+  has_top_p: bool;
+  session_id: string;
+  frequency_penalty: float;
+  has_frequency_penalty: bool;
+  presence_penalty: float;
+  has_presence_penalty: bool;
+  stop_sequences: [string];
+  thinking: bool;
+  has_thinking: bool;
+  mcp_mode: bool;
+  has_mcp_mode: bool;
+  grammar_json: string;
+}
+
+table ImageData {
+  raw: [ubyte];
+  shape: [uint64];
+  patches_first: [uint64];
+  patches_second: [uint64];
+  image_idx: int32;
+  image_token_offset: uint64;
+  tokens_per_image: [uint64];
+  image_token_id: uint32;
+  has_image_token_id: bool;
+}
+
+table Sequence {
+  id: uint64;
+  created_time: uint64;
+  swapped_time: uint64;
+  has_swapped_time: bool;
+  status: SequenceStatus;
+  token_ids: [uint32];
+  output_ids: [uint32];
+  block_table: [uint32];
+  num_cached_tokens: uint64;
+  mamba_prefix_hash: uint64;
+  has_mamba_prefix_hash: bool;
+  last_token: uint32;
+  block_size: uint64;
+  sampling_params: SamplingParams;
+  pd_first_token: uint32;
+  has_pd_first_token: bool;
+  images: ImageData;
+  is_tool_call_end: bool;
+  hit_stop_sequence: bool;
+  stop_sequence: string;
+}
+
+table DecodeSequence {
+  id: uint64;
+  last_token: uint32;
+  len: uint64;
+  last_block_tokens: uint64;
+  block_table_last: uint32;
+  block_tables: [uint32];
+  sampling_params: SamplingParams;
+}
+
+// Request payloads
+table RunPrefillPayload {
+  sequences: [Sequence];
+}
+
+table RunDecodePayload {
+  sequences: [DecodeSequence];
+}
+
+table SingleIdPayload {
+  sequence_id: uint64;
+}
+
+table SingleSequencePayload {
+  sequence: Sequence;
+}
+
+table AvailableTokensPayload {
+  available_tokens: uint64;
+}
+
+table KvCacheSendPayload {
+  sequence: Sequence;
+  first_token: uint32;
+}
+
+table KvCacheSwapPayload {
+  mapping_keys: [uint64];
+  mapping_values: [uint64];
+  swap_in: bool;
+}
+
+// Response payloads
+table RunResponsePayload {
+  output_ids: [uint32];
+}
+
+table BoolPayload {
+  value: bool;
+}
+
+table ReceivePrefillResponsePayload {
+  success: bool;
+  sequence: Sequence;
+}
+
+table KvCacheReceiveResponsePayload {
+  success: bool;
+  first_token: uint32;
+  num_tokens: uint64;
+}
+
+table ErrorPayload {
+  message: string;
+}
