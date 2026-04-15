@@ -94,6 +94,13 @@ myelon = ["dep:myelon-playground"]
 myelon-rkyv = ["myelon", "dep:rkyv"]
 myelon-flatbuf = ["myelon", "dep:flatbuffers"]
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
 [[bin]]
 name = "runner"
 path = "src/runner/runner.rs"
+
+[[bench]]
+name = "serialization_ab"
+harness = false
