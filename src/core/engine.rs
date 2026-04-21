@@ -918,7 +918,8 @@ impl LLMEngine {
                     if self.first_prefill_dispatch_times.contains_key(&seq.id)
                         && !self.first_prefill_response_times.contains_key(&seq.id)
                     {
-                        self.first_prefill_response_times.insert(seq.id, response_ms);
+                        self.first_prefill_response_times
+                            .insert(seq.id, response_ms);
                     }
                 }
             }
@@ -982,7 +983,8 @@ impl LLMEngine {
                     if self.first_prefill_dispatch_times.contains_key(&seq.id)
                         && !self.first_prefill_response_times.contains_key(&seq.id)
                     {
-                        self.first_prefill_response_times.insert(seq.id, response_ms);
+                        self.first_prefill_response_times
+                            .insert(seq.id, response_ms);
                     }
                 }
             }
@@ -2055,7 +2057,8 @@ mod tests {
     #[cfg(feature = "myelon")]
     #[test]
     fn myelon_transport_config_defaults_to_reference_tuned_depths() {
-        let econfig = test_engine_config();
+        let mut econfig = test_engine_config();
+        econfig.myelon_busy_spin = None;
         let resolved = resolve_myelon_transport_config(
             econfig.myelon_rpc_depth,
             econfig.myelon_response_depth,
