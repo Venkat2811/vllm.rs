@@ -538,12 +538,16 @@ fn main() -> anyhow::Result<()> {
         let mut logged_first_response = false;
         loop {
             let request = match match access_mode {
-                MyelonTransportAccessMode::Owned | MyelonTransportAccessMode::Typed => {
-                    rpc_consumer.recv_request_blocking_owned()
-                }
+                MyelonTransportAccessMode::Owned => rpc_consumer.recv_request_blocking_owned(),
                 MyelonTransportAccessMode::Borrowed => {
                     rpc_consumer.recv_request_blocking_borrowed()
                 }
+                MyelonTransportAccessMode::Typed => rpc_consumer
+                    .with_request_blocking_typed(|request| {
+                        request
+                            .to_owned()
+                            .map_err(|e| candle_core::Error::Msg(e.to_string()))
+                    }),
             } {
                 Ok(request) => request,
                 Err(error) => {
@@ -552,14 +556,9 @@ fn main() -> anyhow::Result<()> {
                 }
             };
             if !logged_first_rpc {
-                let payload_len = request
-                    .encode()
-                    .map(|payload| payload.len())
-                    .unwrap_or_default();
                 vllm_rs::log_info!(
-                    "Runner entered Myelon hot path with first kind={} bytes={}.",
+                    "Runner entered Myelon hot path with first kind={}.",
                     request.kind().as_u8(),
-                    payload_len
                 );
                 logged_first_rpc = true;
             }
@@ -571,13 +570,9 @@ fn main() -> anyhow::Result<()> {
                             if runner_rank == 0 {
                                 let response = MyelonResponse::RunResponse(outputs);
                                 if !logged_first_response {
-                                    let payload_len = response
-                                        .encode()
-                                        .map(|payload| payload.len())
-                                        .unwrap_or_default();
                                     vllm_rs::log_info!(
-                                        "Runner sent first Myelon response bytes={}.",
-                                        payload_len
+                                        "Runner sent first Myelon response kind={}.",
+                                        response.kind().as_u8()
                                     );
                                     logged_first_response = true;
                                 }
@@ -597,13 +592,9 @@ fn main() -> anyhow::Result<()> {
                             if runner_rank == 0 {
                                 let response = MyelonResponse::RunResponse(outputs);
                                 if !logged_first_response {
-                                    let payload_len = response
-                                        .encode()
-                                        .map(|payload| payload.len())
-                                        .unwrap_or_default();
                                     vllm_rs::log_info!(
-                                        "Runner sent first Myelon response bytes={}.",
-                                        payload_len
+                                        "Runner sent first Myelon response kind={}.",
+                                        response.kind().as_u8()
                                     );
                                     logged_first_response = true;
                                 }

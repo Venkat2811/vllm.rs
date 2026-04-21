@@ -16,7 +16,10 @@ use myelon_playground::{
 use serde::{Deserialize, Serialize};
 
 use crate::core::sequence::{DecodeSequence, Sequence};
-use crate::ipc::typed_codec::{TypedMyelonRequest, TypedMyelonResponse};
+use crate::ipc::typed_codec::{
+    BorrowedTypedMyelonRequest, BorrowedTypedMyelonResponse, TypedMyelonRequest,
+    TypedMyelonResponse,
+};
 use crate::log_info;
 use crate::runner::{receive_local, send_local, MessageType};
 
@@ -369,9 +372,11 @@ pub enum RpcBroadcastConsumer {
     },
     ShmTyped {
         inner: TypedConsumer<TypedRpcFrame>,
+        reassembly: ReassemblyBuffer,
     },
     MmapTyped {
         inner: MmapTypedConsumer<TypedRpcFrame>,
+        reassembly: ReassemblyBuffer,
     },
 }
 
@@ -392,7 +397,10 @@ impl RpcBroadcastConsumer {
     ) -> Result<Self> {
         let inner = TypedConsumer::<TypedRpcFrame>::attach(name, depth, wait_strategy)
             .with_context(|| format!("failed to attach typed rpc ring '{name}'"))?;
-        Ok(Self::ShmTyped { inner })
+        Ok(Self::ShmTyped {
+            inner,
+            reassembly: ReassemblyBuffer::new(RPC_FRAME_DATA_BYTES),
+        })
     }
 
     pub fn attach_mmap(
@@ -425,7 +433,10 @@ impl RpcBroadcastConsumer {
         let inner =
             MmapTypedConsumer::<TypedRpcFrame>::attach(layout, depth, consumer_id, wait_strategy)
                 .with_context(|| format!("failed to attach typed mmap rpc ring '{segment}'"))?;
-        Ok(Self::MmapTyped { inner })
+        Ok(Self::MmapTyped {
+            inner,
+            reassembly: ReassemblyBuffer::new(RPC_FRAME_DATA_BYTES),
+        })
     }
 
     pub fn has_coordination_support(&self) -> bool {
@@ -446,7 +457,7 @@ impl RpcBroadcastConsumer {
                 let (kind, payload) = inner.recv_message_blocking_owned();
                 MyelonRequest::decode(kind, &payload)
             }
-            Self::ShmTyped { inner } => {
+            Self::ShmTyped { inner, .. } => {
                 let (kind, request) = inner
                     .recv_owned::<TypedMyelonRequest>()
                     .map_err(myelon_to_candle)?;
@@ -455,7 +466,7 @@ impl RpcBroadcastConsumer {
                 }
                 Ok(request.into_inner())
             }
-            Self::MmapTyped { inner } => {
+            Self::MmapTyped { inner, .. } => {
                 let (kind, request) = inner
                     .recv_owned::<TypedMyelonRequest>()
                     .map_err(myelon_to_candle)?;
@@ -463,6 +474,43 @@ impl RpcBroadcastConsumer {
                     candle_core::bail!("unexpected typed request transport kind {}", kind);
                 }
                 Ok(request.into_inner())
+            }
+        }
+    }
+
+    pub fn with_request_blocking_typed<R>(
+        &mut self,
+        mut handler: impl for<'a> FnMut(BorrowedTypedMyelonRequest<'a>) -> CandleResult<R>,
+    ) -> CandleResult<R> {
+        match self {
+            Self::ShmTyped { inner, reassembly } => {
+                inner
+                    .recv_leased::<TypedMyelonRequest, _, _>(reassembly, |kind, request| {
+                        if kind != MsgKind::TypedRequest.as_u8() {
+                            candle_core::bail!(
+                                "unexpected typed request transport kind {}",
+                                kind
+                            );
+                        }
+                        handler(request)
+                    })
+                    .map_err(myelon_to_candle)?
+            }
+            Self::MmapTyped { inner, reassembly } => {
+                inner
+                    .recv_leased::<TypedMyelonRequest, _, _>(reassembly, |kind, request| {
+                        if kind != MsgKind::TypedRequest.as_u8() {
+                            candle_core::bail!(
+                                "unexpected typed request transport kind {}",
+                                kind
+                            );
+                        }
+                        handler(request)
+                    })
+                    .map_err(myelon_to_candle)?
+            }
+            Self::ShmFramed { .. } | Self::MmapFramed { .. } => {
+                candle_core::bail!("framed request transport does not support typed leased access")
             }
         }
     }
@@ -581,9 +629,11 @@ pub enum ResponseConsumer {
     },
     ShmTyped {
         inner: TypedConsumer<TypedResponseFrame>,
+        reassembly: ReassemblyBuffer,
     },
     MmapTyped {
         inner: MmapTypedConsumer<TypedResponseFrame>,
+        reassembly: ReassemblyBuffer,
     },
 }
 
@@ -604,7 +654,10 @@ impl ResponseConsumer {
     ) -> Result<Self> {
         let inner = TypedConsumer::<TypedResponseFrame>::attach(name, depth, wait_strategy)
             .with_context(|| format!("failed to attach typed response ring '{name}'"))?;
-        Ok(Self::ShmTyped { inner })
+        Ok(Self::ShmTyped {
+            inner,
+            reassembly: ReassemblyBuffer::new(RESPONSE_FRAME_DATA_BYTES),
+        })
     }
 
     pub fn attach_mmap(
@@ -641,7 +694,10 @@ impl ResponseConsumer {
             wait_strategy,
         )
         .with_context(|| format!("failed to attach typed mmap response ring '{segment}'"))?;
-        Ok(Self::MmapTyped { inner })
+        Ok(Self::MmapTyped {
+            inner,
+            reassembly: ReassemblyBuffer::new(RESPONSE_FRAME_DATA_BYTES),
+        })
     }
 
     pub fn has_coordination_support(&self) -> bool {
@@ -662,7 +718,7 @@ impl ResponseConsumer {
                 let (kind, payload) = inner.recv_message_blocking_owned();
                 MyelonResponse::decode(kind, &payload)
             }
-            Self::ShmTyped { inner } => {
+            Self::ShmTyped { inner, .. } => {
                 let (kind, response) = inner
                     .recv_owned::<TypedMyelonResponse>()
                     .map_err(myelon_to_candle)?;
@@ -671,7 +727,7 @@ impl ResponseConsumer {
                 }
                 Ok(response.into_inner())
             }
-            Self::MmapTyped { inner } => {
+            Self::MmapTyped { inner, .. } => {
                 let (kind, response) = inner
                     .recv_owned::<TypedMyelonResponse>()
                     .map_err(myelon_to_candle)?;
@@ -679,6 +735,43 @@ impl ResponseConsumer {
                     candle_core::bail!("unexpected typed response transport kind {}", kind);
                 }
                 Ok(response.into_inner())
+            }
+        }
+    }
+
+    pub fn with_response_blocking_typed<R>(
+        &mut self,
+        mut handler: impl for<'a> FnMut(BorrowedTypedMyelonResponse<'a>) -> CandleResult<R>,
+    ) -> CandleResult<R> {
+        match self {
+            Self::ShmTyped { inner, reassembly } => {
+                inner
+                    .recv_leased::<TypedMyelonResponse, _, _>(reassembly, |kind, response| {
+                        if kind != MsgKind::TypedResponse.as_u8() {
+                            candle_core::bail!(
+                                "unexpected typed response transport kind {}",
+                                kind
+                            );
+                        }
+                        handler(response)
+                    })
+                    .map_err(myelon_to_candle)?
+            }
+            Self::MmapTyped { inner, reassembly } => {
+                inner
+                    .recv_leased::<TypedMyelonResponse, _, _>(reassembly, |kind, response| {
+                        if kind != MsgKind::TypedResponse.as_u8() {
+                            candle_core::bail!(
+                                "unexpected typed response transport kind {}",
+                                kind
+                            );
+                        }
+                        handler(response)
+                    })
+                    .map_err(myelon_to_candle)?
+            }
+            Self::ShmFramed { .. } | Self::MmapFramed { .. } => {
+                candle_core::bail!("framed response transport does not support typed leased access")
             }
         }
     }
@@ -1296,12 +1389,13 @@ impl MyelonEngineTransport {
 
         for consumer in &mut self.response_consumers {
             let response = match self.access_mode {
-                MyelonTransportAccessMode::Owned | MyelonTransportAccessMode::Typed => {
-                    consumer.recv_response_blocking_owned()?
-                }
+                MyelonTransportAccessMode::Owned => consumer.recv_response_blocking_owned()?,
                 MyelonTransportAccessMode::Borrowed => {
                     consumer.recv_response_blocking_borrowed()?
                 }
+                MyelonTransportAccessMode::Typed => consumer.with_response_blocking_typed(
+                    |response| response.to_owned().map_err(myelon_to_candle),
+                )?,
             };
             if !self.logged_first_response {
                 log_info!(
@@ -1337,10 +1431,11 @@ impl MyelonEngineTransport {
             .first_mut()
             .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))?;
         let response = match self.access_mode {
-            MyelonTransportAccessMode::Owned | MyelonTransportAccessMode::Typed => {
-                consumer.recv_response_blocking_owned()?
-            }
+            MyelonTransportAccessMode::Owned => consumer.recv_response_blocking_owned()?,
             MyelonTransportAccessMode::Borrowed => consumer.recv_response_blocking_borrowed()?,
+            MyelonTransportAccessMode::Typed => consumer.with_response_blocking_typed(
+                |response| response.to_owned().map_err(myelon_to_candle),
+            )?,
         };
         if !self.logged_first_response {
             log_info!(
