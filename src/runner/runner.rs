@@ -11,7 +11,8 @@ use tokenizers::Tokenizer;
 use vllm_rs::core::runner::{ModelRunner, Seqs};
 #[cfg(feature = "myelon")]
 use vllm_rs::ipc::myelon_ipc::{
-    MyelonRequest, MyelonResponse, ResponseProducer, RpcBroadcastConsumer,
+    MyelonRequest, MyelonResponse, MyelonTransportAccessMode, MyelonTransportBackend,
+    ResponseProducer, RpcBroadcastConsumer,
 };
 use vllm_rs::models::layers::distributed::Comm;
 use vllm_rs::models::layers::VarBuilderX;
@@ -253,7 +254,11 @@ fn main() -> anyhow::Result<()> {
     // mark model as loaded
     model_loaded.store(true, Ordering::SeqCst);
     #[cfg(feature = "myelon")]
-    let mut myelon_transport: Option<(RpcBroadcastConsumer, ResponseProducer)> = None;
+    let mut myelon_transport: Option<(
+        RpcBroadcastConsumer,
+        ResponseProducer,
+        MyelonTransportAccessMode,
+    )> = None;
 
     loop {
         match receive_local(&mut stream, false) {
@@ -267,19 +272,40 @@ fn main() -> anyhow::Result<()> {
                 vllm_rs::log_warn!(
                     "Runner switching execution to Myelon hot path; legacy local-socket control handling will stop after this handshake."
                 );
-                let rpc_consumer = RpcBroadcastConsumer::attach(
-                    &config.rpc_ring_name,
-                    config.rpc_depth,
-                    config.wait_strategy,
-                )?;
-                let response_producer =
-                    ResponseProducer::create(&config.response_ring_name, config.response_depth)?;
+                let rpc_consumer = match config.backend {
+                    MyelonTransportBackend::Shm => RpcBroadcastConsumer::attach_shm(
+                        &config.rpc_ring_name,
+                        config.rpc_depth,
+                        config.wait_strategy,
+                    ),
+                    MyelonTransportBackend::Mmap => RpcBroadcastConsumer::attach_mmap(
+                        myelon_playground::MmapTransportLayout::new(
+                            config.mmap_root_dir()?,
+                            config.rpc_ring_name.clone(),
+                        )?,
+                        config.rpc_depth,
+                        &format!("runner-rpc-{}", config.rank),
+                        config.wait_strategy,
+                    ),
+                }?;
+                let response_producer = match config.backend {
+                    MyelonTransportBackend::Shm => {
+                        ResponseProducer::create_shm(&config.response_ring_name, config.response_depth)
+                    }
+                    MyelonTransportBackend::Mmap => ResponseProducer::create_mmap(
+                        myelon_playground::MmapTransportLayout::new(
+                            config.mmap_root_dir()?,
+                            config.response_ring_name.clone(),
+                        )?,
+                        config.response_depth,
+                    ),
+                }?;
                 send_local(
                     &mut vec![stream.try_clone()?],
                     &MessageType::MyelonReady,
                     false,
                 )?;
-                myelon_transport = Some((rpc_consumer, response_producer));
+                myelon_transport = Some((rpc_consumer, response_producer, config.access_mode));
                 break;
             }
             Ok(MessageType::Shutdown) => {
@@ -473,11 +499,16 @@ fn main() -> anyhow::Result<()> {
     }
 
     #[cfg(feature = "myelon")]
-    if let Some((mut rpc_consumer, mut response_producer)) = myelon_transport {
+    if let Some((mut rpc_consumer, mut response_producer, access_mode)) = myelon_transport {
         let mut logged_first_rpc = false;
         let mut logged_first_response = false;
         loop {
-            let request = match rpc_consumer.recv_request_blocking() {
+            let request = match match access_mode {
+                MyelonTransportAccessMode::Owned => rpc_consumer.recv_request_blocking_owned(),
+                MyelonTransportAccessMode::Borrowed => {
+                    rpc_consumer.recv_request_blocking_borrowed()
+                }
+            } {
                 Ok(request) => request,
                 Err(error) => {
                     response_producer.send_error(error);

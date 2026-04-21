@@ -42,6 +42,8 @@ pub struct EngineBuilder {
     myelon_rpc_depth: Option<usize>,
     myelon_response_depth: Option<usize>,
     myelon_busy_spin: Option<bool>,
+    myelon_backend: Option<String>,
+    myelon_access_mode: Option<String>,
 }
 
 impl EngineBuilder {
@@ -65,6 +67,8 @@ impl EngineBuilder {
             myelon_rpc_depth: None,
             myelon_response_depth: None,
             myelon_busy_spin: None,
+            myelon_backend: None,
+            myelon_access_mode: None,
         }
     }
 
@@ -158,6 +162,16 @@ impl EngineBuilder {
         self
     }
 
+    pub fn with_myelon_backend(mut self, backend: impl Into<String>) -> Self {
+        self.myelon_backend = Some(backend.into());
+        self
+    }
+
+    pub fn with_myelon_access_mode(mut self, access_mode: impl Into<String>) -> Self {
+        self.myelon_access_mode = Some(access_mode.into());
+        self
+    }
+
     fn resolve_repo(&self) -> (Option<String>, Option<String>, Option<String>) {
         match self.repo.clone() {
             ModelRepo::ModelID((model_id, filename)) => (
@@ -198,6 +212,8 @@ impl EngineBuilder {
             self.myelon_rpc_depth,
             self.myelon_response_depth,
             self.myelon_busy_spin,
+            self.myelon_backend.clone(),
+            self.myelon_access_mode.clone(),
             None,
             None,
             self.prefix_cache,
@@ -404,11 +420,15 @@ mod tests {
     fn builder_enables_force_runner_when_myelon_ipc_is_set() {
         let builder = EngineBuilder::new(ModelRepo::ModelPath("/tmp/model"))
             .with_force_runner(false)
-            .with_myelon_ipc(true);
+            .with_myelon_ipc(true)
+            .with_myelon_backend("mmap")
+            .with_myelon_access_mode("borrowed");
 
         let econfig = builder.build_engine_config();
         assert_eq!(econfig.myelon_ipc, Some(true));
         assert_eq!(econfig.force_runner, Some(true));
+        assert_eq!(econfig.myelon_backend.as_deref(), Some("mmap"));
+        assert_eq!(econfig.myelon_access_mode.as_deref(), Some("borrowed"));
     }
 
     #[test]

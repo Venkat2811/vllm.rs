@@ -154,8 +154,8 @@ mod tests {
         let first_event = first.expect("first event should be valid");
         let second_event = second.expect("second event should be valid");
 
-        let first_text = first_event.to_string();
-        let second_text = second_event.to_string();
+        let first_text = format!("{first_event:?}");
+        let second_text = format!("{second_event:?}");
 
         assert!(first_text.contains("hello"));
         assert!(second_text.contains("[DONE]"));

@@ -314,6 +314,8 @@ pub struct EngineConfig {
     pub myelon_rpc_depth: Option<usize>,
     pub myelon_response_depth: Option<usize>,
     pub myelon_busy_spin: Option<bool>,
+    pub myelon_backend: Option<String>,
+    pub myelon_access_mode: Option<String>,
     pub generation_cfg: Option<GenerationConfig>,
     pub seed: Option<u64>,
     pub prefix_cache: Option<bool>,
@@ -392,6 +394,10 @@ pub struct EngineConfig {
     #[pyo3(get, set)]
     pub myelon_busy_spin: Option<bool>,
     #[pyo3(get, set)]
+    pub myelon_backend: Option<String>,
+    #[pyo3(get, set)]
+    pub myelon_access_mode: Option<String>,
+    #[pyo3(get, set)]
     pub generation_cfg: Option<GenerationConfig>,
     #[pyo3(get, set)]
     pub seed: Option<u64>,
@@ -444,6 +450,8 @@ impl EngineConfig {
         myelon_rpc_depth: Option<usize>,
         myelon_response_depth: Option<usize>,
         myelon_busy_spin: Option<bool>,
+        myelon_backend: Option<String>,
+        myelon_access_mode: Option<String>,
         generation_cfg: Option<GenerationConfig>,
         seed: Option<u64>,
         prefix_cache: Option<bool>,
@@ -504,6 +512,8 @@ impl EngineConfig {
             myelon_rpc_depth,
             myelon_response_depth,
             myelon_busy_spin,
+            myelon_backend,
+            myelon_access_mode,
             generation_cfg,
             seed,
             prefix_cache,

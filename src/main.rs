@@ -195,6 +195,8 @@ async fn main() -> Result<()> {
         args.myelon_rpc_depth,
         args.myelon_response_depth,
         Some(args.myelon_busy_spin),
+        Some(args.myelon_backend.clone()),
+        Some(args.myelon_access_mode.clone()),
         generation_cfg,
         args.seed,
         Some(prefix_cache),

@@ -2408,6 +2408,8 @@ mod tests {
             None,
             None,
             Some(false),
+            Some("shm".to_string()),
+            Some("owned".to_string()),
             None,
             Some(123),
             Some(false),
@@ -2424,6 +2426,8 @@ mod tests {
             None,
             None,
             None,
+            None,
+            false,
         )
     }
 

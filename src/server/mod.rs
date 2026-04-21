@@ -909,6 +909,14 @@ pub struct Args {
     #[arg(long, default_value_t = false)]
     pub myelon_busy_spin: bool,
 
+    /// Myelon backend for subprocess IPC hot-path transport.
+    #[arg(long, default_value = "shm", value_parser = ["shm", "mmap"])]
+    pub myelon_backend: String,
+
+    /// Myelon framed receive mode. `borrowed` avoids the transport copy on receive.
+    #[arg(long, default_value = "owned", value_parser = ["owned", "borrowed"])]
+    pub myelon_access_mode: String,
+
     #[arg(long, default_value_t = false)]
     pub log: bool,
 
@@ -2016,6 +2024,10 @@ mod tests {
             "--myelon-response-depth",
             "32",
             "--myelon-busy-spin",
+            "--myelon-backend",
+            "mmap",
+            "--myelon-access-mode",
+            "borrowed",
         ])
         .expect("topology flags should parse");
 
@@ -2026,6 +2038,8 @@ mod tests {
         assert_eq!(args.myelon_rpc_depth, Some(64));
         assert_eq!(args.myelon_response_depth, Some(32));
         assert!(args.myelon_busy_spin);
+        assert_eq!(args.myelon_backend, "mmap");
+        assert_eq!(args.myelon_access_mode, "borrowed");
     }
 
     #[test]
