@@ -290,6 +290,7 @@ impl EngineConfig {
         max_num_seqs=Some(32), config_model_len=None, max_model_len=Some(1024), max_tokens=None,
         isq=None, num_shards=None, device_ids=None, force_runner=Some(false), myelon_ipc=Some(false),
         myelon_rpc_depth=None, myelon_response_depth=None, myelon_busy_spin=Some(false),
+        myelon_backend=None, myelon_access_mode=None,
         generation_cfg=None, seed=None, prefix_cache=None, prefix_cache_max_tokens=None,
         fp8_kvcache=None, server_mode=None, cpu_mem_fold=None, kv_fraction=None, mamba_fraction=None, pd_config=None,
         mcp_command=None, mcp_config=None, mcp_args=None,
@@ -315,6 +316,8 @@ impl EngineConfig {
         myelon_rpc_depth: Option<usize>,
         myelon_response_depth: Option<usize>,
         myelon_busy_spin: Option<bool>,
+        myelon_backend: Option<String>,
+        myelon_access_mode: Option<String>,
         generation_cfg: Option<GenerationConfig>,
         seed: Option<u64>,
         prefix_cache: Option<bool>,
@@ -363,6 +366,8 @@ impl EngineConfig {
             myelon_rpc_depth,
             myelon_response_depth,
             myelon_busy_spin,
+            myelon_backend,
+            myelon_access_mode,
             generation_cfg,
             seed,
             prefix_cache,
@@ -423,6 +428,8 @@ mod tests {
             None,
             None,
             None,
+            None,
+            None,
         );
 
         assert_eq!(config.num_shards, Some(2));
@@ -450,6 +457,8 @@ mod tests {
             None,
             None,
             Some(false),
+            None,
+            None,
             None,
             None,
             None,

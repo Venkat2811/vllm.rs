@@ -11,6 +11,19 @@ fn rkyv_err(e: impl std::fmt::Display) -> candle_core::Error {
     candle_core::Error::Msg(format!("rkyv: {e}"))
 }
 
+macro_rules! decode_owned {
+    ($ty:ty, $payload:expr) => {{
+        let payload = $payload;
+        if (payload.as_ptr() as usize) % rkyv::util::AlignedVec::<16>::ALIGNMENT == 0 {
+            rkyv::from_bytes::<$ty, rkyv::rancor::Error>(payload).map_err(rkyv_err)?
+        } else {
+            let mut aligned = rkyv::util::AlignedVec::<16>::with_capacity(payload.len());
+            aligned.extend_from_slice(payload);
+            rkyv::from_bytes::<$ty, rkyv::rancor::Error>(&aligned).map_err(rkyv_err)?
+        }
+    }};
+}
+
 // --- Request encode ---
 
 pub fn encode_request(req: &MyelonRequest) -> CandleResult<Vec<u8>> {
@@ -68,64 +81,28 @@ pub fn encode_request(req: &MyelonRequest) -> CandleResult<Vec<u8>> {
 pub fn decode_request(kind: u8, payload: &[u8]) -> CandleResult<MyelonRequest> {
     let msg_kind = MsgKind::from_u8(kind)?;
     match msg_kind {
-        MsgKind::RunPrefill => {
-            let archived =
-                rkyv::access::<rkyv::Archived<Vec<Sequence>>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let sequences: Vec<Sequence> =
-                rkyv::deserialize::<Vec<Sequence>, rkyv::rancor::Error>(archived)
-                    .map_err(rkyv_err)?;
-            Ok(MyelonRequest::RunPrefill { sequences })
-        }
-        MsgKind::RunDecode => {
-            let archived =
-                rkyv::access::<rkyv::Archived<Vec<DecodeSequence>>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let sequences: Vec<DecodeSequence> =
-                rkyv::deserialize::<Vec<DecodeSequence>, rkyv::rancor::Error>(archived)
-                    .map_err(rkyv_err)?;
-            Ok(MyelonRequest::RunDecode { sequences })
-        }
-        MsgKind::FinishDecode => {
-            let archived =
-                rkyv::access::<rkyv::Archived<usize>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let sequence_id: usize =
-                rkyv::deserialize::<usize, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonRequest::FinishDecode { sequence_id })
-        }
-        MsgKind::Cancel => {
-            let archived =
-                rkyv::access::<rkyv::Archived<usize>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let sequence_id: usize =
-                rkyv::deserialize::<usize, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonRequest::Cancel { sequence_id })
-        }
-        MsgKind::TransferPrefill => {
-            let archived =
-                rkyv::access::<rkyv::Archived<Sequence>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let sequence: Sequence =
-                rkyv::deserialize::<Sequence, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonRequest::TransferPrefill { sequence })
-        }
-        MsgKind::ReceivePrefill => {
-            let archived =
-                rkyv::access::<rkyv::Archived<usize>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let available_tokens: usize =
-                rkyv::deserialize::<usize, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonRequest::ReceivePrefill { available_tokens })
-        }
+        MsgKind::RunPrefill => Ok(MyelonRequest::RunPrefill {
+            sequences: decode_owned!(Vec<Sequence>, payload),
+        }),
+        MsgKind::RunDecode => Ok(MyelonRequest::RunDecode {
+            sequences: decode_owned!(Vec<DecodeSequence>, payload),
+        }),
+        MsgKind::FinishDecode => Ok(MyelonRequest::FinishDecode {
+            sequence_id: decode_owned!(usize, payload),
+        }),
+        MsgKind::Cancel => Ok(MyelonRequest::Cancel {
+            sequence_id: decode_owned!(usize, payload),
+        }),
+        MsgKind::TransferPrefill => Ok(MyelonRequest::TransferPrefill {
+            sequence: decode_owned!(Sequence, payload),
+        }),
+        MsgKind::ReceivePrefill => Ok(MyelonRequest::ReceivePrefill {
+            available_tokens: decode_owned!(usize, payload),
+        }),
         MsgKind::CheckPrefillStatus
         | MsgKind::KvCacheRelease
         | MsgKind::CheckKvCacheRelease => {
-            let archived =
-                rkyv::access::<rkyv::Archived<usize>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let sequence_id: usize =
-                rkyv::deserialize::<usize, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
+            let sequence_id: usize = decode_owned!(usize, payload);
             match msg_kind {
                 MsgKind::CheckPrefillStatus => Ok(MyelonRequest::CheckPrefillStatus { sequence_id }),
                 MsgKind::KvCacheRelease => Ok(MyelonRequest::KvCacheRelease { sequence_id }),
@@ -136,38 +113,19 @@ pub fn decode_request(kind: u8, payload: &[u8]) -> CandleResult<MyelonRequest> {
             }
         }
         MsgKind::KvCacheSend => {
-            let archived = rkyv::access::<
-                rkyv::Archived<(Sequence, u32)>,
-                rkyv::rancor::Error,
-            >(payload)
-            .map_err(rkyv_err)?;
             let (sequence, first_token): (Sequence, u32) =
-                rkyv::deserialize::<(Sequence, u32), rkyv::rancor::Error>(archived)
-                    .map_err(rkyv_err)?;
+                decode_owned!((Sequence, u32), payload);
             Ok(MyelonRequest::KvCacheSend {
                 sequence,
                 first_token,
             })
         }
-        MsgKind::KvCacheReceive => {
-            let archived =
-                rkyv::access::<rkyv::Archived<Sequence>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let sequence: Sequence =
-                rkyv::deserialize::<Sequence, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonRequest::KvCacheReceive { sequence })
-        }
+        MsgKind::KvCacheReceive => Ok(MyelonRequest::KvCacheReceive {
+            sequence: decode_owned!(Sequence, payload),
+        }),
         MsgKind::KvCacheSwap => {
-            let archived = rkyv::access::<
-                rkyv::Archived<(Vec<usize>, Vec<usize>, bool)>,
-                rkyv::rancor::Error,
-            >(payload)
-            .map_err(rkyv_err)?;
-            let (keys, values, swap_in): (Vec<usize>, Vec<usize>, bool) = rkyv::deserialize::<
-                (Vec<usize>, Vec<usize>, bool),
-                rkyv::rancor::Error,
-            >(archived)
-            .map_err(rkyv_err)?;
+            let (keys, values, swap_in): (Vec<usize>, Vec<usize>, bool) =
+                decode_owned!((Vec<usize>, Vec<usize>, bool), payload);
             let mappings: HashMap<usize, usize> = keys.into_iter().zip(values).collect();
             Ok(MyelonRequest::KvCacheSwap { mappings, swap_in })
         }
@@ -218,84 +176,31 @@ pub fn encode_response(resp: &MyelonResponse) -> CandleResult<Vec<u8>> {
 
 pub fn decode_response(kind: u8, payload: &[u8]) -> CandleResult<MyelonResponse> {
     match MsgKind::from_u8(kind)? {
-        MsgKind::RunResponse => {
-            let archived =
-                rkyv::access::<rkyv::Archived<Vec<u32>>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let output_ids: Vec<u32> =
-                rkyv::deserialize::<Vec<u32>, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonResponse::RunResponse(output_ids))
-        }
-        MsgKind::TransferPrefillResponse => {
-            let archived =
-                rkyv::access::<rkyv::Archived<bool>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let v: bool =
-                rkyv::deserialize::<bool, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonResponse::TransferPrefillResponse(v))
-        }
-        MsgKind::ReceivePrefillResponse => {
-            let archived = rkyv::access::<
-                rkyv::Archived<(bool, Option<Sequence>)>,
-                rkyv::rancor::Error,
-            >(payload)
-            .map_err(rkyv_err)?;
-            let v: (bool, Option<Sequence>) =
-                rkyv::deserialize::<(bool, Option<Sequence>), rkyv::rancor::Error>(archived)
-                    .map_err(rkyv_err)?;
-            Ok(MyelonResponse::ReceivePrefillResponse(v))
-        }
-        MsgKind::CheckPrefillStatusResponse => {
-            let archived =
-                rkyv::access::<rkyv::Archived<bool>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let v: bool =
-                rkyv::deserialize::<bool, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonResponse::CheckPrefillStatusResponse(v))
-        }
-        MsgKind::KvCacheSendResponse => {
-            let archived =
-                rkyv::access::<rkyv::Archived<bool>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let v: bool =
-                rkyv::deserialize::<bool, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonResponse::KvCacheSendResponse(v))
-        }
-        MsgKind::KvCacheReceiveResponse => {
-            let archived = rkyv::access::<
-                rkyv::Archived<(bool, u32, usize)>,
-                rkyv::rancor::Error,
-            >(payload)
-            .map_err(rkyv_err)?;
-            let v: (bool, u32, usize) =
-                rkyv::deserialize::<(bool, u32, usize), rkyv::rancor::Error>(archived)
-                    .map_err(rkyv_err)?;
-            Ok(MyelonResponse::KvCacheReceiveResponse(v))
-        }
-        MsgKind::KvCacheReleaseResponse => {
-            let archived =
-                rkyv::access::<rkyv::Archived<bool>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let v: bool =
-                rkyv::deserialize::<bool, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonResponse::KvCacheReleaseResponse(v))
-        }
-        MsgKind::CheckKvCacheReleaseResponse => {
-            let archived =
-                rkyv::access::<rkyv::Archived<bool>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let v: bool =
-                rkyv::deserialize::<bool, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonResponse::CheckKvCacheReleaseResponse(v))
-        }
-        MsgKind::KvCacheSwapResponse => {
-            let archived =
-                rkyv::access::<rkyv::Archived<bool>, rkyv::rancor::Error>(payload)
-                    .map_err(rkyv_err)?;
-            let v: bool =
-                rkyv::deserialize::<bool, rkyv::rancor::Error>(archived).map_err(rkyv_err)?;
-            Ok(MyelonResponse::KvCacheSwapResponse(v))
-        }
+        MsgKind::RunResponse => Ok(MyelonResponse::RunResponse(decode_owned!(Vec<u32>, payload))),
+        MsgKind::TransferPrefillResponse => Ok(MyelonResponse::TransferPrefillResponse(
+            decode_owned!(bool, payload),
+        )),
+        MsgKind::ReceivePrefillResponse => Ok(MyelonResponse::ReceivePrefillResponse(
+            decode_owned!((bool, Option<Sequence>), payload),
+        )),
+        MsgKind::CheckPrefillStatusResponse => Ok(MyelonResponse::CheckPrefillStatusResponse(
+            decode_owned!(bool, payload),
+        )),
+        MsgKind::KvCacheSendResponse => Ok(MyelonResponse::KvCacheSendResponse(
+            decode_owned!(bool, payload),
+        )),
+        MsgKind::KvCacheReceiveResponse => Ok(MyelonResponse::KvCacheReceiveResponse(
+            decode_owned!((bool, u32, usize), payload),
+        )),
+        MsgKind::KvCacheReleaseResponse => Ok(MyelonResponse::KvCacheReleaseResponse(
+            decode_owned!(bool, payload),
+        )),
+        MsgKind::CheckKvCacheReleaseResponse => Ok(MyelonResponse::CheckKvCacheReleaseResponse(
+            decode_owned!(bool, payload),
+        )),
+        MsgKind::KvCacheSwapResponse => Ok(MyelonResponse::KvCacheSwapResponse(
+            decode_owned!(bool, payload),
+        )),
         MsgKind::Error => Ok(MyelonResponse::Error(
             String::from_utf8_lossy(payload).into_owned(),
         )),

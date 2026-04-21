@@ -1234,6 +1234,8 @@ impl LLMEngine {
                     self.econfig.myelon_rpc_depth,
                     self.econfig.myelon_response_depth,
                     self.econfig.myelon_busy_spin,
+                    self.econfig.myelon_backend.as_deref(),
+                    self.econfig.myelon_access_mode.as_deref(),
                 )?;
                 runner_group.myelon_transport =
                     Some(crate::ipc::myelon_ipc::MyelonEngineTransport::attach(
@@ -2027,6 +2029,8 @@ mod tests {
             None,
             None,
             Some(false),
+            Some("shm".to_string()),
+            Some("owned".to_string()),
             None,
             Some(123),
             Some(false),
@@ -2043,6 +2047,8 @@ mod tests {
             None,
             None,
             None,
+            None,
+            false,
         )
     }
 
@@ -2054,6 +2060,8 @@ mod tests {
             econfig.myelon_rpc_depth,
             econfig.myelon_response_depth,
             econfig.myelon_busy_spin,
+            econfig.myelon_backend.as_deref(),
+            econfig.myelon_access_mode.as_deref(),
         )
         .unwrap();
         assert_eq!(resolved.rpc_depth, VLLM_RS_DEFAULT_MYELON_RPC_DEPTH);
@@ -2071,16 +2079,28 @@ mod tests {
         econfig.myelon_rpc_depth = Some(2048);
         econfig.myelon_response_depth = Some(512);
         econfig.myelon_busy_spin = Some(true);
+        econfig.myelon_backend = Some("mmap".to_string());
+        econfig.myelon_access_mode = Some("borrowed".to_string());
 
         let resolved = resolve_myelon_transport_config(
             econfig.myelon_rpc_depth,
             econfig.myelon_response_depth,
             econfig.myelon_busy_spin,
+            econfig.myelon_backend.as_deref(),
+            econfig.myelon_access_mode.as_deref(),
         )
         .unwrap();
         assert_eq!(resolved.rpc_depth, 2048);
         assert_eq!(resolved.response_depth, 512);
         assert_eq!(resolved.wait_strategy, MyelonWaitStrategy::BusySpin);
+        assert_eq!(
+            resolved.backend,
+            crate::ipc::myelon_ipc::MyelonTransportBackend::Mmap
+        );
+        assert_eq!(
+            resolved.access_mode,
+            crate::ipc::myelon_ipc::MyelonTransportAccessMode::Borrowed
+        );
     }
 
     #[cfg(feature = "myelon")]
@@ -2092,6 +2112,8 @@ mod tests {
             econfig.myelon_rpc_depth,
             econfig.myelon_response_depth,
             econfig.myelon_busy_spin,
+            econfig.myelon_backend.as_deref(),
+            econfig.myelon_access_mode.as_deref(),
         )
         .unwrap_err();
         assert!(error.to_string().contains("myelon_rpc_depth"));
@@ -2102,6 +2124,8 @@ mod tests {
             econfig.myelon_rpc_depth,
             econfig.myelon_response_depth,
             econfig.myelon_busy_spin,
+            econfig.myelon_backend.as_deref(),
+            econfig.myelon_access_mode.as_deref(),
         )
         .unwrap_err();
         assert!(error.to_string().contains("myelon_response_depth"));
