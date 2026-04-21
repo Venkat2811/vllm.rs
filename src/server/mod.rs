@@ -913,8 +913,8 @@ pub struct Args {
     #[arg(long, default_value = "shm", value_parser = ["shm", "mmap"])]
     pub myelon_backend: String,
 
-    /// Myelon framed receive mode. `borrowed` avoids the transport copy on receive.
-    #[arg(long, default_value = "owned", value_parser = ["owned", "borrowed"])]
+    /// Myelon receive mode. `typed` switches to the typed transport path.
+    #[arg(long, default_value = "owned", value_parser = ["owned", "borrowed", "typed"])]
     pub myelon_access_mode: String,
 
     #[arg(long, default_value_t = false)]

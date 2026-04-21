@@ -3,17 +3,20 @@ use candle_core::Result as CandleResult;
 use interprocess::local_socket::Stream as LocalStream;
 use interprocess::TryClone;
 use myelon_playground::transport::{
-    FixedFrame, FramedTransportConsumer, FramedTransportProducer, MmapFramedTransportConsumer,
-    MmapFramedTransportProducer, ReassemblyBuffer,
+    AlignedFixedFrame, FixedFrame, FramedTransportConsumer, FramedTransportProducer,
+    MmapFramedTransportConsumer, MmapFramedTransportProducer, ReassemblyBuffer,
 };
 pub use myelon_playground::{MyelonTransportLayout, MyelonWaitStrategy};
 use std::collections::HashMap;
 use std::path::Path;
 
-use myelon_playground::MmapTransportLayout;
+use myelon_playground::{
+    MmapTransportLayout, MmapTypedConsumer, MmapTypedProducer, TypedConsumer, TypedProducer,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::core::sequence::{DecodeSequence, Sequence};
+use crate::ipc::typed_codec::{TypedMyelonRequest, TypedMyelonResponse};
 use crate::log_info;
 use crate::runner::{receive_local, send_local, MessageType};
 
@@ -26,6 +29,8 @@ pub const VLLM_RS_DEFAULT_MYELON_RESPONSE_DEPTH: usize = 8192;
 
 pub type RpcFrame = FixedFrame<RPC_FRAME_DATA_BYTES>;
 pub type ResponseFrame = FixedFrame<RESPONSE_FRAME_DATA_BYTES>;
+pub type TypedRpcFrame = AlignedFixedFrame<RPC_FRAME_DATA_BYTES>;
+pub type TypedResponseFrame = AlignedFixedFrame<RESPONSE_FRAME_DATA_BYTES>;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -49,6 +54,7 @@ impl MyelonTransportBackend {
 pub enum MyelonTransportAccessMode {
     Owned,
     Borrowed,
+    Typed,
 }
 
 impl MyelonTransportAccessMode {
@@ -56,6 +62,7 @@ impl MyelonTransportAccessMode {
         match value.unwrap_or("owned") {
             "owned" => Ok(Self::Owned),
             "borrowed" => Ok(Self::Borrowed),
+            "typed" => Ok(Self::Typed),
             other => candle_core::bail!("unsupported myelon_access_mode '{other}'"),
         }
     }
@@ -164,6 +171,8 @@ pub enum MsgKind {
     KvCacheReleaseResponse = 107,
     CheckKvCacheReleaseResponse = 108,
     KvCacheSwapResponse = 109,
+    TypedRequest = 200,
+    TypedResponse = 201,
 }
 
 impl MsgKind {
@@ -200,6 +209,8 @@ impl MsgKind {
                 Ok(Self::CheckKvCacheReleaseResponse)
             }
             x if x == Self::KvCacheSwapResponse as u8 => Ok(Self::KvCacheSwapResponse),
+            x if x == Self::TypedRequest as u8 => Ok(Self::TypedRequest),
+            x if x == Self::TypedResponse as u8 => Ok(Self::TypedResponse),
             _ => candle_core::bail!("unexpected Myelon message kind {}", kind),
         }
     }
@@ -268,46 +279,99 @@ pub fn resolve_myelon_transport_config(
 }
 
 pub enum RpcBroadcastProducer {
-    Shm { inner: FramedTransportProducer<RpcFrame> },
-    Mmap { inner: MmapFramedTransportProducer<RpcFrame> },
+    ShmFramed {
+        inner: FramedTransportProducer<RpcFrame>,
+    },
+    MmapFramed {
+        inner: MmapFramedTransportProducer<RpcFrame>,
+    },
+    ShmTyped {
+        inner: TypedProducer<TypedRpcFrame>,
+    },
+    MmapTyped {
+        inner: MmapTypedProducer<TypedRpcFrame>,
+    },
 }
 
 impl RpcBroadcastProducer {
     pub fn create_shm(name: &str, depth: usize) -> Result<Self> {
         let inner = FramedTransportProducer::<RpcFrame>::create(name, depth)
             .with_context(|| format!("failed to create rpc ring '{name}'"))?;
-        Ok(Self::Shm { inner })
+        Ok(Self::ShmFramed { inner })
+    }
+
+    pub fn create_typed_shm(name: &str, depth: usize) -> Result<Self> {
+        let inner = TypedProducer::<TypedRpcFrame>::create(name, depth)
+            .with_context(|| format!("failed to create typed rpc ring '{name}'"))?;
+        Ok(Self::ShmTyped { inner })
     }
 
     pub fn create_mmap(layout: MmapTransportLayout, depth: usize) -> Result<Self> {
         let segment = layout.segment_name().to_string();
         let inner = MmapFramedTransportProducer::<RpcFrame>::create(layout, depth)
             .with_context(|| format!("failed to create mmap rpc ring '{segment}'"))?;
-        Ok(Self::Mmap { inner })
+        Ok(Self::MmapFramed { inner })
     }
 
-    pub fn publish(&mut self, payload: &[u8], kind: MsgKind) {
+    pub fn create_typed_mmap(layout: MmapTransportLayout, depth: usize) -> Result<Self> {
+        let segment = layout.segment_name().to_string();
+        let inner = MmapTypedProducer::<TypedRpcFrame>::create(layout, depth)
+            .with_context(|| format!("failed to create typed mmap rpc ring '{segment}'"))?;
+        Ok(Self::MmapTyped { inner })
+    }
+
+    pub fn publish_raw(&mut self, payload: &[u8], kind: MsgKind) {
         match self {
-            Self::Shm { inner } => inner.publish(payload, kind.as_u8()),
-            Self::Mmap { inner } => inner.publish(payload, kind.as_u8()),
+            Self::ShmFramed { inner } => inner.publish(payload, kind.as_u8()),
+            Self::MmapFramed { inner } => inner.publish(payload, kind.as_u8()),
+            Self::ShmTyped { .. } | Self::MmapTyped { .. } => {
+                panic!("typed rpc producer cannot publish raw framed payloads");
+            }
         }
     }
 
-    pub fn publish_request(&mut self, request: &MyelonRequest) -> CandleResult<Vec<u8>> {
-        let bytes = request.encode()?;
-        self.publish(&bytes, request.kind());
-        Ok(bytes)
+    pub fn publish_request(&mut self, request: &MyelonRequest) -> CandleResult<()> {
+        match self {
+            Self::ShmFramed { inner } => {
+                let bytes = request.encode()?;
+                inner.publish(&bytes, request.kind().as_u8());
+                Ok(())
+            }
+            Self::MmapFramed { inner } => {
+                let bytes = request.encode()?;
+                inner.publish(&bytes, request.kind().as_u8());
+                Ok(())
+            }
+            Self::ShmTyped { inner } => inner
+                .publish(
+                    &TypedMyelonRequest(request.clone()),
+                    MsgKind::TypedRequest.as_u8(),
+                )
+                .map_err(myelon_to_candle),
+            Self::MmapTyped { inner } => inner
+                .publish(
+                    &TypedMyelonRequest(request.clone()),
+                    MsgKind::TypedRequest.as_u8(),
+                )
+                .map_err(myelon_to_candle),
+        }
     }
 }
 
 pub enum RpcBroadcastConsumer {
-    Shm {
+    ShmFramed {
         inner: FramedTransportConsumer<RpcFrame>,
         reassembly: ReassemblyBuffer,
     },
-    Mmap {
+    MmapFramed {
         inner: MmapFramedTransportConsumer<RpcFrame>,
         reassembly: ReassemblyBuffer,
+    },
+    ShmTyped {
+        inner: TypedConsumer<TypedRpcFrame>,
+    },
+    MmapTyped {
+        inner: MmapTypedConsumer<TypedRpcFrame>,
     },
 }
 
@@ -315,10 +379,20 @@ impl RpcBroadcastConsumer {
     pub fn attach_shm(name: &str, depth: usize, wait_strategy: MyelonWaitStrategy) -> Result<Self> {
         let inner = FramedTransportConsumer::<RpcFrame>::attach(name, depth, wait_strategy)
             .with_context(|| format!("failed to attach rpc ring '{name}'"))?;
-        Ok(Self::Shm {
+        Ok(Self::ShmFramed {
             inner,
             reassembly: ReassemblyBuffer::new(RPC_FRAME_DATA_BYTES),
         })
+    }
+
+    pub fn attach_typed_shm(
+        name: &str,
+        depth: usize,
+        wait_strategy: MyelonWaitStrategy,
+    ) -> Result<Self> {
+        let inner = TypedConsumer::<TypedRpcFrame>::attach(name, depth, wait_strategy)
+            .with_context(|| format!("failed to attach typed rpc ring '{name}'"))?;
+        Ok(Self::ShmTyped { inner })
     }
 
     pub fn attach_mmap(
@@ -328,109 +402,209 @@ impl RpcBroadcastConsumer {
         wait_strategy: MyelonWaitStrategy,
     ) -> Result<Self> {
         let segment = layout.segment_name().to_string();
-        let inner =
-            MmapFramedTransportConsumer::<RpcFrame>::attach(layout, depth, consumer_id, wait_strategy)
-                .with_context(|| format!("failed to attach mmap rpc ring '{segment}'"))?;
-        Ok(Self::Mmap {
+        let inner = MmapFramedTransportConsumer::<RpcFrame>::attach(
+            layout,
+            depth,
+            consumer_id,
+            wait_strategy,
+        )
+        .with_context(|| format!("failed to attach mmap rpc ring '{segment}'"))?;
+        Ok(Self::MmapFramed {
             inner,
             reassembly: ReassemblyBuffer::new(RPC_FRAME_DATA_BYTES),
         })
     }
 
+    pub fn attach_typed_mmap(
+        layout: MmapTransportLayout,
+        depth: usize,
+        consumer_id: &str,
+        wait_strategy: MyelonWaitStrategy,
+    ) -> Result<Self> {
+        let segment = layout.segment_name().to_string();
+        let inner =
+            MmapTypedConsumer::<TypedRpcFrame>::attach(layout, depth, consumer_id, wait_strategy)
+                .with_context(|| format!("failed to attach typed mmap rpc ring '{segment}'"))?;
+        Ok(Self::MmapTyped { inner })
+    }
+
     pub fn has_coordination_support(&self) -> bool {
         match self {
-            Self::Shm { inner, .. } => inner.has_coordination_support(),
-            Self::Mmap { inner, .. } => inner.has_coordination_support(),
+            Self::ShmFramed { inner, .. } => inner.has_coordination_support(),
+            Self::MmapFramed { inner, .. } => inner.has_coordination_support(),
+            Self::ShmTyped { .. } | Self::MmapTyped { .. } => true,
         }
     }
 
     pub fn recv_request_blocking_owned(&mut self) -> CandleResult<MyelonRequest> {
         match self {
-            Self::Shm { inner, .. } => {
+            Self::ShmFramed { inner, .. } => {
                 let (kind, payload) = inner.recv_message_blocking_owned();
                 MyelonRequest::decode(kind, &payload)
             }
-            Self::Mmap { inner, .. } => {
+            Self::MmapFramed { inner, .. } => {
                 let (kind, payload) = inner.recv_message_blocking_owned();
                 MyelonRequest::decode(kind, &payload)
+            }
+            Self::ShmTyped { inner } => {
+                let (kind, request) = inner
+                    .recv_owned::<TypedMyelonRequest>()
+                    .map_err(myelon_to_candle)?;
+                if kind != MsgKind::TypedRequest.as_u8() {
+                    candle_core::bail!("unexpected typed request transport kind {}", kind);
+                }
+                Ok(request.into_inner())
+            }
+            Self::MmapTyped { inner } => {
+                let (kind, request) = inner
+                    .recv_owned::<TypedMyelonRequest>()
+                    .map_err(myelon_to_candle)?;
+                if kind != MsgKind::TypedRequest.as_u8() {
+                    candle_core::bail!("unexpected typed request transport kind {}", kind);
+                }
+                Ok(request.into_inner())
             }
         }
     }
 
     pub fn recv_request_blocking_borrowed(&mut self) -> CandleResult<MyelonRequest> {
         match self {
-            Self::Shm { inner, reassembly } => inner
-                .recv_message_blocking_leased(reassembly, MyelonRequest::decode),
-            Self::Mmap { inner, reassembly } => inner
-                .recv_message_blocking_leased(reassembly, MyelonRequest::decode),
+            Self::ShmFramed { inner, reassembly } => {
+                inner.recv_message_blocking_leased(reassembly, MyelonRequest::decode)
+            }
+            Self::MmapFramed { inner, reassembly } => {
+                inner.recv_message_blocking_leased(reassembly, MyelonRequest::decode)
+            }
+            Self::ShmTyped { .. } | Self::MmapTyped { .. } => {
+                candle_core::bail!(
+                    "typed request transport does not support framed borrowed decode"
+                )
+            }
         }
     }
 }
 
 pub enum ResponseProducer {
-    Shm { inner: FramedTransportProducer<ResponseFrame> },
-    Mmap { inner: MmapFramedTransportProducer<ResponseFrame> },
+    ShmFramed {
+        inner: FramedTransportProducer<ResponseFrame>,
+    },
+    MmapFramed {
+        inner: MmapFramedTransportProducer<ResponseFrame>,
+    },
+    ShmTyped {
+        inner: TypedProducer<TypedResponseFrame>,
+    },
+    MmapTyped {
+        inner: MmapTypedProducer<TypedResponseFrame>,
+    },
 }
 
 impl ResponseProducer {
     pub fn create_shm(name: &str, depth: usize) -> Result<Self> {
         let inner = FramedTransportProducer::<ResponseFrame>::create(name, depth)
             .with_context(|| format!("failed to create response ring '{name}'"))?;
-        Ok(Self::Shm { inner })
+        Ok(Self::ShmFramed { inner })
+    }
+
+    pub fn create_typed_shm(name: &str, depth: usize) -> Result<Self> {
+        let inner = TypedProducer::<TypedResponseFrame>::create(name, depth)
+            .with_context(|| format!("failed to create typed response ring '{name}'"))?;
+        Ok(Self::ShmTyped { inner })
     }
 
     pub fn create_mmap(layout: MmapTransportLayout, depth: usize) -> Result<Self> {
         let segment = layout.segment_name().to_string();
         let inner = MmapFramedTransportProducer::<ResponseFrame>::create(layout, depth)
             .with_context(|| format!("failed to create mmap response ring '{segment}'"))?;
-        Ok(Self::Mmap { inner })
+        Ok(Self::MmapFramed { inner })
     }
 
-    pub fn send(&mut self, payload: &[u8], kind: MsgKind) {
+    pub fn create_typed_mmap(layout: MmapTransportLayout, depth: usize) -> Result<Self> {
+        let segment = layout.segment_name().to_string();
+        let inner = MmapTypedProducer::<TypedResponseFrame>::create(layout, depth)
+            .with_context(|| format!("failed to create typed mmap response ring '{segment}'"))?;
+        Ok(Self::MmapTyped { inner })
+    }
+
+    pub fn send_raw(&mut self, payload: &[u8], kind: MsgKind) {
         match self {
-            Self::Shm { inner } => inner.publish(payload, kind.as_u8()),
-            Self::Mmap { inner } => inner.publish(payload, kind.as_u8()),
+            Self::ShmFramed { inner } => inner.publish(payload, kind.as_u8()),
+            Self::MmapFramed { inner } => inner.publish(payload, kind.as_u8()),
+            Self::ShmTyped { .. } | Self::MmapTyped { .. } => {
+                panic!("typed response producer cannot publish raw framed payloads");
+            }
         }
     }
 
-    pub fn send_response(&mut self, response: &MyelonResponse) -> CandleResult<Vec<u8>> {
-        let bytes = response.encode()?;
-        self.send(&bytes, response.kind());
-        Ok(bytes)
+    pub fn send_response(&mut self, response: &MyelonResponse) -> CandleResult<()> {
+        match self {
+            Self::ShmFramed { inner } => {
+                let bytes = response.encode()?;
+                inner.publish(&bytes, response.kind().as_u8());
+                Ok(())
+            }
+            Self::MmapFramed { inner } => {
+                let bytes = response.encode()?;
+                inner.publish(&bytes, response.kind().as_u8());
+                Ok(())
+            }
+            Self::ShmTyped { inner } => inner
+                .publish(
+                    &TypedMyelonResponse(response.clone()),
+                    MsgKind::TypedResponse.as_u8(),
+                )
+                .map_err(myelon_to_candle),
+            Self::MmapTyped { inner } => inner
+                .publish(
+                    &TypedMyelonResponse(response.clone()),
+                    MsgKind::TypedResponse.as_u8(),
+                )
+                .map_err(myelon_to_candle),
+        }
     }
 
     pub fn send_error(&mut self, error: impl std::fmt::Display) {
         let response = MyelonResponse::Error(error.to_string());
-        let bytes = response
-            .encode()
+        self.send_response(&response)
             .expect("MyelonResponse::Error should always serialize");
-        self.send(&bytes, response.kind());
     }
 }
 
 pub enum ResponseConsumer {
-    Shm {
+    ShmFramed {
         inner: FramedTransportConsumer<ResponseFrame>,
         reassembly: ReassemblyBuffer,
     },
-    Mmap {
+    MmapFramed {
         inner: MmapFramedTransportConsumer<ResponseFrame>,
         reassembly: ReassemblyBuffer,
+    },
+    ShmTyped {
+        inner: TypedConsumer<TypedResponseFrame>,
+    },
+    MmapTyped {
+        inner: MmapTypedConsumer<TypedResponseFrame>,
     },
 }
 
 impl ResponseConsumer {
-    pub fn attach_shm(
+    pub fn attach_shm(name: &str, depth: usize, wait_strategy: MyelonWaitStrategy) -> Result<Self> {
+        let inner = FramedTransportConsumer::<ResponseFrame>::attach(name, depth, wait_strategy)
+            .with_context(|| format!("failed to attach response ring '{name}'"))?;
+        Ok(Self::ShmFramed {
+            inner,
+            reassembly: ReassemblyBuffer::new(RESPONSE_FRAME_DATA_BYTES),
+        })
+    }
+
+    pub fn attach_typed_shm(
         name: &str,
         depth: usize,
         wait_strategy: MyelonWaitStrategy,
     ) -> Result<Self> {
-        let inner = FramedTransportConsumer::<ResponseFrame>::attach(name, depth, wait_strategy)
-            .with_context(|| format!("failed to attach response ring '{name}'"))?;
-        Ok(Self::Shm {
-            inner,
-            reassembly: ReassemblyBuffer::new(RESPONSE_FRAME_DATA_BYTES),
-        })
+        let inner = TypedConsumer::<TypedResponseFrame>::attach(name, depth, wait_strategy)
+            .with_context(|| format!("failed to attach typed response ring '{name}'"))?;
+        Ok(Self::ShmTyped { inner })
     }
 
     pub fn attach_mmap(
@@ -447,43 +621,86 @@ impl ResponseConsumer {
             wait_strategy,
         )
         .with_context(|| format!("failed to attach mmap response ring '{segment}'"))?;
-        Ok(Self::Mmap {
+        Ok(Self::MmapFramed {
             inner,
             reassembly: ReassemblyBuffer::new(RESPONSE_FRAME_DATA_BYTES),
         })
     }
 
+    pub fn attach_typed_mmap(
+        layout: MmapTransportLayout,
+        depth: usize,
+        consumer_id: &str,
+        wait_strategy: MyelonWaitStrategy,
+    ) -> Result<Self> {
+        let segment = layout.segment_name().to_string();
+        let inner = MmapTypedConsumer::<TypedResponseFrame>::attach(
+            layout,
+            depth,
+            consumer_id,
+            wait_strategy,
+        )
+        .with_context(|| format!("failed to attach typed mmap response ring '{segment}'"))?;
+        Ok(Self::MmapTyped { inner })
+    }
+
     pub fn has_coordination_support(&self) -> bool {
         match self {
-            Self::Shm { inner, .. } => inner.has_coordination_support(),
-            Self::Mmap { inner, .. } => inner.has_coordination_support(),
+            Self::ShmFramed { inner, .. } => inner.has_coordination_support(),
+            Self::MmapFramed { inner, .. } => inner.has_coordination_support(),
+            Self::ShmTyped { .. } | Self::MmapTyped { .. } => true,
         }
     }
 
     pub fn recv_response_blocking_owned(&mut self) -> CandleResult<MyelonResponse> {
         match self {
-            Self::Shm { inner, .. } => {
+            Self::ShmFramed { inner, .. } => {
                 let (kind, payload) = inner.recv_message_blocking_owned();
                 MyelonResponse::decode(kind, &payload)
             }
-            Self::Mmap { inner, .. } => {
+            Self::MmapFramed { inner, .. } => {
                 let (kind, payload) = inner.recv_message_blocking_owned();
                 MyelonResponse::decode(kind, &payload)
+            }
+            Self::ShmTyped { inner } => {
+                let (kind, response) = inner
+                    .recv_owned::<TypedMyelonResponse>()
+                    .map_err(myelon_to_candle)?;
+                if kind != MsgKind::TypedResponse.as_u8() {
+                    candle_core::bail!("unexpected typed response transport kind {}", kind);
+                }
+                Ok(response.into_inner())
+            }
+            Self::MmapTyped { inner } => {
+                let (kind, response) = inner
+                    .recv_owned::<TypedMyelonResponse>()
+                    .map_err(myelon_to_candle)?;
+                if kind != MsgKind::TypedResponse.as_u8() {
+                    candle_core::bail!("unexpected typed response transport kind {}", kind);
+                }
+                Ok(response.into_inner())
             }
         }
     }
 
     pub fn recv_response_blocking_borrowed(&mut self) -> CandleResult<MyelonResponse> {
         match self {
-            Self::Shm { inner, reassembly } => inner
-                .recv_message_blocking_leased(reassembly, MyelonResponse::decode),
-            Self::Mmap { inner, reassembly } => inner
-                .recv_message_blocking_leased(reassembly, MyelonResponse::decode),
+            Self::ShmFramed { inner, reassembly } => {
+                inner.recv_message_blocking_leased(reassembly, MyelonResponse::decode)
+            }
+            Self::MmapFramed { inner, reassembly } => {
+                inner.recv_message_blocking_leased(reassembly, MyelonResponse::decode)
+            }
+            Self::ShmTyped { .. } | Self::MmapTyped { .. } => {
+                candle_core::bail!(
+                    "typed response transport does not support framed borrowed decode"
+                )
+            }
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MyelonRequest {
     RunPrefill {
         sequences: Vec<Sequence>,
@@ -670,14 +887,16 @@ impl MyelonRequest {
             | MsgKind::KvCacheReceiveResponse
             | MsgKind::KvCacheReleaseResponse
             | MsgKind::CheckKvCacheReleaseResponse
-            | MsgKind::KvCacheSwapResponse => {
+            | MsgKind::KvCacheSwapResponse
+            | MsgKind::TypedRequest
+            | MsgKind::TypedResponse => {
                 candle_core::bail!("response kind {} is not a request", kind);
             }
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MyelonResponse {
     RunResponse(Vec<u32>),
     TransferPrefillResponse(bool),
@@ -790,7 +1009,9 @@ impl MyelonResponse {
             | MsgKind::KvCacheReceive
             | MsgKind::KvCacheRelease
             | MsgKind::CheckKvCacheRelease
-            | MsgKind::KvCacheSwap => {
+            | MsgKind::KvCacheSwap
+            | MsgKind::TypedRequest
+            | MsgKind::TypedResponse => {
                 candle_core::bail!("request kind {} is not a response", kind);
             }
         }
@@ -821,17 +1042,28 @@ impl MyelonEngineTransport {
         let mmap_root_dir = match transport_config.backend {
             MyelonTransportBackend::Shm => None,
             MyelonTransportBackend::Mmap => {
-                let root = std::env::temp_dir()
-                    .join(format!("vllm-rs-myelon-{}", layout.session_tag()));
+                let root =
+                    std::env::temp_dir().join(format!("vllm-rs-myelon-{}", layout.session_tag()));
                 std::fs::create_dir_all(&root).map_err(myelon_to_candle)?;
                 Some(root)
             }
         };
-        let rpc_producer = match transport_config.backend {
-            MyelonTransportBackend::Shm => {
+        let rpc_producer = match (transport_config.backend, transport_config.access_mode) {
+            (MyelonTransportBackend::Shm, MyelonTransportAccessMode::Typed) => {
+                RpcBroadcastProducer::create_typed_shm(layout.rpc_ring_name(), layout.rpc_depth())
+            }
+            (MyelonTransportBackend::Shm, _) => {
                 RpcBroadcastProducer::create_shm(layout.rpc_ring_name(), layout.rpc_depth())
             }
-            MyelonTransportBackend::Mmap => RpcBroadcastProducer::create_mmap(
+            (MyelonTransportBackend::Mmap, MyelonTransportAccessMode::Typed) => {
+                RpcBroadcastProducer::create_typed_mmap(
+                    layout
+                        .rpc_mmap_layout(mmap_root_dir.clone().expect("mmap root dir"))
+                        .map_err(myelon_to_candle)?,
+                    layout.rpc_depth(),
+                )
+            }
+            (MyelonTransportBackend::Mmap, _) => RpcBroadcastProducer::create_mmap(
                 layout
                     .rpc_mmap_layout(mmap_root_dir.clone().expect("mmap root dir"))
                     .map_err(myelon_to_candle)?,
@@ -862,8 +1094,17 @@ impl MyelonEngineTransport {
 
         let mut response_consumers = Vec::with_capacity(layout.runner_count());
         for rank in 0..layout.runner_count() {
-            let consumer = match transport_config.backend {
-                MyelonTransportBackend::Shm => {
+            let consumer = match (transport_config.backend, transport_config.access_mode) {
+                (MyelonTransportBackend::Shm, MyelonTransportAccessMode::Typed) => {
+                    let response_ring_name =
+                        layout.response_ring_name(rank).map_err(myelon_to_candle)?;
+                    ResponseConsumer::attach_typed_shm(
+                        response_ring_name,
+                        layout.response_depth(),
+                        transport_config.wait_strategy,
+                    )
+                }
+                (MyelonTransportBackend::Shm, _) => {
                     let response_ring_name =
                         layout.response_ring_name(rank).map_err(myelon_to_candle)?;
                     ResponseConsumer::attach_shm(
@@ -872,7 +1113,20 @@ impl MyelonEngineTransport {
                         transport_config.wait_strategy,
                     )
                 }
-                MyelonTransportBackend::Mmap => ResponseConsumer::attach_mmap(
+                (MyelonTransportBackend::Mmap, MyelonTransportAccessMode::Typed) => {
+                    ResponseConsumer::attach_typed_mmap(
+                        layout
+                            .response_mmap_layout(
+                                mmap_root_dir.clone().expect("mmap root dir"),
+                                rank,
+                            )
+                            .map_err(myelon_to_candle)?,
+                        layout.response_depth(),
+                        &format!("engine-response-{rank}"),
+                        transport_config.wait_strategy,
+                    )
+                }
+                (MyelonTransportBackend::Mmap, _) => ResponseConsumer::attach_mmap(
                     layout
                         .response_mmap_layout(mmap_root_dir.clone().expect("mmap root dir"), rank)
                         .map_err(myelon_to_candle)?,
@@ -1012,21 +1266,19 @@ impl MyelonEngineTransport {
     }
 
     pub fn shutdown(&mut self) {
-        self.rpc_producer.publish(&[], MsgKind::Shutdown);
+        self.publish_only(&MyelonRequest::Shutdown)
+            .expect("Myelon shutdown publish should succeed");
     }
 
     fn publish_only(&mut self, request: &MyelonRequest) -> CandleResult<()> {
-        let bytes = request.encode()?;
         if !self.logged_first_request {
             log_info!(
-                "Dispatching first Myelon request kind={} bytes={}.",
+                "Dispatching first Myelon request kind={}.",
                 request.kind().as_u8(),
-                bytes.len()
             );
             self.logged_first_request = true;
         }
-        self.rpc_producer.publish(&bytes, request.kind());
-        Ok(())
+        self.rpc_producer.publish_request(request)
     }
 
     fn publish_and_collect(&mut self, request: &MyelonRequest) -> CandleResult<Vec<u32>> {
@@ -1044,14 +1296,17 @@ impl MyelonEngineTransport {
 
         for consumer in &mut self.response_consumers {
             let response = match self.access_mode {
-                MyelonTransportAccessMode::Owned => consumer.recv_response_blocking_owned()?,
-                MyelonTransportAccessMode::Borrowed => consumer.recv_response_blocking_borrowed()?,
+                MyelonTransportAccessMode::Owned | MyelonTransportAccessMode::Typed => {
+                    consumer.recv_response_blocking_owned()?
+                }
+                MyelonTransportAccessMode::Borrowed => {
+                    consumer.recv_response_blocking_borrowed()?
+                }
             };
             if !self.logged_first_response {
                 log_info!(
-                    "Received first Myelon response kind={} bytes={}.",
+                    "Received first Myelon response kind={}.",
                     response.kind().as_u8(),
-                    response.encode()?.len()
                 );
                 self.logged_first_response = true;
             }
@@ -1082,14 +1337,15 @@ impl MyelonEngineTransport {
             .first_mut()
             .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))?;
         let response = match self.access_mode {
-            MyelonTransportAccessMode::Owned => consumer.recv_response_blocking_owned()?,
+            MyelonTransportAccessMode::Owned | MyelonTransportAccessMode::Typed => {
+                consumer.recv_response_blocking_owned()?
+            }
             MyelonTransportAccessMode::Borrowed => consumer.recv_response_blocking_borrowed()?,
         };
         if !self.logged_first_response {
             log_info!(
-                "Received first Myelon response kind={} bytes={}.",
+                "Received first Myelon response kind={}.",
                 response.kind().as_u8(),
-                response.encode()?.len()
             );
             self.logged_first_response = true;
         }
@@ -1108,6 +1364,7 @@ impl MyelonEngineTransport {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "codec-rkyv")]
     use crate::utils::config::SamplingParams;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -1122,7 +1379,7 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("system clock should be valid")
             .as_nanos();
-        format!("{prefix}{counter:x}{nanos:x}")
+        format!("{prefix}{:02x}{:08x}", (counter & 0xff) as u8, nanos as u32)
     }
 
     #[test]
@@ -1230,7 +1487,9 @@ mod tests {
     fn rkyv_request_decode_survives_large_misaligned_prefill_payload() {
         let mut sequences = Vec::new();
         for sequence_id in 0..8usize {
-            let token_ids = (0..1700u32).map(|token| token + sequence_id as u32).collect();
+            let token_ids = (0..1700u32)
+                .map(|token| token + sequence_id as u32)
+                .collect();
             let mut sequence = crate::core::sequence::Sequence::new(
                 token_ids,
                 16,
@@ -1244,7 +1503,11 @@ mod tests {
 
         let request = MyelonRequest::RunPrefill { sequences };
         let bytes = request.encode().unwrap();
-        assert!(bytes.len() > 50_000, "expected large payload, got {}", bytes.len());
+        assert!(
+            bytes.len() > 50_000,
+            "expected large payload, got {}",
+            bytes.len()
+        );
         let mut misaligned = Vec::with_capacity(bytes.len() + 1);
         misaligned.push(0);
         misaligned.extend_from_slice(&bytes);

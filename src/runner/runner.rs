@@ -272,13 +272,31 @@ fn main() -> anyhow::Result<()> {
                 vllm_rs::log_warn!(
                     "Runner switching execution to Myelon hot path; legacy local-socket control handling will stop after this handshake."
                 );
-                let rpc_consumer = match config.backend {
-                    MyelonTransportBackend::Shm => RpcBroadcastConsumer::attach_shm(
+                let rpc_consumer = match (config.backend, config.access_mode) {
+                    (MyelonTransportBackend::Shm, MyelonTransportAccessMode::Typed) => {
+                        RpcBroadcastConsumer::attach_typed_shm(
+                            &config.rpc_ring_name,
+                            config.rpc_depth,
+                            config.wait_strategy,
+                        )
+                    }
+                    (MyelonTransportBackend::Shm, _) => RpcBroadcastConsumer::attach_shm(
                         &config.rpc_ring_name,
                         config.rpc_depth,
                         config.wait_strategy,
                     ),
-                    MyelonTransportBackend::Mmap => RpcBroadcastConsumer::attach_mmap(
+                    (MyelonTransportBackend::Mmap, MyelonTransportAccessMode::Typed) => {
+                        RpcBroadcastConsumer::attach_typed_mmap(
+                            myelon_playground::MmapTransportLayout::new(
+                                config.mmap_root_dir()?,
+                                config.rpc_ring_name.clone(),
+                            )?,
+                            config.rpc_depth,
+                            &format!("runner-rpc-{}", config.rank),
+                            config.wait_strategy,
+                        )
+                    }
+                    (MyelonTransportBackend::Mmap, _) => RpcBroadcastConsumer::attach_mmap(
                         myelon_playground::MmapTransportLayout::new(
                             config.mmap_root_dir()?,
                             config.rpc_ring_name.clone(),
@@ -288,11 +306,27 @@ fn main() -> anyhow::Result<()> {
                         config.wait_strategy,
                     ),
                 }?;
-                let response_producer = match config.backend {
-                    MyelonTransportBackend::Shm => {
-                        ResponseProducer::create_shm(&config.response_ring_name, config.response_depth)
+                let response_producer = match (config.backend, config.access_mode) {
+                    (MyelonTransportBackend::Shm, MyelonTransportAccessMode::Typed) => {
+                        ResponseProducer::create_typed_shm(
+                            &config.response_ring_name,
+                            config.response_depth,
+                        )
                     }
-                    MyelonTransportBackend::Mmap => ResponseProducer::create_mmap(
+                    (MyelonTransportBackend::Shm, _) => ResponseProducer::create_shm(
+                        &config.response_ring_name,
+                        config.response_depth,
+                    ),
+                    (MyelonTransportBackend::Mmap, MyelonTransportAccessMode::Typed) => {
+                        ResponseProducer::create_typed_mmap(
+                            myelon_playground::MmapTransportLayout::new(
+                                config.mmap_root_dir()?,
+                                config.response_ring_name.clone(),
+                            )?,
+                            config.response_depth,
+                        )
+                    }
+                    (MyelonTransportBackend::Mmap, _) => ResponseProducer::create_mmap(
                         myelon_playground::MmapTransportLayout::new(
                             config.mmap_root_dir()?,
                             config.response_ring_name.clone(),
@@ -504,7 +538,9 @@ fn main() -> anyhow::Result<()> {
         let mut logged_first_response = false;
         loop {
             let request = match match access_mode {
-                MyelonTransportAccessMode::Owned => rpc_consumer.recv_request_blocking_owned(),
+                MyelonTransportAccessMode::Owned | MyelonTransportAccessMode::Typed => {
+                    rpc_consumer.recv_request_blocking_owned()
+                }
                 MyelonTransportAccessMode::Borrowed => {
                     rpc_consumer.recv_request_blocking_borrowed()
                 }
