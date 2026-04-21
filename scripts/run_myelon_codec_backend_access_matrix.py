@@ -54,7 +54,7 @@ CODECS = {
 CASES = [
     ("socket_runner", ["--num-shards", "1", "--force-runner"]),
     (
-        "myelon_shm_owned",
+        "myelon_shm_framed",
         [
             "--num-shards",
             "1",
@@ -66,7 +66,7 @@ CASES = [
         ],
     ),
     (
-        "myelon_shm_borrowed",
+        "myelon_shm_typed",
         [
             "--num-shards",
             "1",
@@ -74,11 +74,11 @@ CASES = [
             "--myelon-backend",
             "shm",
             "--myelon-access-mode",
-            "borrowed",
+            "typed",
         ],
     ),
     (
-        "myelon_mmap_owned",
+        "myelon_mmap_framed",
         [
             "--num-shards",
             "1",
@@ -90,7 +90,7 @@ CASES = [
         ],
     ),
     (
-        "myelon_mmap_borrowed",
+        "myelon_mmap_typed",
         [
             "--num-shards",
             "1",
@@ -98,7 +98,7 @@ CASES = [
             "--myelon-backend",
             "mmap",
             "--myelon-access-mode",
-            "borrowed",
+            "typed",
         ],
     ),
 ]
