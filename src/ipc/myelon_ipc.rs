@@ -1471,30 +1471,48 @@ impl MyelonEngineTransport {
         let request_id = self.publish_only(request)?;
         let request_kind = request.kind();
         let mut last_value: Option<T> = None;
+        // Defer the FIRST error encountered while continuing to drain ALL N response
+        // rings. This prevents per-rank response-ring drift: if we returned early on a
+        // rank-0 Error/mismatch/parse-failure, ranks 1..N would leave their already-
+        // published responses stranded in their rings, and the next call would read
+        // those stale responses first → cascading correlation failures. See
+        // 2_artifacts/2026-04-26_phase1_pd_msgid/REPORT.md "Phase 1.5".
+        let mut deferred_error: Option<candle_core::Error> = None;
 
         for (rank, consumer) in self.response_consumers.iter_mut().enumerate() {
-            let (response_id, response) = match self.access_mode {
-                MyelonTransportAccessMode::Owned => consumer.recv_response_blocking_owned()?,
-                MyelonTransportAccessMode::Borrowed => {
-                    consumer.recv_response_blocking_borrowed()?
-                }
+            let recv: CandleResult<(u64, MyelonResponse)> = match self.access_mode {
+                MyelonTransportAccessMode::Owned => consumer.recv_response_blocking_owned(),
+                MyelonTransportAccessMode::Borrowed => consumer.recv_response_blocking_borrowed(),
                 MyelonTransportAccessMode::Typed => consumer.with_response_blocking_typed(
                     |id, response| {
                         let owned = response.to_owned().map_err(myelon_to_candle)?;
                         Ok((id, owned))
                     },
-                )?,
+                ),
+            };
+            let (response_id, response) = match recv {
+                Ok(pair) => pair,
+                Err(e) => {
+                    // Transport-level read failure — we cannot drain further on this
+                    // consumer. Surface it as the first error if none yet.
+                    if deferred_error.is_none() {
+                        deferred_error = Some(candle_core::Error::Msg(format!(
+                            "rank {rank} response read error: {e}"
+                        )));
+                    }
+                    continue;
+                }
             };
             if response_id != request_id {
-                candle_core::bail!(
-                    "Myelon response correlation mismatch on rank {}: expected request_id={} (kind={:?}), got response_id={} kind={:?}. \
-                     This indicates per-rank response-ring drift; check for prior bail-out from publish_and_collect_value.",
-                    rank,
-                    request_id,
-                    request_kind,
-                    response_id,
-                    response.kind(),
-                );
+                if deferred_error.is_none() {
+                    deferred_error = Some(candle_core::Error::Msg(format!(
+                        "Myelon response correlation mismatch on rank {rank}: expected \
+                         request_id={request_id} (kind={request_kind:?}), got \
+                         response_id={response_id} kind={:?}.",
+                        response.kind(),
+                    )));
+                }
+                continue;
             }
             if !self.logged_first_response {
                 log_info!(
@@ -1504,15 +1522,27 @@ impl MyelonEngineTransport {
                 );
                 self.logged_first_response = true;
             }
-            let value = match response {
+            match response {
                 MyelonResponse::Error(error) => {
-                    candle_core::bail!("runner Myelon error: {}", error);
+                    if deferred_error.is_none() {
+                        deferred_error =
+                            Some(candle_core::Error::Msg(format!("runner Myelon error: {error}")));
+                    }
                 }
-                other => parse(other)?,
-            };
-            last_value = Some(value);
+                other => match parse(other) {
+                    Ok(value) => last_value = Some(value),
+                    Err(e) => {
+                        if deferred_error.is_none() {
+                            deferred_error = Some(e);
+                        }
+                    }
+                },
+            }
         }
 
+        if let Some(error) = deferred_error {
+            return Err(error);
+        }
         last_value
             .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))
     }
