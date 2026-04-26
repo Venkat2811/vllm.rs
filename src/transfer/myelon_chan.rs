@@ -23,12 +23,18 @@ use myelon_playground::{
 use std::io::{Read, Write};
 use std::time::{Duration, Instant};
 
-/// Per-frame data capacity. 64KB matches the runner-IPC frame size; large messages
-/// (e.g. the ~58MB TransferKvCache payload) get fragmented automatically.
-const KV_FRAME_DATA_BYTES: usize = 64 * 1024 - 12;
+/// Per-frame data capacity. Sized for bulk KV-cache transfer — at 2MB per frame a
+/// ~62MB TransferKvCache message is ~31 fragments instead of ~960 with 64KB frames,
+/// which neutralizes the recv-side fragmentation cost we saw on the first pass.
+///
+/// Note: each `publish` call constructs one frame on the stack via `T::default()`
+/// before copying into the ring slot. 2MB is well under the 8MB main-thread stack
+/// (Linux pthread default) but consumes ~25% of it; do not bump higher without
+/// switching to a heap-backed publish path upstream.
+const KV_FRAME_DATA_BYTES: usize = 2 * 1024 * 1024 - 12;
 
-/// Ring depth (in frames). With 64KB data per frame, depth 1024 = 64MB ring capacity —
-/// enough for one in-flight 58MB message without blocking the producer.
+/// Ring depth (in frames). 1024 × 2MB = 2GB ring capacity per direction.
+/// Plenty of room for in-flight messages without backpressure.
 const KV_RING_DEPTH: usize = 1024;
 
 const ATTACH_RETRY_INTERVAL: Duration = Duration::from_millis(100);

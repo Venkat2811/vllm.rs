@@ -168,18 +168,29 @@ impl Transfer {
         let thread_available_tokens = available_tokens.clone();
 
         let communicator = Communicator::new(config.clone(), config.role.clone(), rank);
-        // Start the background communication thread
+        // Start the background communication thread.
+        // 32MB stack: with the LocalMyelon transport, ring creation calls
+        // `T::default()` per slot to populate the SHM region; at the configured
+        // 2MB-per-frame × 1024 depth, default thread stack (2MB) overflows on
+        // the very first slot. 32MB gives ~16x headroom and covers any
+        // upstream stack-using helpers in myelon-playground.
         let thread_comm = communicator.clone();
-        let comm_handle = Some(std::thread::spawn(move || {
-            thread_comm.run_listener_loop(
-                thread_pending_prefills,
-                thread_finished_data,
-                thread_server_tasks,
-                thread_available_tokens,
-                model_loaded,
-                stop_flag,
-            );
-        }));
+        let comm_handle = Some(
+            std::thread::Builder::new()
+                .name(format!("pd-comm-rank{}", rank))
+                .stack_size(32 * 1024 * 1024)
+                .spawn(move || {
+                    thread_comm.run_listener_loop(
+                        thread_pending_prefills,
+                        thread_finished_data,
+                        thread_server_tasks,
+                        thread_available_tokens,
+                        model_loaded,
+                        stop_flag,
+                    );
+                })
+                .map_err(candle_core::Error::wrap)?,
+        );
 
         Ok(Self {
             config,
