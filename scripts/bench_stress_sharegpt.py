@@ -55,6 +55,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--output-file", required=True)
     p.add_argument("--no-stream", action="store_true")
     p.add_argument("--prompt-pool-size", type=int, default=500, help="cap on filtered prompts to use")
+    p.add_argument(
+        "--warmup-runs",
+        type=int,
+        default=0,
+        help="number of full benchmark passes to discard for warmup before measurement",
+    )
+    p.add_argument(
+        "--repeat-runs",
+        type=int,
+        default=1,
+        help="number of measured benchmark passes; reports median + IQR across them",
+    )
     return p
 
 
@@ -286,32 +298,124 @@ def summarize(samples: list[dict], runtime_s: float, args: argparse.Namespace) -
     }
 
 
+def median(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    s = sorted(values)
+    n = len(s)
+    return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2.0
+
+
+def iqr_range(values: list[float]) -> tuple[float, float]:
+    if not values:
+        return 0.0, 0.0
+    s = sorted(values)
+    return s[max(0, len(s) // 4)], s[min(len(s) - 1, (3 * len(s)) // 4)]
+
+
+def aggregate_summaries(summaries: list[dict]) -> dict:
+    """Aggregate per-run summaries into median + IQR across runs (vllm-bench style)."""
+    if not summaries:
+        return {}
+    out: dict = {"runs": len(summaries)}
+    scalar_keys = ["req_per_s", "output_tok_per_s", "success_rate", "runtime_s"]
+    for key in scalar_keys:
+        vals = [s[key] for s in summaries if s.get(key) is not None]
+        if not vals:
+            continue
+        q1, q3 = iqr_range(vals)
+        out[key] = {
+            "median": round(median(vals), 3),
+            "min": round(min(vals), 3),
+            "max": round(max(vals), 3),
+            "iqr_q1": round(q1, 3),
+            "iqr_q3": round(q3, 3),
+            "all": [round(v, 3) for v in vals],
+        }
+    for bucket in ("ttft_ms", "latency_ms"):
+        out[bucket] = {}
+        for stat in ("p50", "p95", "p99", "mean", "max"):
+            vals = [s[bucket][stat] for s in summaries if s.get(bucket, {}).get(stat) is not None]
+            if not vals:
+                continue
+            q1, q3 = iqr_range(vals)
+            out[bucket][stat] = {
+                "median": round(median(vals), 2),
+                "iqr_q1": round(q1, 2),
+                "iqr_q3": round(q3, 2),
+                "all": [round(v, 2) for v in vals],
+            }
+    return out
+
+
+async def run_one_pass(args: argparse.Namespace, pool: list[str]) -> tuple[list[dict], float]:
+    if args.request_rate > 0:
+        return await open_loop(args, pool)
+    return await closed_loop(args, pool)
+
+
 def main() -> int:
     args = build_parser().parse_args()
+    if args.warmup_runs < 0 or args.repeat_runs < 1:
+        print("--warmup-runs >= 0 and --repeat-runs >= 1 required", file=sys.stderr)
+        return 1
     pool = load_prompt_pool(args)
-    started = time.perf_counter()
-    if args.request_rate > 0:
-        samples, runtime = asyncio.run(open_loop(args, pool))
-    else:
-        samples, runtime = asyncio.run(closed_loop(args, pool))
-    summary = summarize(samples, runtime, args)
+
+    # Discard warmup passes
+    for i in range(args.warmup_runs):
+        print(f"[bench] warmup pass {i + 1}/{args.warmup_runs}", file=sys.stderr)
+        _ = asyncio.run(run_one_pass(args, pool))
+
+    # Measured passes
+    measured_summaries: list[dict] = []
+    measured_runs: list[dict] = []
+    for i in range(args.repeat_runs):
+        print(f"[bench] measured pass {i + 1}/{args.repeat_runs}", file=sys.stderr)
+        samples, runtime = asyncio.run(run_one_pass(args, pool))
+        s = summarize(samples, runtime, args)
+        measured_summaries.append(s)
+        measured_runs.append({"summary": s, "requests": samples})
+
+    aggregate = aggregate_summaries(measured_summaries)
+
     out = {
         "config": vars(args),
-        "summary": summary,
+        "aggregate": aggregate,
+        "per_run_summaries": measured_summaries,
         "prompt_pool_size_used": len(pool),
-        "requests": samples,
+        "runs": measured_runs,
     }
     Path(args.output_file).parent.mkdir(parents=True, exist_ok=True)
     Path(args.output_file).write_text(json.dumps(out, indent=2))
-    # human summary
-    s = summary
-    print(
-        f"req/s={s['req_per_s']:.2f}  out_tok/s={s['output_tok_per_s']:.1f}  "
-        f"success={s['successful_requests']}/{s['total_requests']} ({s['success_rate']*100:.1f}%)\n"
-        f"  TTFT  ms p50={s['ttft_ms']['p50']} p95={s['ttft_ms']['p95']} p99={s['ttft_ms']['p99']} max={s['ttft_ms']['max']}\n"
-        f"  Latency ms p50={s['latency_ms']['p50']} p95={s['latency_ms']['p95']} p99={s['latency_ms']['p99']} max={s['latency_ms']['max']}\n"
-        f"  runtime={s['runtime_s']:.2f}s"
-    )
+
+    # Human summary — show median + IQR if multi-run, single-run otherwise
+    if args.repeat_runs == 1:
+        s = measured_summaries[0]
+        print(
+            f"req/s={s['req_per_s']:.2f}  out_tok/s={s['output_tok_per_s']:.1f}  "
+            f"success={s['successful_requests']}/{s['total_requests']} ({s['success_rate']*100:.1f}%)\n"
+            f"  TTFT  ms p50={s['ttft_ms']['p50']} p95={s['ttft_ms']['p95']} p99={s['ttft_ms']['p99']} max={s['ttft_ms']['max']}\n"
+            f"  Latency ms p50={s['latency_ms']['p50']} p95={s['latency_ms']['p95']} p99={s['latency_ms']['p99']} max={s['latency_ms']['max']}\n"
+            f"  runtime={s['runtime_s']:.2f}s"
+        )
+    else:
+        rps = aggregate["req_per_s"]
+        ots = aggregate["output_tok_per_s"]
+        ttft_p50 = aggregate["ttft_ms"]["p50"]
+        ttft_p99 = aggregate["ttft_ms"]["p99"]
+        lat_p50 = aggregate["latency_ms"]["p50"]
+        lat_p99 = aggregate["latency_ms"]["p99"]
+        rt = aggregate["runtime_s"]
+        print(
+            f"[median over {aggregate['runs']} runs, warmup={args.warmup_runs}]\n"
+            f"  req/s    median={rps['median']} (IQR {rps['iqr_q1']}-{rps['iqr_q3']}, all={rps['all']})\n"
+            f"  out_tok/s median={ots['median']} (all={ots['all']})\n"
+            f"  TTFT p50  median={ttft_p50['median']}ms (IQR {ttft_p50['iqr_q1']}-{ttft_p50['iqr_q3']})\n"
+            f"  TTFT p99  median={ttft_p99['median']}ms (IQR {ttft_p99['iqr_q1']}-{ttft_p99['iqr_q3']})\n"
+            f"  Lat  p50  median={lat_p50['median']}ms\n"
+            f"  Lat  p99  median={lat_p99['median']}ms\n"
+            f"  runtime/run median={rt['median']}s"
+        )
     return 0
 
 
