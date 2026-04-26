@@ -178,39 +178,41 @@ async def one_request(
 
 
 async def closed_loop(args: argparse.Namespace, prompts: list[str]) -> tuple[list[dict], float]:
-    sem = asyncio.Semaphore(args.concurrency)
     bench_start = time.perf_counter()
     rng = random.Random(args.seed + 1)
     done: list[dict] = []
 
-    async def worker(i: int, sess: aiohttp.ClientSession) -> None:
-        async with sem:
-            arr = time.perf_counter()
-            rec = await one_request(
-                sess,
-                url=args.url,
-                model=args.served_model_name,
-                prompt_text=prompts[rng.randrange(len(prompts))],
-                max_tokens=args.max_tokens,
-                timeout_seconds=args.request_timeout_sec,
-                stream=not args.no_stream,
-                arrival_s=arr,
-                bench_start_s=bench_start,
-            )
-            done.append(rec)
+    async def fire_one(sess: aiohttp.ClientSession) -> None:
+        arr = time.perf_counter()
+        rec = await one_request(
+            sess,
+            url=args.url,
+            model=args.served_model_name,
+            prompt_text=prompts[rng.randrange(len(prompts))],
+            max_tokens=args.max_tokens,
+            timeout_seconds=args.request_timeout_sec,
+            stream=not args.no_stream,
+            arrival_s=arr,
+            bench_start_s=bench_start,
+        )
+        done.append(rec)
+
+    async def worker_loop(sess: aiohttp.ClientSession) -> None:
+        # one persistent worker — fires sequential requests until duration expires
+        while time.perf_counter() - bench_start < args.duration_sec:
+            await fire_one(sess)
 
     async with aiohttp.ClientSession() as sess:
         if args.num_requests:
-            await asyncio.gather(*(worker(i, sess) for i in range(args.num_requests)))
+            # fixed total: spawn N workers with cap = concurrency
+            sem = asyncio.Semaphore(args.concurrency)
+            async def capped(i: int) -> None:
+                async with sem:
+                    await fire_one(sess)
+            await asyncio.gather(*(capped(i) for i in range(args.num_requests)))
         else:
-            tasks: list[asyncio.Task] = []
-            i = 0
-            while time.perf_counter() - bench_start < args.duration_sec:
-                tasks.append(asyncio.create_task(worker(i, sess)))
-                i += 1
-                # let semaphore pace dispatch — yield so completed tasks free slots
-                await asyncio.sleep(0)
-            await asyncio.gather(*tasks)
+            # duration-bounded: spawn exactly `concurrency` persistent workers
+            await asyncio.gather(*(worker_loop(sess) for _ in range(args.concurrency)))
     return done, time.perf_counter() - bench_start
 
 
