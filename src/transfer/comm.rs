@@ -80,11 +80,19 @@ struct ReceiveStats {
     io_ns: u128,
     decode_ns: u128,
 }
-/// An internal enum to abstract over the two stream types.
+/// An internal enum to abstract over the stream types.
 /// It implements Read and Write to be used generically.
+///
+/// `MyelonReader` and `MyelonWriter` are separate variants because the PD
+/// Myelon channel has independent producer (write) and consumer (read) rings —
+/// unlike Tcp/Local which share a single bidirectional stream.
 enum CommStream {
     Local(LocalStream),
     Remote(TcpStream),
+    #[cfg(feature = "myelon")]
+    MyelonRead(crate::transfer::myelon_chan::MyelonReader),
+    #[cfg(feature = "myelon")]
+    MyelonWrite(crate::transfer::myelon_chan::MyelonWriter),
 }
 
 impl Read for CommStream {
@@ -92,6 +100,10 @@ impl Read for CommStream {
         match self {
             CommStream::Local(s) => s.read(buf),
             CommStream::Remote(s) => s.read(buf),
+            #[cfg(feature = "myelon")]
+            CommStream::MyelonRead(s) => s.read(buf),
+            #[cfg(feature = "myelon")]
+            CommStream::MyelonWrite(s) => s.read(buf),
         }
     }
 }
@@ -101,12 +113,20 @@ impl Write for CommStream {
         match self {
             CommStream::Local(s) => s.write(buf),
             CommStream::Remote(s) => s.write(buf),
+            #[cfg(feature = "myelon")]
+            CommStream::MyelonRead(s) => s.write(buf),
+            #[cfg(feature = "myelon")]
+            CommStream::MyelonWrite(s) => s.write(buf),
         }
     }
     fn flush(&mut self) -> std::io::Result<()> {
         match self {
             CommStream::Local(s) => s.flush(),
             CommStream::Remote(s) => s.flush(),
+            #[cfg(feature = "myelon")]
+            CommStream::MyelonRead(s) => s.flush(),
+            #[cfg(feature = "myelon")]
+            CommStream::MyelonWrite(s) => s.flush(),
         }
     }
 }
@@ -282,6 +302,8 @@ impl Communicator {
                                 format!("{}@vllm-rs-transfer-{}", url.path(), self.rank);
                             self.connect_local_ipc(&sock_name)?
                         }
+                        #[cfg(feature = "myelon")]
+                        "myelon" => self.connect_myelon()?,
                         _ => {
                             panic!("{} is not a supported URL scheme", url.scheme());
                         }
@@ -350,6 +372,26 @@ impl Communicator {
                 ))
             }
         }
+    }
+
+    /// Establishes a Myelon-backed bidirectional channel via SHM rings.
+    #[cfg(feature = "myelon")]
+    fn connect_myelon(&self) -> Result<(CommStream, CommStream)> {
+        let (reader, writer) =
+            crate::transfer::myelon_chan::connect(&self.role, self.rank).map_err(|e| {
+                candle_core::Error::Msg(format!(
+                    "[PD {:?} Rank {}] myelon connect failed: {e:?}",
+                    self.role, self.rank
+                ))
+            })?;
+        if self.rank == 0 {
+            crate::log_info!(
+                "[PD {:?} Rank {}] Myelon SHM channel established",
+                self.role,
+                self.rank
+            );
+        }
+        Ok((CommStream::MyelonRead(reader), CommStream::MyelonWrite(writer)))
     }
 
     /// Establishes a local IPC connection using filesystem-based sockets.

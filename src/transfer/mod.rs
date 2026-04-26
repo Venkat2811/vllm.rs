@@ -12,6 +12,8 @@ use std::thread::JoinHandle;
 mod comm;
 #[cfg(feature = "cuda")]
 mod cuda_remote;
+#[cfg(feature = "myelon")]
+mod myelon_chan;
 #[cfg(feature = "cuda")]
 use candle_core::cuda_backend::CudaDType as MsgDtype;
 use once_cell::sync::Lazy;
@@ -45,6 +47,9 @@ pub enum PdMethod {
     LocalIpc = 1,
     /// Use TCP for remote transfer (inter-machine).
     RemoteTcp = 2,
+    /// Use Myelon SHM rings for the control + bulk message channel (same machine,
+    /// keeps the existing `KVTransferHandle` shape — just swaps the transport).
+    LocalMyelon = 3,
 }
 
 #[cfg(not(feature = "python"))]
@@ -429,7 +434,9 @@ impl Transfer {
                         server_block_ids: seq.block_table.clone(),
                     }
                 }
-                PdMethod::RemoteTcp => {
+                // RemoteTcp and LocalMyelon both send raw KV bytes through the
+                // chosen transport — only the underlying socket/SHM differs.
+                PdMethod::RemoteTcp | PdMethod::LocalMyelon => {
                     let mut layer_data = Vec::new();
                     let server_block_ids = &seq.block_table;
 

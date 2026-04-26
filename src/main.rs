@@ -139,9 +139,10 @@ async fn main() -> Result<()> {
         } else {
             PdRole::Client
         };
-        // RemoteTcp for http:// or tcp:// URLs, LocalIpc for file:// or None
+        // RemoteTcp for http:// or tcp:// URLs, LocalMyelon for myelon://, LocalIpc for file:// or None
         let pd_method = match &args.pd_url {
             Some(url) if url.starts_with("tcp:") || url.starts_with("http:") => PdMethod::RemoteTcp,
+            Some(url) if url.starts_with("myelon:") => PdMethod::LocalMyelon,
             _ => PdMethod::LocalIpc,
         };
         Some(PdConfig {
