@@ -2,42 +2,81 @@ use crate::ipc::myelon_ipc::{MsgKind, MyelonRequest, MyelonResponse};
 use myelon_playground::codec::ZeroCopyCodec;
 use myelon_playground::{Codec, CodecError};
 
+/// Layout of the 16-byte typed envelope header:
+///   byte 0      : MsgKind tag (e.g. RunPrefill)
+///   bytes 1..8  : reserved (zero)
+///   bytes 8..16 : request_id (LE u64) — engine assigns, runner echoes
 pub const MYELON_TYPED_ENVELOPE_HEADER_BYTES: usize = 16;
+const REQUEST_ID_OFFSET: usize = 8;
 
 #[derive(Debug, Clone)]
-pub struct TypedMyelonRequest(pub MyelonRequest);
+pub struct TypedMyelonRequest {
+    pub request_id: u64,
+    pub inner: MyelonRequest,
+}
 
 impl TypedMyelonRequest {
+    pub fn new(request_id: u64, inner: MyelonRequest) -> Self {
+        Self { request_id, inner }
+    }
+
     pub fn into_inner(self) -> MyelonRequest {
-        self.0
+        self.inner
+    }
+
+    pub fn into_parts(self) -> (u64, MyelonRequest) {
+        (self.request_id, self.inner)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct TypedMyelonResponse(pub MyelonResponse);
+pub struct TypedMyelonResponse {
+    pub request_id: u64,
+    pub inner: MyelonResponse,
+}
 
 impl TypedMyelonResponse {
+    pub fn new(request_id: u64, inner: MyelonResponse) -> Self {
+        Self { request_id, inner }
+    }
+
     pub fn into_inner(self) -> MyelonResponse {
-        self.0
+        self.inner
+    }
+
+    pub fn into_parts(self) -> (u64, MyelonResponse) {
+        (self.request_id, self.inner)
     }
 }
 
-fn encode_envelope(tag: u8, payload: &[u8]) -> Vec<u8> {
+fn encode_envelope(tag: u8, request_id: u64, payload: &[u8]) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(MYELON_TYPED_ENVELOPE_HEADER_BYTES + payload.len());
     bytes.push(tag);
     bytes.resize(MYELON_TYPED_ENVELOPE_HEADER_BYTES, 0);
+    bytes[REQUEST_ID_OFFSET..MYELON_TYPED_ENVELOPE_HEADER_BYTES]
+        .copy_from_slice(&request_id.to_le_bytes());
     bytes.extend_from_slice(payload);
     bytes
 }
 
-fn decode_envelope(bytes: &[u8]) -> Result<(u8, &[u8]), CodecError> {
+fn decode_envelope(bytes: &[u8]) -> Result<(u8, u64, &[u8]), CodecError> {
     if bytes.len() < MYELON_TYPED_ENVELOPE_HEADER_BYTES {
         return Err(CodecError::decode(format!(
             "typed Myelon envelope too short: {}",
             bytes.len()
         )));
     }
-    Ok((bytes[0], &bytes[MYELON_TYPED_ENVELOPE_HEADER_BYTES..]))
+    let tag = bytes[0];
+    let request_id = u64::from_le_bytes(
+        bytes[REQUEST_ID_OFFSET..MYELON_TYPED_ENVELOPE_HEADER_BYTES]
+            .try_into()
+            .expect("envelope id slice length"),
+    );
+    Ok((
+        tag,
+        request_id,
+        &bytes[MYELON_TYPED_ENVELOPE_HEADER_BYTES..],
+    ))
 }
 
 #[cfg(feature = "codec-rkyv")]
@@ -356,20 +395,23 @@ mod typed_rkyv {
     }
 
     impl ZeroCopyCodec for TypedMyelonRequest {
-        type Archived<'a> = BorrowedTypedMyelonRequest<'a>;
+        /// `(request_id, borrowed_view)` — id is read from envelope bytes 8..16.
+        type Archived<'a> = (u64, BorrowedTypedMyelonRequest<'a>);
 
         fn access<'a>(bytes: &'a [u8]) -> Result<Self::Archived<'a>, CodecError> {
-            let (tag, payload) = decode_envelope(bytes)?;
-            BorrowedTypedMyelonRequest::from_payload(tag, payload)
+            let (tag, request_id, payload) = decode_envelope(bytes)?;
+            let view = BorrowedTypedMyelonRequest::from_payload(tag, payload)?;
+            Ok((request_id, view))
         }
     }
 
     impl ZeroCopyCodec for TypedMyelonResponse {
-        type Archived<'a> = BorrowedTypedMyelonResponse<'a>;
+        type Archived<'a> = (u64, BorrowedTypedMyelonResponse<'a>);
 
         fn access<'a>(bytes: &'a [u8]) -> Result<Self::Archived<'a>, CodecError> {
-            let (tag, payload) = decode_envelope(bytes)?;
-            BorrowedTypedMyelonResponse::from_payload(tag, payload)
+            let (tag, request_id, payload) = decode_envelope(bytes)?;
+            let view = BorrowedTypedMyelonResponse::from_payload(tag, payload)?;
+            Ok((request_id, view))
         }
     }
 }
@@ -720,20 +762,22 @@ mod typed_flatbuf {
     }
 
     impl ZeroCopyCodec for TypedMyelonRequest {
-        type Archived<'a> = BorrowedTypedMyelonRequest<'a>;
+        type Archived<'a> = (u64, BorrowedTypedMyelonRequest<'a>);
 
         fn access<'a>(bytes: &'a [u8]) -> Result<Self::Archived<'a>, CodecError> {
-            let (tag, payload) = decode_envelope(bytes)?;
-            BorrowedTypedMyelonRequest::from_payload(tag, payload)
+            let (tag, request_id, payload) = decode_envelope(bytes)?;
+            let view = BorrowedTypedMyelonRequest::from_payload(tag, payload)?;
+            Ok((request_id, view))
         }
     }
 
     impl ZeroCopyCodec for TypedMyelonResponse {
-        type Archived<'a> = BorrowedTypedMyelonResponse<'a>;
+        type Archived<'a> = (u64, BorrowedTypedMyelonResponse<'a>);
 
         fn access<'a>(bytes: &'a [u8]) -> Result<Self::Archived<'a>, CodecError> {
-            let (tag, payload) = decode_envelope(bytes)?;
-            BorrowedTypedMyelonResponse::from_payload(tag, payload)
+            let (tag, request_id, payload) = decode_envelope(bytes)?;
+            let view = BorrowedTypedMyelonResponse::from_payload(tag, payload)?;
+            Ok((request_id, view))
         }
     }
 }
@@ -745,14 +789,21 @@ impl Codec for TypedMyelonRequest {
     type Encoded = Vec<u8>;
 
     fn encode(&self) -> Result<Self::Encoded, CodecError> {
-        let payload = self.0.encode().map_err(CodecError::encode)?;
-        Ok(encode_envelope(self.0.kind().as_u8(), &payload))
+        let payload = self.inner.encode().map_err(CodecError::encode)?;
+        Ok(encode_envelope(
+            self.inner.kind().as_u8(),
+            self.request_id,
+            &payload,
+        ))
     }
 
     fn decode(bytes: &[u8]) -> Result<Self, CodecError> {
-        let (tag, payload) = decode_envelope(bytes)?;
+        let (tag, request_id, payload) = decode_envelope(bytes)?;
         let request = MyelonRequest::decode(tag, payload).map_err(CodecError::decode)?;
-        Ok(Self(request))
+        Ok(Self {
+            request_id,
+            inner: request,
+        })
     }
 }
 
@@ -760,14 +811,21 @@ impl Codec for TypedMyelonResponse {
     type Encoded = Vec<u8>;
 
     fn encode(&self) -> Result<Self::Encoded, CodecError> {
-        let payload = self.0.encode().map_err(CodecError::encode)?;
-        Ok(encode_envelope(self.0.kind().as_u8(), &payload))
+        let payload = self.inner.encode().map_err(CodecError::encode)?;
+        Ok(encode_envelope(
+            self.inner.kind().as_u8(),
+            self.request_id,
+            &payload,
+        ))
     }
 
     fn decode(bytes: &[u8]) -> Result<Self, CodecError> {
-        let (tag, payload) = decode_envelope(bytes)?;
+        let (tag, request_id, payload) = decode_envelope(bytes)?;
         let response = MyelonResponse::decode(tag, payload).map_err(CodecError::decode)?;
-        Ok(Self(response))
+        Ok(Self {
+            request_id,
+            inner: response,
+        })
     }
 }
 
@@ -777,21 +835,24 @@ mod tests {
     use crate::utils::config::SamplingParams;
 
     #[test]
-    fn typed_request_round_trip_preserves_prefill_payload() {
-        let request = TypedMyelonRequest(MyelonRequest::RunPrefill {
-            sequences: vec![crate::core::sequence::Sequence::new(
-                vec![1, 2, 3, 4],
-                16,
-                SamplingParams::default(),
-                &None,
-                0,
-            )],
-        });
+    fn typed_request_round_trip_preserves_prefill_payload_and_id() {
+        let request = TypedMyelonRequest::new(
+            42,
+            MyelonRequest::RunPrefill {
+                sequences: vec![crate::core::sequence::Sequence::new(
+                    vec![1, 2, 3, 4],
+                    16,
+                    SamplingParams::default(),
+                    &None,
+                    0,
+                )],
+            },
+        );
 
         let bytes = request.encode().unwrap();
-        let decoded = TypedMyelonRequest::decode(&bytes).unwrap().into_inner();
-
-        match decoded {
+        let decoded = TypedMyelonRequest::decode(&bytes).unwrap();
+        assert_eq!(decoded.request_id, 42);
+        match decoded.into_inner() {
             MyelonRequest::RunPrefill { sequences } => {
                 assert_eq!(sequences.len(), 1);
                 assert_eq!(sequences[0].token_ids, vec![1, 2, 3, 4]);
@@ -801,13 +862,13 @@ mod tests {
     }
 
     #[test]
-    fn typed_response_round_trip_preserves_run_outputs() {
-        let response = TypedMyelonResponse(MyelonResponse::RunResponse(vec![7, 8, 9]));
+    fn typed_response_round_trip_preserves_run_outputs_and_id() {
+        let response = TypedMyelonResponse::new(7, MyelonResponse::RunResponse(vec![7, 8, 9]));
 
         let bytes = response.encode().unwrap();
-        let decoded = TypedMyelonResponse::decode(&bytes).unwrap().into_inner();
-
-        match decoded {
+        let decoded = TypedMyelonResponse::decode(&bytes).unwrap();
+        assert_eq!(decoded.request_id, 7);
+        match decoded.into_inner() {
             MyelonResponse::RunResponse(output_ids) => assert_eq!(output_ids, vec![7, 8, 9]),
             other => panic!("unexpected decoded response: {other:?}"),
         }
@@ -823,10 +884,12 @@ mod tests {
 
     #[cfg(feature = "codec-rkyv")]
     #[test]
-    fn typed_request_zero_copy_access_preserves_kind() {
-        let request = TypedMyelonRequest(MyelonRequest::FinishDecode { sequence_id: 17 });
+    fn typed_request_zero_copy_access_preserves_kind_and_id() {
+        let request =
+            TypedMyelonRequest::new(99, MyelonRequest::FinishDecode { sequence_id: 17 });
         let bytes = request.encode().unwrap();
-        let archived = TypedMyelonRequest::access(&bytes).unwrap();
+        let (request_id, archived) = TypedMyelonRequest::access(&bytes).unwrap();
+        assert_eq!(request_id, 99);
         match archived {
             BorrowedTypedMyelonRequest::FinishDecode { sequence_id, .. } => {
                 assert_eq!(sequence_id, 17);
@@ -837,10 +900,11 @@ mod tests {
 
     #[cfg(feature = "codec-flatbuf")]
     #[test]
-    fn typed_response_zero_copy_access_preserves_kind() {
-        let response = TypedMyelonResponse(MyelonResponse::KvCacheSendResponse(true));
+    fn typed_response_zero_copy_access_preserves_kind_and_id() {
+        let response = TypedMyelonResponse::new(11, MyelonResponse::KvCacheSendResponse(true));
         let bytes = response.encode().unwrap();
-        let archived = TypedMyelonResponse::access(&bytes).unwrap();
+        let (request_id, archived) = TypedMyelonResponse::access(&bytes).unwrap();
+        assert_eq!(request_id, 11);
         match archived {
             BorrowedTypedMyelonResponse::KvCacheSendResponse { value, .. } => {
                 assert!(value);

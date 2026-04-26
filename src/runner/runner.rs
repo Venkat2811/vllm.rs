@@ -537,28 +537,34 @@ fn main() -> anyhow::Result<()> {
         let mut logged_first_rpc = false;
         let mut logged_first_response = false;
         loop {
-            let request = match match access_mode {
+            let (request_id, request) = match match access_mode {
                 MyelonTransportAccessMode::Owned => rpc_consumer.recv_request_blocking_owned(),
                 MyelonTransportAccessMode::Borrowed => {
                     rpc_consumer.recv_request_blocking_borrowed()
                 }
                 MyelonTransportAccessMode::Typed => rpc_consumer
-                    .with_request_blocking_typed(|request| {
+                    .with_request_blocking_typed(|id, request| {
                         request
                             .to_owned()
+                            .map(|owned| (id, owned))
                             .map_err(|e| candle_core::Error::Msg(e.to_string()))
-                    }),
+                    })
+                    .map(|(id, request)| (id, request)),
             } {
-                Ok(request) => request,
+                Ok(pair) => pair,
                 Err(error) => {
-                    response_producer.send_error(error);
+                    // Without a request_id we cannot correlate; surface as id=0 sentinel
+                    // so the engine bails on its next consumer read with a clear mismatch
+                    // instead of silently corrupting subsequent calls.
+                    response_producer.send_error(error, 0);
                     continue;
                 }
             };
             if !logged_first_rpc {
                 vllm_rs::log_info!(
-                    "Runner entered Myelon hot path with first kind={}.",
+                    "Runner entered Myelon hot path with first kind={} request_id={}.",
                     request.kind().as_u8(),
+                    request_id,
                 );
                 logged_first_rpc = true;
             }
@@ -571,18 +577,21 @@ fn main() -> anyhow::Result<()> {
                                 let response = MyelonResponse::RunResponse(outputs);
                                 if !logged_first_response {
                                     vllm_rs::log_info!(
-                                        "Runner sent first Myelon response kind={}.",
-                                        response.kind().as_u8()
+                                        "Runner sent first Myelon response kind={} request_id={}.",
+                                        response.kind().as_u8(),
+                                        request_id,
                                     );
                                     logged_first_response = true;
                                 }
                                 response_producer
-                                    .send_response(&response)
+                                    .send_response(&response, request_id)
                                     .expect("serialize Myelon prefill outputs");
                             }
                         }
                         Err(error) => {
-                            response_producer.send_error(error);
+                            if runner_rank == 0 {
+                                response_producer.send_error(error, request_id);
+                            }
                         }
                     }
                 }
@@ -593,18 +602,21 @@ fn main() -> anyhow::Result<()> {
                                 let response = MyelonResponse::RunResponse(outputs);
                                 if !logged_first_response {
                                     vllm_rs::log_info!(
-                                        "Runner sent first Myelon response kind={}.",
-                                        response.kind().as_u8()
+                                        "Runner sent first Myelon response kind={} request_id={}.",
+                                        response.kind().as_u8(),
+                                        request_id,
                                     );
                                     logged_first_response = true;
                                 }
                                 response_producer
-                                    .send_response(&response)
+                                    .send_response(&response, request_id)
                                     .expect("serialize Myelon decode outputs");
                             }
                         }
                         Err(error) => {
-                            response_producer.send_error(error);
+                            if runner_rank == 0 {
+                                response_producer.send_error(error, request_id);
+                            }
                         }
                     }
                 }
@@ -616,36 +628,36 @@ fn main() -> anyhow::Result<()> {
                     let response = match runner.transfer_prefill(&sequence) {
                         Ok(value) => MyelonResponse::TransferPrefillResponse(value),
                         Err(error) => {
-                            response_producer.send_error(error);
+                            response_producer.send_error(error, request_id);
                             continue;
                         }
                     };
                     response_producer
-                        .send_response(&response)
+                        .send_response(&response, request_id)
                         .expect("serialize Myelon transfer prefill response");
                 }
                 MyelonRequest::ReceivePrefill { available_tokens } => {
                     let response = match runner.try_receive_prefill(available_tokens) {
                         Ok(value) => MyelonResponse::ReceivePrefillResponse(value),
                         Err(error) => {
-                            response_producer.send_error(error);
+                            response_producer.send_error(error, request_id);
                             continue;
                         }
                     };
                     response_producer
-                        .send_response(&response)
+                        .send_response(&response, request_id)
                         .expect("serialize Myelon receive prefill response");
                 }
                 MyelonRequest::CheckPrefillStatus { sequence_id } => {
                     let response = match runner.check_prefill_status(sequence_id) {
                         Ok(value) => MyelonResponse::CheckPrefillStatusResponse(value),
                         Err(error) => {
-                            response_producer.send_error(error);
+                            response_producer.send_error(error, request_id);
                             continue;
                         }
                     };
                     response_producer
-                        .send_response(&response)
+                        .send_response(&response, request_id)
                         .expect("serialize Myelon check prefill status response");
                 }
                 MyelonRequest::KvCacheSend {
@@ -653,67 +665,68 @@ fn main() -> anyhow::Result<()> {
                     first_token,
                 } => {
                     vllm_rs::log_info!(
-                        "Runner received Myelon KvCacheSend for seq {} (first_token={}).",
+                        "Runner received Myelon KvCacheSend for seq {} (first_token={}, request_id={}).",
                         sequence.id,
-                        first_token
+                        first_token,
+                        request_id,
                     );
                     let response = match runner.send_kvcache(&sequence, first_token) {
                         Ok(value) => MyelonResponse::KvCacheSendResponse(value),
                         Err(error) => {
-                            response_producer.send_error(error);
+                            response_producer.send_error(error, request_id);
                             continue;
                         }
                     };
                     response_producer
-                        .send_response(&response)
+                        .send_response(&response, request_id)
                         .expect("serialize Myelon kv cache send response");
                 }
                 MyelonRequest::KvCacheReceive { sequence } => {
                     let response = match runner.receive_kvcache(&sequence) {
                         Ok(value) => MyelonResponse::KvCacheReceiveResponse(value),
                         Err(error) => {
-                            response_producer.send_error(error);
+                            response_producer.send_error(error, request_id);
                             continue;
                         }
                     };
                     response_producer
-                        .send_response(&response)
+                        .send_response(&response, request_id)
                         .expect("serialize Myelon kv cache receive response");
                 }
                 MyelonRequest::KvCacheRelease { sequence_id } => {
                     let response = match runner.release_remote_kvcache(sequence_id) {
                         Ok(value) => MyelonResponse::KvCacheReleaseResponse(value),
                         Err(error) => {
-                            response_producer.send_error(error);
+                            response_producer.send_error(error, request_id);
                             continue;
                         }
                     };
                     response_producer
-                        .send_response(&response)
+                        .send_response(&response, request_id)
                         .expect("serialize Myelon kv cache release response");
                 }
                 MyelonRequest::CheckKvCacheRelease { sequence_id } => {
                     let response = match runner.check_kvcache_release(sequence_id) {
                         Ok(value) => MyelonResponse::CheckKvCacheReleaseResponse(value),
                         Err(error) => {
-                            response_producer.send_error(error);
+                            response_producer.send_error(error, request_id);
                             continue;
                         }
                     };
                     response_producer
-                        .send_response(&response)
+                        .send_response(&response, request_id)
                         .expect("serialize Myelon kv cache release status response");
                 }
                 MyelonRequest::KvCacheSwap { mappings, swap_in } => {
                     let response = match runner.swap_kvcache(mappings, swap_in) {
                         Ok(value) => MyelonResponse::KvCacheSwapResponse(value),
                         Err(error) => {
-                            response_producer.send_error(error);
+                            response_producer.send_error(error, request_id);
                             continue;
                         }
                     };
                     response_producer
-                        .send_response(&response)
+                        .send_response(&response, request_id)
                         .expect("serialize Myelon kv cache swap response");
                 }
                 MyelonRequest::Shutdown => {
