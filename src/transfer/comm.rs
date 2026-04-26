@@ -7,6 +7,7 @@ use interprocess::local_socket::{
     GenericFilePath, ListenerOptions, Stream as LocalStream, ToFsName,
 };
 use interprocess::TryClone;
+use once_cell::sync::Lazy;
 use parking_lot::{Mutex, RwLock};
 use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Write};
@@ -14,8 +15,71 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use url::Url;
+
+static MYELON_INSTRUMENT: Lazy<bool> = Lazy::new(|| {
+    std::env::var("MYELON_INSTRUMENT")
+        .map(|v| v == "1")
+        .unwrap_or(false)
+});
+
+fn transfer_message_kind(msg: &TransferMessage) -> &'static str {
+    match msg {
+        TransferMessage::TransferPrefill(_) => "TransferPrefill",
+        TransferMessage::AvailableTokenResponse(_) => "AvailableTokenResponse",
+        TransferMessage::TransferKvCache(_) => "TransferKvCache",
+        TransferMessage::ReleaseKvCache(_) => "ReleaseKvCache",
+    }
+}
+
+fn role_name(role: &PdRole) -> &'static str {
+    match role {
+        PdRole::Client => "client",
+        PdRole::Server => "server",
+    }
+}
+
+fn emit_transfer_comm_instr(
+    direction: &str,
+    role: &PdRole,
+    rank: usize,
+    message: &str,
+    payload_bytes: usize,
+    serialize_ns: u128,
+    io_ns: u128,
+    decode_ns: u128,
+) {
+    if !*MYELON_INSTRUMENT {
+        return;
+    }
+    println!(
+        "[MyelonInstr] {}",
+        serde_json::json!({
+            "scope": "pd_comm",
+            "direction": direction,
+            "role": role_name(role),
+            "rank": rank,
+            "message": message,
+            "payload_bytes": payload_bytes,
+            "serialize_ns": serialize_ns,
+            "io_ns": io_ns,
+            "decode_ns": decode_ns,
+        })
+    );
+}
+
+struct SendStats {
+    payload_bytes: usize,
+    serialize_ns: u128,
+    io_ns: u128,
+}
+
+struct ReceiveStats {
+    payload_bytes: usize,
+    io_ns: u128,
+    decode_ns: u128,
+}
 /// An internal enum to abstract over the two stream types.
 /// It implements Read and Write to be used generically.
 enum CommStream {
@@ -81,7 +145,18 @@ impl Communicator {
     pub fn send(&self, msg: &TransferMessage) -> Result<bool> {
         let mut guard = self.writer.lock();
         if let Some(stream) = guard.as_mut() {
-            send_message_generic(stream, msg)
+            let stats = send_message_generic(stream, msg)?;
+            emit_transfer_comm_instr(
+                "send",
+                &self.role,
+                self.rank,
+                transfer_message_kind(msg),
+                stats.payload_bytes,
+                stats.serialize_ns,
+                stats.io_ns,
+                0,
+            );
+            Ok(true)
         } else {
             candle_core::bail!(
                 "[{:?} Rank {}] Communicator not connected, cannot send message.",
@@ -96,7 +171,18 @@ impl Communicator {
     fn receive(&self) -> Result<TransferMessage> {
         let mut guard = self.reader.lock();
         if let Some(stream) = guard.as_mut() {
-            receive_message_generic(stream)
+            let (msg, stats) = receive_message_generic(stream)?;
+            emit_transfer_comm_instr(
+                "recv",
+                &self.role,
+                self.rank,
+                transfer_message_kind(&msg),
+                stats.payload_bytes,
+                0,
+                stats.io_ns,
+                stats.decode_ns,
+            );
+            Ok(msg)
         } else {
             // This should ideally not happen if called from run_listener_loop
             // as the stream is guaranteed to be Some.
@@ -382,18 +468,32 @@ impl Communicator {
 
 /// Generic, standardized function to send a message.
 /// Uses a 4-byte LE length prefix followed by bincode data.
-fn send_message_generic(stream: &mut (impl Read + Write), msg: &TransferMessage) -> Result<bool> {
+fn send_message_generic(
+    stream: &mut (impl Read + Write),
+    msg: &TransferMessage,
+) -> Result<SendStats> {
+    let t_serialize = Instant::now();
     let serialized: Vec<u8> = bincode::serialize(msg).map_err(candle_core::Error::wrap)?;
+    let serialize_ns = t_serialize.elapsed().as_nanos();
     let len = serialized.len() as u32;
+    let t_io = Instant::now();
     stream.write_all(&len.to_le_bytes())?;
     stream.write_all(&serialized)?;
     stream.flush()?;
-    Ok(true)
+    let io_ns = t_io.elapsed().as_nanos();
+    Ok(SendStats {
+        payload_bytes: serialized.len(),
+        serialize_ns,
+        io_ns,
+    })
 }
 
 /// Generic, standardized function to receive a message.
 /// Reads a 4-byte LE length prefix then bincode data.
-fn receive_message_generic(stream: &mut (impl Read + Write)) -> Result<TransferMessage> {
+fn receive_message_generic(
+    stream: &mut (impl Read + Write),
+) -> Result<(TransferMessage, ReceiveStats)> {
+    let t_io = Instant::now();
     let mut len_buf = [0u8; 4];
     stream.read_exact(&mut len_buf)?;
     let len = u32::from_le_bytes(len_buf) as usize;
@@ -405,7 +505,17 @@ fn receive_message_generic(stream: &mut (impl Read + Write)) -> Result<TransferM
 
     let mut msg_buf = vec![0u8; len];
     stream.read_exact(&mut msg_buf)?;
+    let io_ns = t_io.elapsed().as_nanos();
 
+    let t_decode = Instant::now();
     let msg = bincode::deserialize(&msg_buf).map_err(candle_core::Error::wrap)?;
-    Ok(msg)
+    let decode_ns = t_decode.elapsed().as_nanos();
+    Ok((
+        msg,
+        ReceiveStats {
+            payload_bytes: len,
+            io_ns,
+            decode_ns,
+        },
+    ))
 }

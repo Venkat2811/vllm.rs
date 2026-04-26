@@ -14,7 +14,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use myelon_playground::{
     MmapTransportLayout, MmapTypedConsumer, MmapTypedProducer, TypedConsumer, TypedProducer,
 };
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::time::Instant;
 
 use crate::core::sequence::{DecodeSequence, Sequence};
 use crate::ipc::typed_codec::{
@@ -36,6 +39,100 @@ pub const VLLM_RS_DEFAULT_MYELON_RESPONSE_DEPTH: usize = 8192;
 /// the echoed id matches the expected id before parsing the response value, which
 /// catches per-rank response-ring drift (the PD tp2/tp2 bug).
 pub const REQUEST_ID_BYTES: usize = 8;
+static MYELON_INSTRUMENT: Lazy<bool> = Lazy::new(|| {
+    std::env::var("MYELON_INSTRUMENT")
+        .map(|v| v == "1")
+        .unwrap_or(false)
+});
+
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct PublishStats {
+    payload_bytes: usize,
+    encode_ns: u128,
+    publish_ns: u128,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct ResponseRecvStats {
+    request_id: u64,
+    payload_bytes: usize,
+    collect_ns: u128,
+    decode_ns: u128,
+}
+
+fn msg_kind_name(kind: MsgKind) -> &'static str {
+    match kind {
+        MsgKind::RunPrefill => "RunPrefill",
+        MsgKind::RunDecode => "RunDecode",
+        MsgKind::FinishDecode => "FinishDecode",
+        MsgKind::Cancel => "Cancel",
+        MsgKind::Shutdown => "Shutdown",
+        MsgKind::TransferPrefill => "TransferPrefill",
+        MsgKind::ReceivePrefill => "ReceivePrefill",
+        MsgKind::CheckPrefillStatus => "CheckPrefillStatus",
+        MsgKind::KvCacheSend => "KvCacheSend",
+        MsgKind::KvCacheReceive => "KvCacheReceive",
+        MsgKind::KvCacheRelease => "KvCacheRelease",
+        MsgKind::CheckKvCacheRelease => "CheckKvCacheRelease",
+        MsgKind::KvCacheSwap => "KvCacheSwap",
+        MsgKind::RunResponse => "RunResponse",
+        MsgKind::Error => "Error",
+        MsgKind::TransferPrefillResponse => "TransferPrefillResponse",
+        MsgKind::ReceivePrefillResponse => "ReceivePrefillResponse",
+        MsgKind::CheckPrefillStatusResponse => "CheckPrefillStatusResponse",
+        MsgKind::KvCacheSendResponse => "KvCacheSendResponse",
+        MsgKind::KvCacheReceiveResponse => "KvCacheReceiveResponse",
+        MsgKind::KvCacheReleaseResponse => "KvCacheReleaseResponse",
+        MsgKind::CheckKvCacheReleaseResponse => "CheckKvCacheReleaseResponse",
+        MsgKind::KvCacheSwapResponse => "KvCacheSwapResponse",
+        MsgKind::TypedRequest => "TypedRequest",
+        MsgKind::TypedResponse => "TypedResponse",
+    }
+}
+
+fn access_mode_name(mode: MyelonTransportAccessMode) -> &'static str {
+    match mode {
+        MyelonTransportAccessMode::Owned => "owned",
+        MyelonTransportAccessMode::Borrowed => "borrowed",
+        MyelonTransportAccessMode::Typed => "typed",
+    }
+}
+
+fn emit_ipc_instr(
+    request_id: u64,
+    request_kind: MsgKind,
+    access_mode: MyelonTransportAccessMode,
+    payload_bytes: usize,
+    response_payload_bytes: usize,
+    response_count: usize,
+    encode_ns: u128,
+    publish_ns: u128,
+    collect_ns: u128,
+    decode_ns: u128,
+    status: &str,
+) {
+    if !*MYELON_INSTRUMENT {
+        return;
+    }
+    println!(
+        "[MyelonInstr] {}",
+        json!({
+            "scope": "ipc",
+            "request_id": request_id,
+            "request_kind": msg_kind_name(request_kind),
+            "request_kind_id": request_kind.as_u8(),
+            "access_mode": access_mode_name(access_mode),
+            "payload_bytes": payload_bytes,
+            "response_payload_bytes": response_payload_bytes,
+            "response_count": response_count,
+            "encode_ns": encode_ns,
+            "publish_ns": publish_ns,
+            "collect_ns": collect_ns,
+            "decode_ns": decode_ns,
+            "status": status,
+        })
+    );
+}
 
 /// Prepend `request_id` (LE u64) to `payload`. Used by framed transport publish path.
 fn prepend_request_id(request_id: u64, payload: &[u8]) -> Vec<u8> {
@@ -364,36 +461,62 @@ impl RpcBroadcastProducer {
         }
     }
 
-    pub fn publish_request(
+    pub(crate) fn publish_request(
         &mut self,
         request: &MyelonRequest,
         request_id: u64,
-    ) -> CandleResult<()> {
+    ) -> CandleResult<PublishStats> {
         match self {
             Self::ShmFramed { inner } => {
+                let t_encode = Instant::now();
                 let bytes = request.encode()?;
                 let stamped = prepend_request_id(request_id, &bytes);
+                let encode_ns = t_encode.elapsed().as_nanos();
+                let t_publish = Instant::now();
                 inner.publish(&stamped, request.kind().as_u8());
-                Ok(())
+                Ok(PublishStats {
+                    payload_bytes: stamped.len(),
+                    encode_ns,
+                    publish_ns: t_publish.elapsed().as_nanos(),
+                })
             }
             Self::MmapFramed { inner } => {
+                let t_encode = Instant::now();
                 let bytes = request.encode()?;
                 let stamped = prepend_request_id(request_id, &bytes);
+                let encode_ns = t_encode.elapsed().as_nanos();
+                let t_publish = Instant::now();
                 inner.publish(&stamped, request.kind().as_u8());
-                Ok(())
+                Ok(PublishStats {
+                    payload_bytes: stamped.len(),
+                    encode_ns,
+                    publish_ns: t_publish.elapsed().as_nanos(),
+                })
             }
-            Self::ShmTyped { inner } => inner
-                .publish(
-                    &TypedMyelonRequest::new(request_id, request.clone()),
-                    MsgKind::TypedRequest.as_u8(),
-                )
-                .map_err(myelon_to_candle),
-            Self::MmapTyped { inner } => inner
-                .publish(
-                    &TypedMyelonRequest::new(request_id, request.clone()),
-                    MsgKind::TypedRequest.as_u8(),
-                )
-                .map_err(myelon_to_candle),
+            Self::ShmTyped { inner } => {
+                let typed = TypedMyelonRequest::new(request_id, request.clone());
+                let t_publish = Instant::now();
+                inner
+                    .publish(&typed, MsgKind::TypedRequest.as_u8())
+                    .map_err(myelon_to_candle)?;
+                Ok(PublishStats {
+                    payload_bytes: 0,
+                    encode_ns: 0,
+                    publish_ns: t_publish.elapsed().as_nanos(),
+                })
+            }
+            Self::MmapTyped { inner } => {
+                let typed = TypedMyelonRequest::new(request_id, request.clone());
+                let t_publish = Instant::now();
+                inner
+                    .publish(&typed, MsgKind::TypedRequest.as_u8())
+                    .map_err(myelon_to_candle)?;
+                Ok(PublishStats {
+                    payload_bytes: 0,
+                    encode_ns: 0,
+                    publish_ns: t_publish.elapsed().as_nanos(),
+                })
+            }
         }
     }
 }
@@ -526,34 +649,24 @@ impl RpcBroadcastConsumer {
         mut handler: impl for<'a> FnMut(u64, BorrowedTypedMyelonRequest<'a>) -> CandleResult<R>,
     ) -> CandleResult<R> {
         match self {
-            Self::ShmTyped { inner, reassembly } => {
-                inner
-                    .recv_leased::<TypedMyelonRequest, _, _>(reassembly, |kind, archived| {
-                        if kind != MsgKind::TypedRequest.as_u8() {
-                            candle_core::bail!(
-                                "unexpected typed request transport kind {}",
-                                kind
-                            );
-                        }
-                        let (id, request) = archived;
-                        handler(id, request)
-                    })
-                    .map_err(myelon_to_candle)?
-            }
-            Self::MmapTyped { inner, reassembly } => {
-                inner
-                    .recv_leased::<TypedMyelonRequest, _, _>(reassembly, |kind, archived| {
-                        if kind != MsgKind::TypedRequest.as_u8() {
-                            candle_core::bail!(
-                                "unexpected typed request transport kind {}",
-                                kind
-                            );
-                        }
-                        let (id, request) = archived;
-                        handler(id, request)
-                    })
-                    .map_err(myelon_to_candle)?
-            }
+            Self::ShmTyped { inner, reassembly } => inner
+                .recv_leased::<TypedMyelonRequest, _, _>(reassembly, |kind, archived| {
+                    if kind != MsgKind::TypedRequest.as_u8() {
+                        candle_core::bail!("unexpected typed request transport kind {}", kind);
+                    }
+                    let (id, request) = archived;
+                    handler(id, request)
+                })
+                .map_err(myelon_to_candle)?,
+            Self::MmapTyped { inner, reassembly } => inner
+                .recv_leased::<TypedMyelonRequest, _, _>(reassembly, |kind, archived| {
+                    if kind != MsgKind::TypedRequest.as_u8() {
+                        candle_core::bail!("unexpected typed request transport kind {}", kind);
+                    }
+                    let (id, request) = archived;
+                    handler(id, request)
+                })
+                .map_err(myelon_to_candle)?,
             Self::ShmFramed { .. } | Self::MmapFramed { .. } => {
                 candle_core::bail!("framed request transport does not support typed leased access")
             }
@@ -767,39 +880,141 @@ impl ResponseConsumer {
         }
     }
 
-    pub fn recv_response_blocking_owned(&mut self) -> CandleResult<(u64, MyelonResponse)> {
+    pub(crate) fn recv_response_blocking_owned(
+        &mut self,
+    ) -> CandleResult<(ResponseRecvStats, MyelonResponse)> {
         match self {
             Self::ShmFramed { inner, .. } => {
+                let t_collect = Instant::now();
                 let (kind, payload) = inner.recv_message_blocking_owned();
+                let collect_ns = t_collect.elapsed().as_nanos();
+                let t_decode = Instant::now();
                 let (id, body) = split_request_id(&payload)?;
                 let response = MyelonResponse::decode(kind, body)?;
-                Ok((id, response))
+                Ok((
+                    ResponseRecvStats {
+                        request_id: id,
+                        payload_bytes: payload.len(),
+                        collect_ns,
+                        decode_ns: t_decode.elapsed().as_nanos(),
+                    },
+                    response,
+                ))
             }
             Self::MmapFramed { inner, .. } => {
+                let t_collect = Instant::now();
                 let (kind, payload) = inner.recv_message_blocking_owned();
+                let collect_ns = t_collect.elapsed().as_nanos();
+                let t_decode = Instant::now();
                 let (id, body) = split_request_id(&payload)?;
                 let response = MyelonResponse::decode(kind, body)?;
-                Ok((id, response))
+                Ok((
+                    ResponseRecvStats {
+                        request_id: id,
+                        payload_bytes: payload.len(),
+                        collect_ns,
+                        decode_ns: t_decode.elapsed().as_nanos(),
+                    },
+                    response,
+                ))
             }
             Self::ShmTyped { inner, .. } => {
+                let t_collect = Instant::now();
                 let (kind, typed) = inner
                     .recv_owned::<TypedMyelonResponse>()
                     .map_err(myelon_to_candle)?;
+                let collect_ns = t_collect.elapsed().as_nanos();
                 if kind != MsgKind::TypedResponse.as_u8() {
                     candle_core::bail!("unexpected typed response transport kind {}", kind);
                 }
+                let t_decode = Instant::now();
                 let (id, response) = typed.into_parts();
-                Ok((id, response))
+                Ok((
+                    ResponseRecvStats {
+                        request_id: id,
+                        payload_bytes: 0,
+                        collect_ns,
+                        decode_ns: t_decode.elapsed().as_nanos(),
+                    },
+                    response,
+                ))
             }
             Self::MmapTyped { inner, .. } => {
+                let t_collect = Instant::now();
                 let (kind, typed) = inner
                     .recv_owned::<TypedMyelonResponse>()
                     .map_err(myelon_to_candle)?;
+                let collect_ns = t_collect.elapsed().as_nanos();
                 if kind != MsgKind::TypedResponse.as_u8() {
                     candle_core::bail!("unexpected typed response transport kind {}", kind);
                 }
+                let t_decode = Instant::now();
                 let (id, response) = typed.into_parts();
-                Ok((id, response))
+                Ok((
+                    ResponseRecvStats {
+                        request_id: id,
+                        payload_bytes: 0,
+                        collect_ns,
+                        decode_ns: t_decode.elapsed().as_nanos(),
+                    },
+                    response,
+                ))
+            }
+        }
+    }
+
+    pub(crate) fn recv_response_blocking_typed(
+        &mut self,
+    ) -> CandleResult<(ResponseRecvStats, MyelonResponse)> {
+        match self {
+            Self::ShmTyped { inner, reassembly } => {
+                let t_collect = Instant::now();
+                let (request_id, response) = inner
+                    .recv_leased::<TypedMyelonResponse, _, _>(reassembly, |kind, archived| {
+                        if kind != MsgKind::TypedResponse.as_u8() {
+                            candle_core::bail!("unexpected typed response transport kind {}", kind);
+                        }
+                        let (id, response) = archived;
+                        let owned = response.to_owned().map_err(myelon_to_candle)?;
+                        Ok((id, owned))
+                    })
+                    .map_err(myelon_to_candle)??;
+                let collect_ns = t_collect.elapsed().as_nanos();
+                Ok((
+                    ResponseRecvStats {
+                        request_id,
+                        payload_bytes: 0,
+                        collect_ns,
+                        decode_ns: 0,
+                    },
+                    response,
+                ))
+            }
+            Self::MmapTyped { inner, reassembly } => {
+                let t_collect = Instant::now();
+                let (request_id, response) = inner
+                    .recv_leased::<TypedMyelonResponse, _, _>(reassembly, |kind, archived| {
+                        if kind != MsgKind::TypedResponse.as_u8() {
+                            candle_core::bail!("unexpected typed response transport kind {}", kind);
+                        }
+                        let (id, response) = archived;
+                        let owned = response.to_owned().map_err(myelon_to_candle)?;
+                        Ok((id, owned))
+                    })
+                    .map_err(myelon_to_candle)??;
+                let collect_ns = t_collect.elapsed().as_nanos();
+                Ok((
+                    ResponseRecvStats {
+                        request_id,
+                        payload_bytes: 0,
+                        collect_ns,
+                        decode_ns: 0,
+                    },
+                    response,
+                ))
+            }
+            Self::ShmFramed { .. } | Self::MmapFramed { .. } => {
+                candle_core::bail!("framed response transport does not support typed leased access")
             }
         }
     }
@@ -809,55 +1024,77 @@ impl ResponseConsumer {
         mut handler: impl for<'a> FnMut(u64, BorrowedTypedMyelonResponse<'a>) -> CandleResult<R>,
     ) -> CandleResult<R> {
         match self {
-            Self::ShmTyped { inner, reassembly } => {
-                inner
-                    .recv_leased::<TypedMyelonResponse, _, _>(reassembly, |kind, archived| {
-                        if kind != MsgKind::TypedResponse.as_u8() {
-                            candle_core::bail!(
-                                "unexpected typed response transport kind {}",
-                                kind
-                            );
-                        }
-                        let (id, response) = archived;
-                        handler(id, response)
-                    })
-                    .map_err(myelon_to_candle)?
-            }
-            Self::MmapTyped { inner, reassembly } => {
-                inner
-                    .recv_leased::<TypedMyelonResponse, _, _>(reassembly, |kind, archived| {
-                        if kind != MsgKind::TypedResponse.as_u8() {
-                            candle_core::bail!(
-                                "unexpected typed response transport kind {}",
-                                kind
-                            );
-                        }
-                        let (id, response) = archived;
-                        handler(id, response)
-                    })
-                    .map_err(myelon_to_candle)?
-            }
+            Self::ShmTyped { inner, reassembly } => inner
+                .recv_leased::<TypedMyelonResponse, _, _>(reassembly, |kind, archived| {
+                    if kind != MsgKind::TypedResponse.as_u8() {
+                        candle_core::bail!("unexpected typed response transport kind {}", kind);
+                    }
+                    let (id, response) = archived;
+                    handler(id, response)
+                })
+                .map_err(myelon_to_candle)?,
+            Self::MmapTyped { inner, reassembly } => inner
+                .recv_leased::<TypedMyelonResponse, _, _>(reassembly, |kind, archived| {
+                    if kind != MsgKind::TypedResponse.as_u8() {
+                        candle_core::bail!("unexpected typed response transport kind {}", kind);
+                    }
+                    let (id, response) = archived;
+                    handler(id, response)
+                })
+                .map_err(myelon_to_candle)?,
             Self::ShmFramed { .. } | Self::MmapFramed { .. } => {
                 candle_core::bail!("framed response transport does not support typed leased access")
             }
         }
     }
 
-    pub fn recv_response_blocking_borrowed(&mut self) -> CandleResult<(u64, MyelonResponse)> {
+    pub(crate) fn recv_response_blocking_borrowed(
+        &mut self,
+    ) -> CandleResult<(ResponseRecvStats, MyelonResponse)> {
         match self {
             Self::ShmFramed { inner, reassembly } => {
-                inner.recv_message_blocking_leased(reassembly, |kind, payload| {
-                    let (id, body) = split_request_id(payload)?;
-                    let response = MyelonResponse::decode(kind, body)?;
-                    Ok((id, response))
-                })
+                let t_collect = Instant::now();
+                let (mut stats, response) =
+                    inner.recv_message_blocking_leased(reassembly, |kind, payload| {
+                        let payload_bytes = payload.len();
+                        let t_decode = Instant::now();
+                        let (id, body) = split_request_id(payload)?;
+                        let response = MyelonResponse::decode(kind, body)?;
+                        Ok::<(ResponseRecvStats, MyelonResponse), candle_core::Error>((
+                            ResponseRecvStats {
+                                request_id: id,
+                                payload_bytes,
+                                collect_ns: 0,
+                                decode_ns: t_decode.elapsed().as_nanos(),
+                            },
+                            response,
+                        ))
+                    })?;
+                let total_ns = t_collect.elapsed().as_nanos();
+                stats.collect_ns = total_ns.saturating_sub(stats.decode_ns);
+                Ok((stats, response))
             }
             Self::MmapFramed { inner, reassembly } => {
-                inner.recv_message_blocking_leased(reassembly, |kind, payload| {
-                    let (id, body) = split_request_id(payload)?;
-                    let response = MyelonResponse::decode(kind, body)?;
-                    Ok((id, response))
-                })
+                let t_collect = Instant::now();
+                let (mut stats, response) =
+                    inner.recv_message_blocking_leased(reassembly, |kind, payload| {
+                        let payload_bytes = payload.len();
+                        let t_decode = Instant::now();
+                        let (id, body) = split_request_id(payload)?;
+                        let response = MyelonResponse::decode(kind, body)?;
+                        Ok::<(ResponseRecvStats, MyelonResponse), candle_core::Error>((
+                            ResponseRecvStats {
+                                request_id: id,
+                                payload_bytes,
+                                collect_ns: 0,
+                                decode_ns: t_decode.elapsed().as_nanos(),
+                            },
+                            response,
+                        ))
+                    })?;
+                let total_ns = t_collect.elapsed().as_nanos();
+                stats.collect_ns = total_ns.saturating_sub(stats.decode_ns);
+                Ok((stats, response))
             }
             Self::ShmTyped { .. } | Self::MmapTyped { .. } => {
                 candle_core::bail!(
@@ -1444,7 +1681,7 @@ impl MyelonEngineTransport {
             .expect("Myelon shutdown publish should succeed");
     }
 
-    fn publish_only(&mut self, request: &MyelonRequest) -> CandleResult<u64> {
+    fn publish_only(&mut self, request: &MyelonRequest) -> CandleResult<(u64, PublishStats)> {
         let request_id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
         if !self.logged_first_request {
             log_info!(
@@ -1454,13 +1691,13 @@ impl MyelonEngineTransport {
             );
             self.logged_first_request = true;
         }
-        self.rpc_producer.publish_request(request, request_id)?;
-        Ok(request_id)
+        let stats = self.rpc_producer.publish_request(request, request_id)?;
+        Ok((request_id, stats))
     }
 
     fn publish_and_collect(&mut self, request: &MyelonRequest) -> CandleResult<Vec<u32>> {
-        let request_id = self.publish_only(request)?;
-        self.collect_outputs(request_id, request.kind())
+        let (request_id, publish_stats) = self.publish_only(request)?;
+        self.collect_outputs(request_id, request.kind(), publish_stats)
     }
 
     fn publish_and_collect_value<T>(
@@ -1468,7 +1705,7 @@ impl MyelonEngineTransport {
         request: &MyelonRequest,
         mut parse: impl FnMut(MyelonResponse) -> CandleResult<T>,
     ) -> CandleResult<T> {
-        let request_id = self.publish_only(request)?;
+        let (request_id, publish_stats) = self.publish_only(request)?;
         let request_kind = request.kind();
         let mut last_value: Option<T> = None;
         // Defer the FIRST error encountered while continuing to drain ALL N response
@@ -1478,19 +1715,18 @@ impl MyelonEngineTransport {
         // those stale responses first → cascading correlation failures. See
         // 2_artifacts/2026-04-26_phase1_pd_msgid/REPORT.md "Phase 1.5".
         let mut deferred_error: Option<candle_core::Error> = None;
+        let mut response_payload_bytes = 0usize;
+        let mut collect_ns = 0u128;
+        let mut decode_ns = 0u128;
+        let mut response_count = 0usize;
 
         for (rank, consumer) in self.response_consumers.iter_mut().enumerate() {
-            let recv: CandleResult<(u64, MyelonResponse)> = match self.access_mode {
+            let recv: CandleResult<(ResponseRecvStats, MyelonResponse)> = match self.access_mode {
                 MyelonTransportAccessMode::Owned => consumer.recv_response_blocking_owned(),
                 MyelonTransportAccessMode::Borrowed => consumer.recv_response_blocking_borrowed(),
-                MyelonTransportAccessMode::Typed => consumer.with_response_blocking_typed(
-                    |id, response| {
-                        let owned = response.to_owned().map_err(myelon_to_candle)?;
-                        Ok((id, owned))
-                    },
-                ),
+                MyelonTransportAccessMode::Typed => consumer.recv_response_blocking_typed(),
             };
-            let (response_id, response) = match recv {
+            let (recv_stats, response) = match recv {
                 Ok(pair) => pair,
                 Err(e) => {
                     // Transport-level read failure — we cannot drain further on this
@@ -1503,6 +1739,11 @@ impl MyelonEngineTransport {
                     continue;
                 }
             };
+            response_count += 1;
+            response_payload_bytes += recv_stats.payload_bytes;
+            collect_ns += recv_stats.collect_ns;
+            decode_ns += recv_stats.decode_ns;
+            let response_id = recv_stats.request_id;
             if response_id != request_id {
                 if deferred_error.is_none() {
                     deferred_error = Some(candle_core::Error::Msg(format!(
@@ -1525,8 +1766,9 @@ impl MyelonEngineTransport {
             match response {
                 MyelonResponse::Error(error) => {
                     if deferred_error.is_none() {
-                        deferred_error =
-                            Some(candle_core::Error::Msg(format!("runner Myelon error: {error}")));
+                        deferred_error = Some(candle_core::Error::Msg(format!(
+                            "runner Myelon error: {error}"
+                        )));
                     }
                 }
                 other => match parse(other) {
@@ -1541,10 +1783,39 @@ impl MyelonEngineTransport {
         }
 
         if let Some(error) = deferred_error {
+            emit_ipc_instr(
+                request_id,
+                request_kind,
+                self.access_mode,
+                publish_stats.payload_bytes,
+                response_payload_bytes,
+                response_count,
+                publish_stats.encode_ns,
+                publish_stats.publish_ns,
+                collect_ns,
+                decode_ns,
+                "error",
+            );
             return Err(error);
         }
-        last_value
-            .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))
+        let result = last_value
+            .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()));
+        if result.is_ok() {
+            emit_ipc_instr(
+                request_id,
+                request_kind,
+                self.access_mode,
+                publish_stats.payload_bytes,
+                response_payload_bytes,
+                response_count,
+                publish_stats.encode_ns,
+                publish_stats.publish_ns,
+                collect_ns,
+                decode_ns,
+                "ok",
+            );
+        }
+        result
     }
 
     fn publish_and_collect_bool(
@@ -1555,22 +1826,36 @@ impl MyelonEngineTransport {
         self.publish_and_collect_value(request, parse)
     }
 
-    fn collect_outputs(&mut self, request_id: u64, request_kind: MsgKind) -> CandleResult<Vec<u32>> {
+    fn collect_outputs(
+        &mut self,
+        request_id: u64,
+        request_kind: MsgKind,
+        publish_stats: PublishStats,
+    ) -> CandleResult<Vec<u32>> {
         let consumer = self
             .response_consumers
             .first_mut()
             .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))?;
-        let (response_id, response) = match self.access_mode {
+        let (recv_stats, response) = match self.access_mode {
             MyelonTransportAccessMode::Owned => consumer.recv_response_blocking_owned()?,
             MyelonTransportAccessMode::Borrowed => consumer.recv_response_blocking_borrowed()?,
-            MyelonTransportAccessMode::Typed => consumer.with_response_blocking_typed(
-                |id, response| {
-                    let owned = response.to_owned().map_err(myelon_to_candle)?;
-                    Ok((id, owned))
-                },
-            )?,
+            MyelonTransportAccessMode::Typed => consumer.recv_response_blocking_typed()?,
         };
+        let response_id = recv_stats.request_id;
         if response_id != request_id {
+            emit_ipc_instr(
+                request_id,
+                request_kind,
+                self.access_mode,
+                publish_stats.payload_bytes,
+                recv_stats.payload_bytes,
+                1,
+                publish_stats.encode_ns,
+                publish_stats.publish_ns,
+                recv_stats.collect_ns,
+                recv_stats.decode_ns,
+                "error",
+            );
             candle_core::bail!(
                 "Myelon response correlation mismatch on rank 0: expected request_id={} (kind={:?}), got response_id={} kind={:?}.",
                 request_id,
@@ -1588,11 +1873,52 @@ impl MyelonEngineTransport {
             self.logged_first_response = true;
         }
         match response {
-            MyelonResponse::RunResponse(output_ids) => Ok(output_ids),
+            MyelonResponse::RunResponse(output_ids) => {
+                emit_ipc_instr(
+                    request_id,
+                    request_kind,
+                    self.access_mode,
+                    publish_stats.payload_bytes,
+                    recv_stats.payload_bytes,
+                    1,
+                    publish_stats.encode_ns,
+                    publish_stats.publish_ns,
+                    recv_stats.collect_ns,
+                    recv_stats.decode_ns,
+                    "ok",
+                );
+                Ok(output_ids)
+            }
             MyelonResponse::Error(error) => {
+                emit_ipc_instr(
+                    request_id,
+                    request_kind,
+                    self.access_mode,
+                    publish_stats.payload_bytes,
+                    recv_stats.payload_bytes,
+                    1,
+                    publish_stats.encode_ns,
+                    publish_stats.publish_ns,
+                    recv_stats.collect_ns,
+                    recv_stats.decode_ns,
+                    "error",
+                );
                 candle_core::bail!("runner Myelon error: {}", error);
             }
             other => {
+                emit_ipc_instr(
+                    request_id,
+                    request_kind,
+                    self.access_mode,
+                    publish_stats.payload_bytes,
+                    recv_stats.payload_bytes,
+                    1,
+                    publish_stats.encode_ns,
+                    publish_stats.publish_ns,
+                    recv_stats.collect_ns,
+                    recv_stats.decode_ns,
+                    "error",
+                );
                 candle_core::bail!("unexpected Myelon run response: {other:?}");
             }
         }
