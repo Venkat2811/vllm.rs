@@ -33,9 +33,13 @@ use std::time::{Duration, Instant};
 /// switching to a heap-backed publish path upstream.
 const KV_FRAME_DATA_BYTES: usize = 2 * 1024 * 1024 - 12;
 
-/// Ring depth (in frames). 1024 × 2MB = 2GB ring capacity per direction.
-/// Plenty of room for in-flight messages without backpressure.
-const KV_RING_DEPTH: usize = 1024;
+/// Ring depth (in frames). 128 × 2MB = 256MB ring capacity per direction —
+/// more than 4× a typical 62MB message in flight, but cheap on SHM (1GB total
+/// across c2s+s2c × tp2 ranks). The earlier 1024 depth (2GB per ring, 8GB
+/// across all rings) was wasteful and contributed to host RAM pressure under
+/// load. Backpressure on the producer when ring fills is fine here — the
+/// receiver should be draining at line speed.
+const KV_RING_DEPTH: usize = 128;
 
 const ATTACH_RETRY_INTERVAL: Duration = Duration::from_millis(100);
 const ATTACH_TIMEOUT: Duration = Duration::from_secs(120);

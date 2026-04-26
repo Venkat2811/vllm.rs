@@ -401,22 +401,28 @@ def main() -> int:
             f"  runtime={s['runtime_s']:.2f}s"
         )
     else:
-        rps = aggregate["req_per_s"]
-        ots = aggregate["output_tok_per_s"]
-        ttft_p50 = aggregate["ttft_ms"]["p50"]
-        ttft_p99 = aggregate["ttft_ms"]["p99"]
-        lat_p50 = aggregate["latency_ms"]["p50"]
-        lat_p99 = aggregate["latency_ms"]["p99"]
-        rt = aggregate["runtime_s"]
+        # Guard against cells with zero successful requests (PD overloaded,
+        # connection refused, etc.) — aggregate buckets may be empty.
+        def med(d, *path, default="-"):
+            cur = d
+            for k in path:
+                if not isinstance(cur, dict) or k not in cur:
+                    return default
+                cur = cur[k]
+            return cur if cur is not None else default
+        success_rates = aggregate.get("success_rate", {}).get("all", []) if isinstance(aggregate.get("success_rate"), dict) else []
         print(
             f"[median over {aggregate['runs']} runs, warmup={args.warmup_runs}]\n"
-            f"  req/s    median={rps['median']} (IQR {rps['iqr_q1']}-{rps['iqr_q3']}, all={rps['all']})\n"
-            f"  out_tok/s median={ots['median']} (all={ots['all']})\n"
-            f"  TTFT p50  median={ttft_p50['median']}ms (IQR {ttft_p50['iqr_q1']}-{ttft_p50['iqr_q3']})\n"
-            f"  TTFT p99  median={ttft_p99['median']}ms (IQR {ttft_p99['iqr_q1']}-{ttft_p99['iqr_q3']})\n"
-            f"  Lat  p50  median={lat_p50['median']}ms\n"
-            f"  Lat  p99  median={lat_p99['median']}ms\n"
-            f"  runtime/run median={rt['median']}s"
+            f"  success_rate per run: {success_rates}\n"
+            f"  req/s    median={med(aggregate, 'req_per_s', 'median')} "
+            f"(IQR {med(aggregate, 'req_per_s', 'iqr_q1')}-{med(aggregate, 'req_per_s', 'iqr_q3')}, all={med(aggregate, 'req_per_s', 'all')})\n"
+            f"  out_tok/s median={med(aggregate, 'output_tok_per_s', 'median')} "
+            f"(all={med(aggregate, 'output_tok_per_s', 'all')})\n"
+            f"  TTFT p50  median={med(aggregate, 'ttft_ms', 'p50', 'median')}ms\n"
+            f"  TTFT p99  median={med(aggregate, 'ttft_ms', 'p99', 'median')}ms\n"
+            f"  Lat  p50  median={med(aggregate, 'latency_ms', 'p50', 'median')}ms\n"
+            f"  Lat  p99  median={med(aggregate, 'latency_ms', 'p99', 'median')}ms\n"
+            f"  runtime/run median={med(aggregate, 'runtime_s', 'median')}s"
         )
     return 0
 
