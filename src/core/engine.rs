@@ -2,7 +2,7 @@
 use super::runner::{ModelRunner, ProcessRunnerGroup, RunnerType, Seqs};
 use super::scheduler::{Scheduler, KVCACHE_SWAP_THRESHOLD};
 use super::sequence::Sequence;
-use crate::core::scheduler::PD_PREFILL_STATUS_CHECK_COOLING_PERIOD;
+use crate::core::scheduler::pd_prefill_status_check_cooling_period_ms;
 use crate::core::sequence::{DecodeSequence, SequenceStatus};
 use crate::core::GenerationOutput;
 #[cfg(feature = "myelon")]
@@ -1903,7 +1903,7 @@ impl LLMEngine {
                 }
                 if task_processed == 0 {
                     tokio::time::sleep(tokio::time::Duration::from_millis(if is_pd_server {
-                        PD_PREFILL_STATUS_CHECK_COOLING_PERIOD as u64
+                        pd_prefill_status_check_cooling_period_ms() as u64
                     } else {
                         1
                     }))

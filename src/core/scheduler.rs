@@ -8,6 +8,7 @@ use super::{
 use crate::transfer::{PdConfig, PdRole};
 use crate::utils::config::{Config, EngineConfig, EosTokenId};
 use candle_core::Result;
+use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use regex::Regex;
 use std::collections::VecDeque;
@@ -41,13 +42,24 @@ const MIN_NUM_SCHEDULED_REQS: usize = 5;
 pub const KVCACHE_SWAP_THRESHOLD: f32 = 0.95f32; // over 95%
 const SWAP_COOLING_PERIOD: usize = 5000; // 5 seconds cooling time to prevent frequent swap out/in
 const MIN_KVCACHE_TOKENS_LEFT_FOR_SWAP: usize = 1000; // to swap-in, at least 1000 kvcache tokens left for decoding
-pub const PD_PREFILL_STATUS_CHECK_COOLING_PERIOD: usize = 50; // check prefill status every 50ms (data is pushed immediately)
+pub const PD_PREFILL_STATUS_CHECK_COOLING_PERIOD_DEFAULT_MS: usize = 50; // check prefill status every 50ms (data is pushed immediately)
 pub const PD_PREFILL_TRANSFER_NUM_TOKEN_THRESHOLD: usize = 128; // do not transfer prefill length < 128
 /// When prefix cache hit is high, prefer local prefill if new tokens < this threshold
 pub const PD_LOCAL_PREFILL_NEW_TOKEN_THRESHOLD: usize = 1024;
 const PREFIX_CACHE_RATIO_NORMAL: f32 = 0.5;
 const PREFIX_CACHE_RATIO_PD_SERVER: f32 = 0.75;
 const PREFIX_CACHE_RATIO_PD_CLIENT: f32 = 0.35;
+static PD_PREFILL_STATUS_CHECK_COOLING_PERIOD_MS: Lazy<usize> = Lazy::new(|| {
+    std::env::var("VLLM_PD_PREFILL_STATUS_CHECK_MS")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|v| *v > 0)
+        .unwrap_or(PD_PREFILL_STATUS_CHECK_COOLING_PERIOD_DEFAULT_MS)
+});
+
+pub fn pd_prefill_status_check_cooling_period_ms() -> usize {
+    *PD_PREFILL_STATUS_CHECK_COOLING_PERIOD_MS
+}
 
 fn build_prefix_cache_config(econfig: &EngineConfig) -> PrefixCacheConfig {
     let enabled = econfig.prefix_cache.unwrap_or(false);
@@ -930,7 +942,7 @@ impl Scheduler {
         for idx in 0..self.transferred.len() {
             let seq_id = self.transferred[idx].id;
             if cur_time - self.transferred[idx].swapped_time().unwrap_or(cur_time)
-                < PD_PREFILL_STATUS_CHECK_COOLING_PERIOD
+                < pd_prefill_status_check_cooling_period_ms()
             {
                 continue;
             }
