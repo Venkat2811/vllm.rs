@@ -105,8 +105,12 @@ EOF
     sleep 1
 }
 
+# Apples-to-apples: both modes use --force-runner so both spawn
+# subprocess runners. Only the engine↔runner IPC transport differs.
+# Without --force-runner on the socket side, the engine runs in-process
+# and we'd be measuring "in-process exec vs subprocess+Myelon" instead.
 echo "── pd_socket ──"
-run_pd "pd_socket"
+run_pd "pd_socket" --force-runner
 echo ""
 echo "── pd_myelon_typed ──"
 run_pd "pd_myelon_typed" --force-runner --myelon-ipc --myelon-access-mode typed
