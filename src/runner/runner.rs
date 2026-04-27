@@ -607,12 +607,93 @@ fn main() -> anyhow::Result<()> {
                             }
                             Ok(None)
                         }
+                        // RFC 0034 T1.3 — small-payload kinds with no
+                        // sequence body. These avoid the to_owned() →
+                        // outer-match round-trip; the payload is just one
+                        // primitive (sequence_id or available_tokens) so the
+                        // saving per request is sub-µs, but the consistency
+                        // matters: the typed path is now fully self-contained
+                        // for every request kind.
+                        //
+                        // No-response variants (FinishDecode, Cancel) just
+                        // call the runner method.
+                        BorrowedTypedMyelonRequest::FinishDecode { sequence_id, .. }
+                        | BorrowedTypedMyelonRequest::Cancel { sequence_id, .. } => {
+                            runner.finished(sequence_id);
+                            Ok(None)
+                        }
+                        BorrowedTypedMyelonRequest::ReceivePrefill {
+                            available_tokens,
+                            ..
+                        } => {
+                            let response = match runner
+                                .try_receive_prefill(available_tokens)
+                            {
+                                Ok(value) => MyelonResponse::ReceivePrefillResponse(value),
+                                Err(error) => {
+                                    response_producer.send_error(error, id);
+                                    return Ok(None);
+                                }
+                            };
+                            response_producer
+                                .send_response(&response, id)
+                                .expect("serialize Myelon receive prefill (typed)");
+                            Ok(None)
+                        }
+                        BorrowedTypedMyelonRequest::CheckPrefillStatus {
+                            sequence_id,
+                            ..
+                        } => {
+                            let response = match runner.check_prefill_status(sequence_id) {
+                                Ok(value) => MyelonResponse::CheckPrefillStatusResponse(value),
+                                Err(error) => {
+                                    response_producer.send_error(error, id);
+                                    return Ok(None);
+                                }
+                            };
+                            response_producer
+                                .send_response(&response, id)
+                                .expect("serialize Myelon check prefill status (typed)");
+                            Ok(None)
+                        }
+                        BorrowedTypedMyelonRequest::KvCacheRelease { sequence_id, .. } => {
+                            let response = match runner.release_remote_kvcache(sequence_id) {
+                                Ok(value) => MyelonResponse::KvCacheReleaseResponse(value),
+                                Err(error) => {
+                                    response_producer.send_error(error, id);
+                                    return Ok(None);
+                                }
+                            };
+                            response_producer
+                                .send_response(&response, id)
+                                .expect("serialize Myelon kv release (typed)");
+                            Ok(None)
+                        }
+                        BorrowedTypedMyelonRequest::CheckKvCacheRelease {
+                            sequence_id,
+                            ..
+                        } => {
+                            let response = match runner.check_kvcache_release(sequence_id) {
+                                Ok(value) => MyelonResponse::CheckKvCacheReleaseResponse(value),
+                                Err(error) => {
+                                    response_producer.send_error(error, id);
+                                    return Ok(None);
+                                }
+                            };
+                            response_producer
+                                .send_response(&response, id)
+                                .expect("serialize Myelon check kv release (typed)");
+                            Ok(None)
+                        }
+                        // Sequence-bearing variants (TransferPrefill,
+                        // KvCacheSend, KvCacheReceive, KvCacheSwap) carry
+                        // archived Sequence payloads that the existing runner
+                        // methods take by &Sequence — no zero-copy without
+                        // refactoring those signatures (out of P2 scope).
+                        // Materialise to owned + outer match handles them.
+                        // Shutdown also goes through the outer path so the
+                        // hot loop's break logic applies.
                         other => {
-                            // Small-payload kinds (FinishDecode, Cancel, KvCache*,
-                            // TransferPrefill, etc.): materialise to owned for
-                            // the outer match. The savings from a true zero-copy
-                            // path on these would be sub-µs per request — not
-                            // worth the complexity (RFC 0034 T1.3).
                             let owned = other
                                 .to_owned()
                                 .map_err(|e| candle_core::Error::Msg(e.to_string()))?;
