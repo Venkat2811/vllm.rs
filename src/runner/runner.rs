@@ -590,8 +590,29 @@ fn main() -> anyhow::Result<()> {
                             }
                             Ok(None)
                         }
+                        // RFC 0034 P2.5: zero-copy decode dispatch — same
+                        // pattern as RunPrefill but using ArchivedDecodeSeqs.
+                        // Decode payloads are smaller per request than prefill
+                        // (no token_ids, just block_tables), but every decode
+                        // step pays them, so the aggregate saving across long
+                        // generation runs is worth it.
+                        BorrowedTypedMyelonRequest::RunDecode { sequences, .. } => {
+                            let outputs =
+                                runner.run(Seqs::ArchivedDecodeSeqs(sequences), false)?;
+                            if runner_rank == 0 {
+                                let response = MyelonResponse::RunResponse(outputs);
+                                response_producer
+                                    .send_response(&response, id)
+                                    .expect("serialize Myelon decode outputs (typed zero-copy)");
+                            }
+                            Ok(None)
+                        }
                         other => {
-                            // Materialise to owned for the outer match.
+                            // Small-payload kinds (FinishDecode, Cancel, KvCache*,
+                            // TransferPrefill, etc.): materialise to owned for
+                            // the outer match. The savings from a true zero-copy
+                            // path on these would be sub-µs per request — not
+                            // worth the complexity (RFC 0034 T1.3).
                             let owned = other
                                 .to_owned()
                                 .map_err(|e| candle_core::Error::Msg(e.to_string()))?;

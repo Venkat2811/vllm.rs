@@ -91,10 +91,13 @@ fn sampling_params_for_batch_index(seqs: &Seqs<'_>, index: usize) -> SamplingPar
             archived.sampling_params_owned()
         }
         #[cfg(feature = "codec-rkyv")]
-        Seqs::ArchivedDecodeSeqs(_) => unreachable!(
-            "Seqs::ArchivedDecodeSeqs reached sampling_params_for_batch_index; \
-             decode-side archived dispatch is RFC 0034 P2.5 (not yet implemented)"
-        ),
+        Seqs::ArchivedDecodeSeqs(av) => {
+            // RFC 0034 P2.5: ToDecodeInput now exposes sampling_params_owned()
+            // for archived decode sequences too. Same per-index deserialise as
+            // the prefill case.
+            let archived: &rkyv::Archived<DecodeSequence> = &av[index];
+            ToDecodeInput::sampling_params_owned(&archived)
+        }
     }
 }
 
@@ -833,13 +836,23 @@ impl ModelRunner {
                 Seqs::SeqRefs(seqs) => self.prepare_decode(*seqs)?,
                 Seqs::DecodeVec(decode_seqs) => self.prepare_decode(decode_seqs.iter())?,
                 #[cfg(feature = "codec-rkyv")]
-                Seqs::ArchivedSeqs(_) | Seqs::ArchivedDecodeSeqs(_) => {
-                    // Decode-side archived dispatch is RFC 0034 P2.4 (later).
-                    // The hot win is on prefill (largest payload); decode payloads
-                    // are smaller per request but more frequent. For now bail to
-                    // force the runner to use the owned path until we land it.
+                Seqs::ArchivedDecodeSeqs(archived_vec) => {
+                    // RFC 0034 P2.5: zero-copy decode dispatch from a Myelon
+                    // typed lease. ArchivedVec<DecodeSequence> derefs to
+                    // &[ArchivedDecodeSequence]; ToDecodeInput is implemented
+                    // on &Archived<DecodeSequence> so prepare_decode's generic
+                    // body handles it. We pass `refs.iter()` so the iterator
+                    // yields `&&Archived<DecodeSequence>` — matching
+                    // `IntoIterator<Item = &'a S>` with S = &Archived<DecodeSequence>.
+                    let refs: Vec<&rkyv::Archived<DecodeSequence>> =
+                        archived_vec.iter().collect();
+                    self.prepare_decode(refs.iter())?
+                }
+                #[cfg(feature = "codec-rkyv")]
+                Seqs::ArchivedSeqs(_) => {
                     candle_core::bail!(
-                        "Archived decode dispatch not yet implemented — runner.rs must materialise via to_owned() for decode."
+                        "Decode requested with prefill-shaped ArchivedSeqs input — \
+                         runner.rs must dispatch RunDecode via ArchivedDecodeSeqs."
                     );
                 }
             }
@@ -939,26 +952,55 @@ impl ModelRunner {
             }
         }
 
-        let images = if let Seqs::SeqRefs(s) = &seqs {
-            // We do not batch multimodel prefill
-            if let Some(images) = &s[0].images {
-                if images.image_idx == -1 || !is_prefill {
-                    None
+        let images = match &seqs {
+            Seqs::SeqRefs(s) => {
+                // We do not batch multimodel prefill
+                if let Some(images) = &s[0].images {
+                    if images.image_idx == -1 || !is_prefill {
+                        None
+                    } else {
+                        compute_image_slice(&s[0].token_ids, s[0].num_cached_tokens, images).map(
+                            |(image_idx, token_offset)| {
+                                let mut images = images.clone();
+                                images.image_idx = image_idx;
+                                images.image_token_offset = token_offset;
+                                images
+                            },
+                        )
+                    }
                 } else {
-                    compute_image_slice(&s[0].token_ids, s[0].num_cached_tokens, images).map(
-                        |(image_idx, token_offset)| {
-                            let mut images = images.clone();
-                            images.image_idx = image_idx;
-                            images.image_token_offset = token_offset;
-                            images
-                        },
-                    )
+                    None
                 }
-            } else {
-                None
             }
-        } else {
-            None
+            #[cfg(feature = "codec-rkyv")]
+            Seqs::ArchivedSeqs(av) if is_prefill && !av.is_empty() => {
+                // RFC 0034 P2.5: extract image slice on the archived prefill path
+                // for multimodal models. The archived first sequence carries the
+                // optional image; deserialise just that one entry's image data
+                // and reuse the same compute_image_slice helper.
+                use crate::core::sequence::PrefillSeqLike;
+                let first: &rkyv::Archived<crate::core::sequence::Sequence> = &av[0];
+                if let Some(images) = first.images_owned() {
+                    if images.image_idx == -1 {
+                        None
+                    } else {
+                        // Reconstruct the bits we need from the archived view.
+                        let token_ids_slice: &[u32] = first.token_ids();
+                        let num_cached = first.num_cached_tokens();
+                        compute_image_slice(token_ids_slice, num_cached, &images).map(
+                            |(image_idx, token_offset)| {
+                                let mut images = images.clone();
+                                images.image_idx = image_idx;
+                                images.image_token_offset = token_offset;
+                                images
+                            },
+                        )
+                    }
+                } else {
+                    None
+                }
+            }
+            _ => None,
         };
         let images = images.as_ref();
 
@@ -1521,9 +1563,7 @@ impl ModelRunner {
             #[cfg(feature = "codec-rkyv")]
             Seqs::ArchivedSeqs(av) => av.iter().map(|s| PrefillSeqLike::id(&s)).collect(),
             #[cfg(feature = "codec-rkyv")]
-            Seqs::ArchivedDecodeSeqs(_) => unreachable!(
-                "ArchivedDecodeSeqs path not yet implemented; runner.rs must materialise decode via to_owned()"
-            ),
+            Seqs::ArchivedDecodeSeqs(av) => av.iter().map(|s| ToDecodeInput::id(&s)).collect(),
         };
 
         // Get the batch size for deciding whether to use parallel sampling
@@ -1533,9 +1573,7 @@ impl ModelRunner {
             #[cfg(feature = "codec-rkyv")]
             Seqs::ArchivedSeqs(av) => av.len(),
             #[cfg(feature = "codec-rkyv")]
-            Seqs::ArchivedDecodeSeqs(_) => unreachable!(
-                "ArchivedDecodeSeqs not yet implemented"
-            ),
+            Seqs::ArchivedDecodeSeqs(av) => av.len(),
         };
 
         // Compute and cache sampling params (including penalties) during prefill, reuse during decode
@@ -1631,6 +1669,88 @@ impl ModelRunner {
                 };
 
                 // Cache for decode phase
+                *self.cached_sampling.write() = Some(cached.clone());
+                cached
+            }
+            // RFC 0034 P2.5: archived prefill must compute the same sampling
+            // strategy / penalties as the SeqRefs path. Skipping this branch
+            // would cache nothing on the first request and fall through to
+            // hard-coded defaults. We deserialise just the first sequence's
+            // sampling params (already done via PrefillSeqLike::sampling_params_owned).
+            #[cfg(feature = "codec-rkyv")]
+            (true, Seqs::ArchivedSeqs(av)) => {
+                use crate::core::sequence::PrefillSeqLike;
+                let has_valid_sampling_cfg =
+                    self.config.generation_cfg.as_ref().map_or(false, |cfg| {
+                        cfg.temperature.is_some() && (cfg.top_k.is_some() || cfg.top_p.is_some())
+                    });
+                let first: &rkyv::Archived<crate::core::sequence::Sequence> = &av[0];
+                let user_params = first.sampling_params_owned();
+                let num_cached_tokens = first.num_cached_tokens();
+
+                if self.is_first_rank && num_cached_tokens == 0 {
+                    crate::log_info!(
+                        "User's thinking preference for reasoning models: {:?}",
+                        user_params.thinking
+                    );
+                }
+
+                let gen_cfg_freq = self
+                    .config
+                    .generation_cfg
+                    .as_ref()
+                    .and_then(|c| c.frequency_penalty);
+                let gen_cfg_pres = self
+                    .config
+                    .generation_cfg
+                    .as_ref()
+                    .and_then(|c| c.presence_penalty);
+                let frequency_penalty = user_params.frequency_penalty.or(gen_cfg_freq);
+                let presence_penalty = user_params.presence_penalty.or(gen_cfg_pres);
+
+                let user_has_temperature = user_params.temperature.is_some();
+                let user_wants_greedy = matches!(user_params.temperature, Some(t) if t == 0.0);
+                let has_user_config = user_has_temperature
+                    || matches!(user_params.top_k, Some(k) if k > 0)
+                    || matches!(user_params.top_p, Some(p) if p > 0.0 && p < 1.0);
+
+                let sampling = if user_wants_greedy {
+                    if self.is_first_rank && num_cached_tokens == 0 {
+                        crate::log_warn!("Using greedy decoding (temperature=0.0)");
+                    }
+                    Sampling::ArgMax
+                } else if has_user_config {
+                    if self.is_first_rank && num_cached_tokens == 0 {
+                        crate::log_warn!(
+                            "Using user's sampling params: temp={:?}, top_k={:?}, top_p={:?}, freq_penalty={:?}, pres_penalty={:?}",
+                            user_params.temperature,
+                            user_params.top_k,
+                            user_params.top_p,
+                            frequency_penalty,
+                            presence_penalty
+                        );
+                    }
+                    LogitsProcessor::get_strategy(
+                        user_params.temperature,
+                        user_params.top_k,
+                        user_params.top_p,
+                    )
+                } else if has_valid_sampling_cfg {
+                    let cfg = self.config.generation_cfg.as_ref().unwrap();
+                    LogitsProcessor::get_strategy(cfg.temperature, cfg.top_k, cfg.top_p)
+                } else {
+                    Sampling::TopKThenTopP {
+                        k: 32,
+                        p: 0.95,
+                        temperature: 0.7,
+                    }
+                };
+
+                let cached = CachedSamplingParams {
+                    sampling,
+                    frequency_penalty,
+                    presence_penalty,
+                };
                 *self.cached_sampling.write() = Some(cached.clone());
                 cached
             }

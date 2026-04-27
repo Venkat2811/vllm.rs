@@ -91,8 +91,15 @@ pub trait ToDecodeInput {
     fn len(&self) -> usize;
     fn last_block_tokens(&self) -> usize;
     fn block_table_last(&self) -> u32;
-    fn block_table(&self) -> &Vec<u32>;
+    /// Decode block table. Returns a slice so the impl can come from either an
+    /// owned `Vec<u32>` (DecodeSequence / Sequence) or a rkyv `ArchivedVec<u32>`
+    /// reinterpreted as `&[u32]` on little-endian targets (RFC 0034 P2.5).
+    fn block_table(&self) -> &[u32];
     fn id(&self) -> usize;
+    /// Owned snapshot of the per-sequence sampling params. Decode-side
+    /// `sampling_params_for_batch_index` calls this for archived inputs;
+    /// owned impls just clone (sub-µs cost for a small struct).
+    fn sampling_params_owned(&self) -> SamplingParams;
 }
 
 impl ToDecodeInput for DecodeSequence {
@@ -112,12 +119,16 @@ impl ToDecodeInput for DecodeSequence {
         self.block_table_last
     }
 
-    fn block_table(&self) -> &Vec<u32> {
+    fn block_table(&self) -> &[u32] {
         &self.block_tables
     }
 
     fn id(&self) -> usize {
         self.id
+    }
+
+    fn sampling_params_owned(&self) -> SamplingParams {
+        self.sampling_params.clone()
     }
 }
 
@@ -253,12 +264,59 @@ impl ToDecodeInput for &Sequence {
         *self.block_table.last().unwrap()
     }
 
-    fn block_table(&self) -> &Vec<u32> {
+    fn block_table(&self) -> &[u32] {
         &self.block_table
     }
 
     fn id(&self) -> usize {
         self.id
+    }
+
+    fn sampling_params_owned(&self) -> SamplingParams {
+        self.sampling_params.clone()
+    }
+}
+
+/// RFC 0034 P2.5: zero-copy decode dispatch for archived `DecodeSequence`s
+/// (the variants reachable via `Seqs::ArchivedDecodeSeqs` from a Myelon typed
+/// lease). The decode payload is much smaller per request than prefill, but
+/// every decode step pays it, so the aggregate saving is non-trivial at high
+/// step counts.
+#[cfg(feature = "codec-rkyv")]
+impl ToDecodeInput for &rkyv::Archived<DecodeSequence> {
+    fn last_token(&self) -> u32 {
+        self.last_token.to_native()
+    }
+
+    fn len(&self) -> usize {
+        self.len.to_native() as usize
+    }
+
+    fn last_block_tokens(&self) -> usize {
+        self.last_block_tokens.to_native() as usize
+    }
+
+    fn block_table_last(&self) -> u32 {
+        self.block_table_last.to_native()
+    }
+
+    fn block_table(&self) -> &[u32] {
+        // Same trick as PrefillSeqLike: ArchivedVec<u32> stores rkyv::rend::u32_le
+        // (#[repr(transparent)] over u32 on LE targets — x86_64, aarch64). Reinterpret
+        // as &[u32] without copying.
+        let archived: &[rkyv::rend::u32_le] = self.block_tables.as_slice();
+        unsafe {
+            std::slice::from_raw_parts(archived.as_ptr() as *const u32, archived.len())
+        }
+    }
+
+    fn id(&self) -> usize {
+        self.id.to_native() as usize
+    }
+
+    fn sampling_params_owned(&self) -> SamplingParams {
+        rkyv::deserialize::<SamplingParams, rkyv::rancor::Error>(&self.sampling_params)
+            .expect("rkyv: deserialize ArchivedSamplingParams (decode)")
     }
 }
 
