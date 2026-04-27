@@ -59,12 +59,37 @@ pub struct CachedSamplingParams {
 pub enum Seqs<'a> {
     SeqRefs(&'a [&'a Sequence]),
     DecodeVec(&'a Vec<DecodeSequence>),
+    /// Borrowed prefill sequences pulled directly from a Myelon typed lease.
+    /// Held inside `runner.rs` for the lifetime of `with_request_blocking_typed`
+    /// closures so model execution can read fields without an owned copy.
+    ///
+    /// Currently materialised into `Vec<Sequence>` at the boundary (see
+    /// `runner.rs::execute_typed_prefill`) until `prepare_prefill` is rewritten
+    /// to consume archived fields directly (RFC 0034 P2).
+    #[cfg(feature = "codec-rkyv")]
+    ArchivedSeqs(&'a rkyv::Archived<Vec<Sequence>>),
+    /// Same constraint as `ArchivedSeqs` but for decode-step inputs.
+    #[cfg(feature = "codec-rkyv")]
+    ArchivedDecodeSeqs(&'a rkyv::Archived<Vec<DecodeSequence>>),
 }
 
 fn sampling_params_for_batch_index<'a>(seqs: &'a Seqs<'a>, index: usize) -> &'a SamplingParams {
     match seqs {
         Seqs::SeqRefs(refs) => &refs[index].sampling_params,
         Seqs::DecodeVec(vec) => &vec[index].sampling_params,
+        // Archived variants are not yet plumbed through the model exec path —
+        // runner.rs materialises them to owned and dispatches as SeqRefs/DecodeVec.
+        // RFC 0034 P2 will close this gap.
+        #[cfg(feature = "codec-rkyv")]
+        Seqs::ArchivedSeqs(_) => unreachable!(
+            "Seqs::ArchivedSeqs reached sampling_params_for_batch_index; \
+             runner.rs must materialise archived input to SeqRefs before model exec"
+        ),
+        #[cfg(feature = "codec-rkyv")]
+        Seqs::ArchivedDecodeSeqs(_) => unreachable!(
+            "Seqs::ArchivedDecodeSeqs reached sampling_params_for_batch_index; \
+             runner.rs must materialise archived input to DecodeVec before model exec"
+        ),
     }
 }
 
@@ -763,11 +788,23 @@ impl ModelRunner {
                         "Decode sequences are not supported for prefill. Use SeqRefs instead."
                     );
                 }
+                #[cfg(feature = "codec-rkyv")]
+                Seqs::ArchivedSeqs(_) | Seqs::ArchivedDecodeSeqs(_) => {
+                    candle_core::bail!(
+                        "Archived seqs must be materialised by runner.rs before run() — RFC 0034 P2 not yet implemented."
+                    );
+                }
             }
         } else {
             match &seqs {
                 Seqs::SeqRefs(seqs) => self.prepare_decode(*seqs)?,
                 Seqs::DecodeVec(decode_seqs) => self.prepare_decode(decode_seqs.iter())?,
+                #[cfg(feature = "codec-rkyv")]
+                Seqs::ArchivedSeqs(_) | Seqs::ArchivedDecodeSeqs(_) => {
+                    candle_core::bail!(
+                        "Archived seqs must be materialised by runner.rs before run() — RFC 0034 P2 not yet implemented."
+                    );
+                }
             }
         };
 
@@ -1398,12 +1435,20 @@ impl ModelRunner {
         let seq_ids: Vec<usize> = match &seqs {
             Seqs::SeqRefs(seqs) => seqs.iter().map(|s| s.id()).collect(),
             Seqs::DecodeVec(v) => v.iter().map(|s| s.id()).collect(),
+            #[cfg(feature = "codec-rkyv")]
+            Seqs::ArchivedSeqs(_) | Seqs::ArchivedDecodeSeqs(_) => unreachable!(
+                "Archived seqs must be materialised before sample() — RFC 0034 P2 not yet implemented"
+            ),
         };
 
         // Get the batch size for deciding whether to use parallel sampling
         let batch_size = match seqs {
             Seqs::SeqRefs(seqs) => seqs.len(),
             Seqs::DecodeVec(v) => v.len(),
+            #[cfg(feature = "codec-rkyv")]
+            Seqs::ArchivedSeqs(_) | Seqs::ArchivedDecodeSeqs(_) => unreachable!(
+                "Archived seqs must be materialised before sample()"
+            ),
         };
 
         // Compute and cache sampling params (including penalties) during prefill, reuse during decode
