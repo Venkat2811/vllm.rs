@@ -165,25 +165,87 @@ mod typed_rkyv {
             }
         }
 
+        /// Convert the borrowed typed request into an owned `MyelonRequest`.
+        ///
+        /// Fast path (RFC 0034 P1): uses `rkyv::deserialize` directly on the
+        /// already-accessed archived view, bypassing the alignment check +
+        /// `rkyv::access` step that `MyelonRequest::decode → rkyv::from_bytes`
+        /// would redo. Saves one access traversal per request — the heap
+        /// allocation cost remains until P2 lands.
+        ///
+        /// The full zero-copy path (no owned materialisation at all) requires
+        /// runner.rs to dispatch via `Seqs::ArchivedSeqs` instead of calling
+        /// this method — RFC 0034 P2.
         pub fn to_owned(&self) -> Result<MyelonRequest, CodecError> {
+            use std::collections::HashMap;
+            let de_err = |e: rkyv::rancor::Error| CodecError::decode(format!("rkyv deserialize: {}", e));
             match self {
-                Self::Shutdown => MyelonRequest::decode(MsgKind::Shutdown.as_u8(), &[]),
-                Self::RunPrefill { payload, .. }
-                | Self::RunDecode { payload, .. }
-                | Self::FinishDecode { payload, .. }
-                | Self::Cancel { payload, .. }
-                | Self::TransferPrefill { payload, .. }
-                | Self::ReceivePrefill { payload, .. }
-                | Self::CheckPrefillStatus { payload, .. }
-                | Self::KvCacheSend { payload, .. }
-                | Self::KvCacheReceive { payload, .. }
-                | Self::KvCacheRelease { payload, .. }
-                | Self::CheckKvCacheRelease { payload, .. }
-                | Self::KvCacheSwap { payload, .. } => {
-                    MyelonRequest::decode(self.kind().as_u8(), payload)
+                Self::Shutdown => Ok(MyelonRequest::Shutdown),
+                Self::RunPrefill { sequences, .. } => {
+                    let owned: Vec<Sequence> =
+                        rkyv::deserialize::<Vec<Sequence>, rkyv::rancor::Error>(*sequences)
+                            .map_err(de_err)?;
+                    Ok(MyelonRequest::RunPrefill { sequences: owned })
+                }
+                Self::RunDecode { sequences, .. } => {
+                    let owned: Vec<DecodeSequence> =
+                        rkyv::deserialize::<Vec<DecodeSequence>, rkyv::rancor::Error>(*sequences)
+                            .map_err(de_err)?;
+                    Ok(MyelonRequest::RunDecode { sequences: owned })
+                }
+                Self::FinishDecode { sequence_id, .. } => {
+                    Ok(MyelonRequest::FinishDecode { sequence_id: *sequence_id })
+                }
+                Self::Cancel { sequence_id, .. } => {
+                    Ok(MyelonRequest::Cancel { sequence_id: *sequence_id })
+                }
+                Self::TransferPrefill { sequence, .. } => {
+                    let owned: Sequence =
+                        rkyv::deserialize::<Sequence, rkyv::rancor::Error>(*sequence)
+                            .map_err(de_err)?;
+                    Ok(MyelonRequest::TransferPrefill { sequence: owned })
+                }
+                Self::ReceivePrefill { available_tokens, .. } => {
+                    Ok(MyelonRequest::ReceivePrefill { available_tokens: *available_tokens })
+                }
+                Self::CheckPrefillStatus { sequence_id, .. } => {
+                    Ok(MyelonRequest::CheckPrefillStatus { sequence_id: *sequence_id })
+                }
+                Self::KvCacheSend { sequence, first_token, .. } => {
+                    let owned: Sequence =
+                        rkyv::deserialize::<Sequence, rkyv::rancor::Error>(*sequence)
+                            .map_err(de_err)?;
+                    Ok(MyelonRequest::KvCacheSend {
+                        sequence: owned,
+                        first_token: *first_token,
+                    })
+                }
+                Self::KvCacheReceive { sequence, .. } => {
+                    let owned: Sequence =
+                        rkyv::deserialize::<Sequence, rkyv::rancor::Error>(*sequence)
+                            .map_err(de_err)?;
+                    Ok(MyelonRequest::KvCacheReceive { sequence: owned })
+                }
+                Self::KvCacheRelease { sequence_id, .. } => {
+                    Ok(MyelonRequest::KvCacheRelease { sequence_id: *sequence_id })
+                }
+                Self::CheckKvCacheRelease { sequence_id, .. } => {
+                    Ok(MyelonRequest::CheckKvCacheRelease { sequence_id: *sequence_id })
+                }
+                Self::KvCacheSwap { mapping_keys, mapping_values, swap_in, .. } => {
+                    let keys: Vec<usize> =
+                        rkyv::deserialize::<Vec<usize>, rkyv::rancor::Error>(*mapping_keys)
+                            .map_err(de_err)?;
+                    let values: Vec<usize> =
+                        rkyv::deserialize::<Vec<usize>, rkyv::rancor::Error>(*mapping_values)
+                            .map_err(de_err)?;
+                    let mappings: HashMap<usize, usize> = keys.into_iter().zip(values).collect();
+                    Ok(MyelonRequest::KvCacheSwap {
+                        mappings,
+                        swap_in: *swap_in,
+                    })
                 }
             }
-            .map_err(CodecError::decode)
         }
 
         fn from_payload(tag: u8, payload: &'a [u8]) -> Result<Self, CodecError> {
