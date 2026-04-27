@@ -711,31 +711,46 @@ impl ModelRunner {
     }
 
     fn restore_mamba_prefix_states_for_prefill(&self, seqs: &[&Sequence]) -> Result<()> {
+        // Delegate to the generic body so the owned and ArchivedSeqs paths
+        // share the same correctness guarantees on mamba models.
+        self.restore_mamba_prefix_states_for_prefill_generic(seqs)
+    }
+
+    /// Generic mamba-prefix-restore that works on any input implementing
+    /// `PrefillSeqLike`. Both `&Sequence` (owned) and `&rkyv::Archived<Sequence>`
+    /// (zero-copy from a Myelon typed lease, RFC 0034 P2) implement the trait,
+    /// so the ArchivedSeqs path stays correct on Qwen3.5 / Qwen3.5MoE / Qwen3VL.
+    fn restore_mamba_prefix_states_for_prefill_generic<S: crate::core::sequence::PrefillSeqLike>(
+        &self,
+        seqs: &[S],
+    ) -> Result<()> {
         match &self.model {
             Model::Qwen3_5(_) | Model::Qwen3_5MoE(_) | Model::Qwen3VL(_) => {
                 for seq in seqs {
-                    if seq.num_cached_tokens == 0 {
+                    let num_cached = seq.num_cached_tokens();
+                    if num_cached == 0 {
                         continue;
                     }
-                    let Some(hash) = seq.mamba_prefix_hash else {
+                    let Some(hash) = seq.mamba_prefix_hash() else {
                         continue;
                     };
-                    if self.restored_prefix_sequences.read().contains(&seq.id) {
+                    let id = seq.id();
+                    if self.restored_prefix_sequences.read().contains(&id) {
                         continue;
                     }
-                    let restored = self.restore_mamba_prefix_state(seq.id, hash)?;
+                    let restored = self.restore_mamba_prefix_state(id, hash)?;
                     if !restored {
                         candle_core::bail!(
                             "Missing mamba prefix snapshot for seq {} hash {}",
-                            seq.id,
+                            id,
                             hash
                         );
                     }
-                    self.restored_prefix_sequences.write().insert(seq.id);
+                    self.restored_prefix_sequences.write().insert(id);
                     crate::log_info!(
                         "Restored mamba prefix state for seq {} (cached {} tokens)",
-                        seq.id,
-                        seq.num_cached_tokens
+                        id,
+                        num_cached
                     );
                 }
                 Ok(())
@@ -821,8 +836,19 @@ impl ModelRunner {
         };
 
         if is_prefill {
-            if let Seqs::SeqRefs(seqs_ref) = &seqs {
-                self.restore_mamba_prefix_states_for_prefill(seqs_ref)?;
+            match &seqs {
+                Seqs::SeqRefs(seqs_ref) => {
+                    self.restore_mamba_prefix_states_for_prefill(seqs_ref)?;
+                }
+                #[cfg(feature = "codec-rkyv")]
+                Seqs::ArchivedSeqs(archived_vec) => {
+                    // Mamba prefix restore on archived inputs: build refs once
+                    // and reuse the generic body. This keeps Qwen3.5 family
+                    // correct under typed-end-to-end dispatch (RFC 0034 P2.4).
+                    let refs: Vec<&rkyv::Archived<Sequence>> = archived_vec.iter().collect();
+                    self.restore_mamba_prefix_states_for_prefill_generic(&refs)?;
+                }
+                _ => {}
             }
         }
 

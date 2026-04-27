@@ -14,6 +14,8 @@ use vllm_rs::ipc::myelon_ipc::{
     MyelonRequest, MyelonResponse, MyelonTransportAccessMode, MyelonTransportBackend,
     ResponseProducer, RpcBroadcastConsumer,
 };
+#[cfg(all(feature = "myelon", feature = "codec-rkyv"))]
+use vllm_rs::ipc::typed_codec::BorrowedTypedMyelonRequest;
 use vllm_rs::models::layers::distributed::Comm;
 use vllm_rs::models::layers::VarBuilderX;
 use vllm_rs::runner::{receive_local, send_local, MessageType};
@@ -537,28 +539,135 @@ fn main() -> anyhow::Result<()> {
         let mut logged_first_rpc = false;
         let mut logged_first_response = false;
         loop {
-            let (request_id, request) = match match access_mode {
-                MyelonTransportAccessMode::Owned => rpc_consumer.recv_request_blocking_owned(),
-                MyelonTransportAccessMode::Borrowed => {
-                    rpc_consumer.recv_request_blocking_borrowed()
+            // RFC 0034 P2.4: under Typed mode, dispatch RunPrefill INSIDE the
+            // lease closure to skip the owned `Vec<Sequence>` materialisation.
+            // The closure returns either:
+            //   - `None` if the request was handled inline (RunPrefill zero-copy
+            //     path); the outer match below is then a no-op for this iteration.
+            //   - `Some((id, owned_request))` for every other request kind, which
+            //     falls through to the owned-dispatch match the same way as
+            //     Owned/Borrowed access modes do.
+            //
+            // Only RunPrefill goes zero-copy — it has the largest payload
+            // (Vec<Sequence>) and is the dominant cost on prefill-heavy workloads.
+            // RunDecode and the small-payload control-plane requests stay on the
+            // owned path because the savings would be sub-microsecond and the
+            // structural complexity (decode Seqs::ArchivedDecodeSeqs through
+            // sample(), prepare_decode, KV ring etc.) is much larger.
+            #[cfg(feature = "codec-rkyv")]
+            let typed_inline_dispatch =
+                |runner: &ModelRunner,
+                 response_producer: &mut ResponseProducer,
+                 logged_first_rpc: &mut bool,
+                 logged_first_response: &mut bool,
+                 id: u64,
+                 borrowed: BorrowedTypedMyelonRequest<'_>|
+                 -> candle_core::Result<Option<(u64, MyelonRequest)>> {
+                    match borrowed {
+                        BorrowedTypedMyelonRequest::RunPrefill { sequences, .. } => {
+                            if !*logged_first_rpc {
+                                vllm_rs::log_info!(
+                                    "Runner entered Myelon hot path (typed zero-copy prefill) request_id={}.",
+                                    id,
+                                );
+                                *logged_first_rpc = true;
+                            }
+                            let outputs =
+                                runner.run(Seqs::ArchivedSeqs(sequences), true)?;
+                            if runner_rank == 0 {
+                                let response = MyelonResponse::RunResponse(outputs);
+                                if !*logged_first_response {
+                                    vllm_rs::log_info!(
+                                        "Runner sent first Myelon response (typed) kind={} request_id={}.",
+                                        response.kind().as_u8(),
+                                        id,
+                                    );
+                                    *logged_first_response = true;
+                                }
+                                response_producer
+                                    .send_response(&response, id)
+                                    .expect("serialize Myelon prefill outputs (typed zero-copy)");
+                            }
+                            Ok(None)
+                        }
+                        other => {
+                            // Materialise to owned for the outer match.
+                            let owned = other
+                                .to_owned()
+                                .map_err(|e| candle_core::Error::Msg(e.to_string()))?;
+                            Ok(Some((id, owned)))
+                        }
+                    }
+                };
+
+            let pair = match access_mode {
+                MyelonTransportAccessMode::Owned => match rpc_consumer
+                    .recv_request_blocking_owned()
+                {
+                    Ok(p) => Some(p),
+                    Err(error) => {
+                        response_producer.send_error(error, 0);
+                        continue;
+                    }
+                },
+                MyelonTransportAccessMode::Borrowed => match rpc_consumer
+                    .recv_request_blocking_borrowed()
+                {
+                    Ok(p) => Some(p),
+                    Err(error) => {
+                        response_producer.send_error(error, 0);
+                        continue;
+                    }
+                },
+                MyelonTransportAccessMode::Typed => {
+                    #[cfg(feature = "codec-rkyv")]
+                    {
+                        let result = rpc_consumer.with_request_blocking_typed(
+                            |id, borrowed| {
+                                typed_inline_dispatch(
+                                    &runner,
+                                    &mut response_producer,
+                                    &mut logged_first_rpc,
+                                    &mut logged_first_response,
+                                    id,
+                                    borrowed,
+                                )
+                            },
+                        );
+                        match result {
+                            Ok(None) => continue, // handled inline (zero-copy prefill)
+                            Ok(Some(p)) => Some(p),
+                            Err(error) => {
+                                response_producer.send_error(error, 0);
+                                continue;
+                            }
+                        }
+                    }
+                    #[cfg(not(feature = "codec-rkyv"))]
+                    {
+                        // Without rkyv, Typed mode has no zero-copy path; fall
+                        // back to the previous to_owned() behaviour so the
+                        // outer match handles the request normally.
+                        match rpc_consumer.with_request_blocking_typed(
+                            |id, request| {
+                                request
+                                    .to_owned()
+                                    .map(|owned| (id, owned))
+                                    .map_err(|e| candle_core::Error::Msg(e.to_string()))
+                            },
+                        ) {
+                            Ok(p) => Some(p),
+                            Err(error) => {
+                                response_producer.send_error(error, 0);
+                                continue;
+                            }
+                        }
+                    }
                 }
-                MyelonTransportAccessMode::Typed => rpc_consumer
-                    .with_request_blocking_typed(|id, request| {
-                        request
-                            .to_owned()
-                            .map(|owned| (id, owned))
-                            .map_err(|e| candle_core::Error::Msg(e.to_string()))
-                    })
-                    .map(|(id, request)| (id, request)),
-            } {
-                Ok(pair) => pair,
-                Err(error) => {
-                    // Without a request_id we cannot correlate; surface as id=0 sentinel
-                    // so the engine bails on its next consumer read with a clear mismatch
-                    // instead of silently corrupting subsequent calls.
-                    response_producer.send_error(error, 0);
-                    continue;
-                }
+            };
+            let (request_id, request) = match pair {
+                Some(p) => p,
+                None => continue,
             };
             if !logged_first_rpc {
                 vllm_rs::log_info!(
