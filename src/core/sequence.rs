@@ -121,6 +121,121 @@ impl ToDecodeInput for DecodeSequence {
     }
 }
 
+/// Read-only access surface for prefill inputs. Implemented for both
+/// `&Sequence` (owned) and `&rkyv::Archived<Sequence>` (zero-copy).
+///
+/// RFC 0034 P2: this trait lets `prepare_prefill` consume archived
+/// payload references directly from a Myelon typed lease, without
+/// going through `MyelonRequest::decode → rkyv::from_bytes`.
+///
+/// All accessors return concrete owned scalars or borrowed slices so the
+/// existing `prepare_prefill` body can use them unchanged.
+#[allow(dead_code)] // used once P2 wiring lands
+pub trait PrefillSeqLike {
+    fn id(&self) -> usize;
+    fn token_ids(&self) -> &[u32];
+    fn block_table(&self) -> &[u32];
+    fn num_cached_tokens(&self) -> usize;
+    fn block_size(&self) -> usize;
+    /// `token_ids.len()`
+    fn len(&self) -> usize;
+    /// `len.div_ceil(block_size)`
+    fn num_blocks(&self) -> usize;
+    /// `len - (num_blocks - 1) * block_size`
+    fn last_block_num_tokens(&self) -> usize;
+    /// `num_cached_tokens / block_size`
+    fn num_cached_blocks(&self) -> usize;
+    /// Mamba prefix hash if present (used by `restore_mamba_prefix_states_for_prefill`).
+    fn mamba_prefix_hash(&self) -> Option<u64>;
+    /// Owned copy of sampling params. Sampling params are small, so this is
+    /// cheap and avoids threading lifetimes through cached_sampling state.
+    fn sampling_params_owned(&self) -> SamplingParams;
+    /// Image data for multimodel prefill (only inspected for first sequence).
+    /// Returns `None` for archived inputs unless image plumbing lands later.
+    fn images_owned(&self) -> Option<ImageData>;
+}
+
+impl PrefillSeqLike for &Sequence {
+    fn id(&self) -> usize { self.id }
+    fn token_ids(&self) -> &[u32] { &self.token_ids }
+    fn block_table(&self) -> &[u32] { &self.block_table }
+    fn num_cached_tokens(&self) -> usize { self.num_cached_tokens }
+    fn block_size(&self) -> usize { self.block_size }
+    fn len(&self) -> usize { self.token_ids.len() }
+    fn num_blocks(&self) -> usize { Sequence::num_blocks(self) }
+    fn last_block_num_tokens(&self) -> usize { Sequence::last_block_num_tokens(self) }
+    fn num_cached_blocks(&self) -> usize { Sequence::num_cached_blocks(self) }
+    fn mamba_prefix_hash(&self) -> Option<u64> { self.mamba_prefix_hash }
+    fn sampling_params_owned(&self) -> SamplingParams { self.sampling_params.clone() }
+    fn images_owned(&self) -> Option<ImageData> { self.images.clone() }
+}
+
+#[cfg(feature = "codec-rkyv")]
+impl PrefillSeqLike for &rkyv::Archived<Sequence> {
+    fn id(&self) -> usize {
+        self.id.to_native() as usize
+    }
+    fn token_ids(&self) -> &[u32] {
+        // ArchivedVec<u32> stores `u32_le` (rend::u32_le, #[repr(transparent)]
+        // over u32 on little-endian targets). x86_64 (our only deployment) is
+        // little-endian, so the byte layout of [u32_le] is identical to [u32].
+        let archived: &[rkyv::rend::u32_le] = self.token_ids.as_slice();
+        unsafe {
+            std::slice::from_raw_parts(archived.as_ptr() as *const u32, archived.len())
+        }
+    }
+    fn block_table(&self) -> &[u32] {
+        let archived: &[rkyv::rend::u32_le] = self.block_table.as_slice();
+        unsafe {
+            std::slice::from_raw_parts(archived.as_ptr() as *const u32, archived.len())
+        }
+    }
+    fn num_cached_tokens(&self) -> usize {
+        self.num_cached_tokens.to_native() as usize
+    }
+    fn block_size(&self) -> usize {
+        self.block_size.to_native() as usize
+    }
+    fn len(&self) -> usize {
+        self.token_ids.len()
+    }
+    fn num_blocks(&self) -> usize {
+        let len = PrefillSeqLike::len(self);
+        let bs = PrefillSeqLike::block_size(self);
+        len.div_ceil(bs)
+    }
+    fn last_block_num_tokens(&self) -> usize {
+        let len = PrefillSeqLike::len(self);
+        let bs = PrefillSeqLike::block_size(self);
+        len - (PrefillSeqLike::num_blocks(self) - 1) * bs
+    }
+    fn num_cached_blocks(&self) -> usize {
+        PrefillSeqLike::num_cached_tokens(self) / PrefillSeqLike::block_size(self)
+    }
+    fn mamba_prefix_hash(&self) -> Option<u64> {
+        match self.mamba_prefix_hash.as_ref() {
+            Some(h) => Some(h.to_native()),
+            None => None,
+        }
+    }
+    fn sampling_params_owned(&self) -> SamplingParams {
+        // SamplingParams is small; deserialize the archived view back into an
+        // owned struct via rkyv. This is the one allocation we still pay per
+        // request; the main win is skipping the per-token Vec<u32> realloc.
+        rkyv::deserialize::<SamplingParams, rkyv::rancor::Error>(&self.sampling_params)
+            .expect("rkyv: deserialize ArchivedSamplingParams")
+    }
+    fn images_owned(&self) -> Option<ImageData> {
+        match self.images.as_ref() {
+            Some(img) => Some(
+                rkyv::deserialize::<ImageData, rkyv::rancor::Error>(img)
+                    .expect("rkyv: deserialize ArchivedImageData"),
+            ),
+            None => None,
+        }
+    }
+}
+
 impl ToDecodeInput for &Sequence {
     fn last_token(&self) -> u32 {
         self.last_token
