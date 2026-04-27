@@ -73,22 +73,27 @@ pub enum Seqs<'a> {
     ArchivedDecodeSeqs(&'a rkyv::Archived<Vec<DecodeSequence>>),
 }
 
-fn sampling_params_for_batch_index<'a>(seqs: &'a Seqs<'a>, index: usize) -> &'a SamplingParams {
+/// Returns an owned `SamplingParams` for batch index `index`.
+///
+/// SeqRefs/DecodeVec clone the existing field (a few-word struct + small Arc
+/// clones — sub-microsecond). ArchivedSeqs deserialises just the one entry's
+/// archived params via the `PrefillSeqLike::sampling_params_owned` trait
+/// method (RFC 0034 P2.1, sequence.rs). This unblocks zero-copy prefill on
+/// the typed lease path while keeping the per-request guidance hookup correct.
+fn sampling_params_for_batch_index(seqs: &Seqs<'_>, index: usize) -> SamplingParams {
     match seqs {
-        Seqs::SeqRefs(refs) => &refs[index].sampling_params,
-        Seqs::DecodeVec(vec) => &vec[index].sampling_params,
-        // Archived variants are not yet plumbed through the model exec path —
-        // runner.rs materialises them to owned and dispatches as SeqRefs/DecodeVec.
-        // RFC 0034 P2 will close this gap.
+        Seqs::SeqRefs(refs) => refs[index].sampling_params.clone(),
+        Seqs::DecodeVec(vec) => vec[index].sampling_params.clone(),
         #[cfg(feature = "codec-rkyv")]
-        Seqs::ArchivedSeqs(_) => unreachable!(
-            "Seqs::ArchivedSeqs reached sampling_params_for_batch_index; \
-             runner.rs must materialise archived input to SeqRefs before model exec"
-        ),
+        Seqs::ArchivedSeqs(av) => {
+            use crate::core::sequence::PrefillSeqLike;
+            let archived: &rkyv::Archived<crate::core::sequence::Sequence> = &av[index];
+            archived.sampling_params_owned()
+        }
         #[cfg(feature = "codec-rkyv")]
         Seqs::ArchivedDecodeSeqs(_) => unreachable!(
             "Seqs::ArchivedDecodeSeqs reached sampling_params_for_batch_index; \
-             runner.rs must materialise archived input to DecodeVec before model exec"
+             decode-side archived dispatch is RFC 0034 P2.5 (not yet implemented)"
         ),
     }
 }
@@ -260,7 +265,12 @@ impl ModelRunner {
                 continue;
             }
 
-            let grammar = sampling_params_for_batch_index(seqs, i)
+            // sampling_params_for_batch_index now returns owned SamplingParams
+            // (RFC 0034 P2.4 archived dispatch needs to deserialise per-index;
+            // the SeqRefs/DecodeVec paths just clone). Bind to a local so the
+            // grammar reference stays valid through the new_from_grammar call.
+            let sampling_params = sampling_params_for_batch_index(seqs, i);
+            let grammar = sampling_params
                 .grammar
                 .as_ref()
                 .expect("guided batch entries must have a grammar");
