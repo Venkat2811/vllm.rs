@@ -1025,6 +1025,24 @@ impl ModelRunner {
     #[allow(non_snake_case)]
     #[allow(unused_mut)]
     fn prepare_prefill(&self, seqs: &[&Sequence]) -> Result<(Tensor, Tensor, InputMetadata)> {
+        // Delegate to the generic body. Calling sites pass &[&Sequence] which
+        // already implements PrefillSeqLike (via the &Sequence impl).
+        self.prepare_prefill_generic(seqs)
+    }
+
+    /// Generic prefill prep that works on any input implementing `PrefillSeqLike`.
+    /// Both `&Sequence` (owned) and `&rkyv::Archived<Sequence>` (zero-copy from
+    /// a Myelon typed lease) implement the trait.
+    ///
+    /// Body identical to the original `prepare_prefill` modulo `seq.field` →
+    /// `seq.field()` method calls. The `block_table[i]` indexing now reads
+    /// from a borrowed slice returned by `block_table()`.
+    #[allow(non_snake_case)]
+    #[allow(unused_mut)]
+    fn prepare_prefill_generic<S: crate::core::sequence::PrefillSeqLike>(
+        &self,
+        seqs: &[S],
+    ) -> Result<(Tensor, Tensor, InputMetadata)> {
         let mut input_ids: Vec<u32> = Vec::new();
         let mut positions = Vec::new();
         let mut batch_indices_vec: Vec<u32> = Vec::new();
@@ -1039,27 +1057,28 @@ impl ModelRunner {
         let mut max_context_len = 0;
         for (seq_idx, seq) in seqs.iter().enumerate() {
             let seqlen = seq.len();
-            let num_tokens = std::cmp::min(CHUNK_SIZE, seqlen - seq.num_cached_tokens);
-            input_ids
-                .extend(&seq.token_ids[seq.num_cached_tokens..seq.num_cached_tokens + num_tokens]);
+            let num_cached = seq.num_cached_tokens();
+            let num_tokens = std::cmp::min(CHUNK_SIZE, seqlen - num_cached);
+            let token_ids = seq.token_ids();
+            let block_table = seq.block_table();
+            input_ids.extend(&token_ids[num_cached..num_cached + num_tokens]);
             positions.extend(
-                (seq.num_cached_tokens as i64..(seq.num_cached_tokens + num_tokens) as i64)
-                    .collect::<Vec<_>>(),
+                (num_cached as i64..(num_cached + num_tokens) as i64).collect::<Vec<_>>(),
             );
             for pos in 0..num_tokens {
                 batch_indices_vec.push(seq_idx as u32);
-                positions_vec.push((seq.num_cached_tokens + pos) as u32);
+                positions_vec.push((num_cached + pos) as u32);
             }
             prefill_tokens.push(num_tokens);
             if seqlen > max_context_len {
                 max_context_len = seqlen;
             }
-            let seqlen_q = num_tokens; //seqlen - seq.num_cached_tokens;
+            let seqlen_q = num_tokens;
             let seqlen_k = if self.config.prefix_cache.unwrap_or(false)
-                || (seq.num_cached_tokens > 0
+                || (num_cached > 0
                     && (cfg!(feature = "flashattn") || cfg!(feature = "flashinfer")))
             {
-                seq.num_cached_tokens + num_tokens
+                num_cached + num_tokens
             } else {
                 num_tokens
             };
@@ -1069,10 +1088,12 @@ impl ModelRunner {
             max_seqlen_k = std::cmp::max(max_seqlen_k, seqlen_k);
 
             let mut slot_mapping_tokens: i64 = 0;
-            for i in seq.num_cached_blocks()..seq.num_blocks() {
-                let start = (seq.block_table[i] * self.config.block_size as u32) as i64;
-                let start = if i == seq.num_cached_blocks() {
-                    start + (seq.num_cached_tokens as i64 % self.config.block_size as i64)
+            let num_cached_blocks = seq.num_cached_blocks();
+            let num_blocks = seq.num_blocks();
+            for i in num_cached_blocks..num_blocks {
+                let start = (block_table[i] * self.config.block_size as u32) as i64;
+                let start = if i == num_cached_blocks {
+                    start + (num_cached as i64 % self.config.block_size as i64)
                 } else {
                     start
                 };
@@ -1118,7 +1139,17 @@ impl ModelRunner {
 
         // Handle cached prefix KV reuse
         let (block_tables, context_lens) = if cu_seqlens_k.last() > cu_seqlens_q.last() {
-            let block_tables_t = self.prepare_block_tables(seqs)?;
+            // Inline of prepare_block_tables — that helper requires ToDecodeInput
+            // which doesn't apply to PrefillSeqLike inputs.
+            let len = seqs.len();
+            let max_len = seqs.iter().map(|seq| seq.block_table().len()).max().unwrap_or(0);
+            let mut flat: Vec<u32> = Vec::with_capacity(len * max_len);
+            for seq in seqs.iter() {
+                let bt = seq.block_table();
+                flat.extend_from_slice(bt);
+                flat.extend(std::iter::repeat(0).take(max_len - bt.len()));
+            }
+            let block_tables_t = Tensor::from_vec(flat, (len, max_len), &self.device)?;
             let context_lens: Vec<u32> = seqs.iter().map(|seq| seq.len() as u32).collect();
             let context_lens = Tensor::from_vec(context_lens, seqs.len(), &self.device)?;
             (Some(block_tables_t), Some(context_lens))
@@ -1140,16 +1171,18 @@ impl ModelRunner {
             let mut indices = Vec::new();
             let mut last_len = Vec::new();
             for (seq, &num_tokens) in seqs.iter().zip(prefill_tokens.iter()) {
-                let effective_len = seq.num_cached_tokens + num_tokens;
-                let max_blocks = seq.block_table.len();
+                let num_cached = seq.num_cached_tokens();
+                let bt = seq.block_table();
+                let effective_len = num_cached + num_tokens;
+                let max_blocks = bt.len();
                 let num_blocks = if effective_len == 0 {
                     0
                 } else {
                     (effective_len + self.config.block_size - 1) / self.config.block_size
                 };
                 let num_blocks = std::cmp::min(num_blocks, max_blocks);
-                let bt = &seq.block_table[..num_blocks];
-                indices.extend(bt.iter().map(|&x| x as u32));
+                let bt_slice = &bt[..num_blocks];
+                indices.extend(bt_slice.iter().map(|&x| x as u32));
                 indptr.push(indices.len() as u32);
                 let last = if effective_len == 0 {
                     0
