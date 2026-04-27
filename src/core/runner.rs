@@ -789,9 +789,17 @@ impl ModelRunner {
                     );
                 }
                 #[cfg(feature = "codec-rkyv")]
-                Seqs::ArchivedSeqs(_) | Seqs::ArchivedDecodeSeqs(_) => {
+                Seqs::ArchivedSeqs(archived_vec) => {
+                    // Zero-copy prefill from a Myelon typed lease (RFC 0034 P2).
+                    // ArchivedVec<Sequence> derefs to &[ArchivedSequence];
+                    // we pass references so PrefillSeqLike::for(&ArchivedSequence) applies.
+                    let refs: Vec<&rkyv::Archived<Sequence>> = archived_vec.iter().collect();
+                    self.prepare_prefill_generic(&refs)?
+                }
+                #[cfg(feature = "codec-rkyv")]
+                Seqs::ArchivedDecodeSeqs(_) => {
                     candle_core::bail!(
-                        "Archived seqs must be materialised by runner.rs before run() — RFC 0034 P2 not yet implemented."
+                        "Decode sequences are not supported for prefill. Use ArchivedSeqs instead."
                     );
                 }
             }
@@ -801,8 +809,12 @@ impl ModelRunner {
                 Seqs::DecodeVec(decode_seqs) => self.prepare_decode(decode_seqs.iter())?,
                 #[cfg(feature = "codec-rkyv")]
                 Seqs::ArchivedSeqs(_) | Seqs::ArchivedDecodeSeqs(_) => {
+                    // Decode-side archived dispatch is RFC 0034 P2.4 (later).
+                    // The hot win is on prefill (largest payload); decode payloads
+                    // are smaller per request but more frequent. For now bail to
+                    // force the runner to use the owned path until we land it.
                     candle_core::bail!(
-                        "Archived seqs must be materialised by runner.rs before run() — RFC 0034 P2 not yet implemented."
+                        "Archived decode dispatch not yet implemented — runner.rs must materialise via to_owned() for decode."
                     );
                 }
             }
@@ -1465,12 +1477,16 @@ impl ModelRunner {
     }
 
     fn sample(&self, logits: &Tensor, seqs: Seqs, is_prefill: bool) -> Result<Vec<u32>> {
+        use crate::core::sequence::PrefillSeqLike;
         let seq_ids: Vec<usize> = match &seqs {
-            Seqs::SeqRefs(seqs) => seqs.iter().map(|s| s.id()).collect(),
+            // Disambiguate id() — both PrefillSeqLike and ToDecodeInput impl it for &Sequence
+            Seqs::SeqRefs(seqs) => seqs.iter().map(|s| ToDecodeInput::id(s)).collect(),
             Seqs::DecodeVec(v) => v.iter().map(|s| s.id()).collect(),
             #[cfg(feature = "codec-rkyv")]
-            Seqs::ArchivedSeqs(_) | Seqs::ArchivedDecodeSeqs(_) => unreachable!(
-                "Archived seqs must be materialised before sample() — RFC 0034 P2 not yet implemented"
+            Seqs::ArchivedSeqs(av) => av.iter().map(|s| PrefillSeqLike::id(&s)).collect(),
+            #[cfg(feature = "codec-rkyv")]
+            Seqs::ArchivedDecodeSeqs(_) => unreachable!(
+                "ArchivedDecodeSeqs path not yet implemented; runner.rs must materialise decode via to_owned()"
             ),
         };
 
@@ -1479,8 +1495,10 @@ impl ModelRunner {
             Seqs::SeqRefs(seqs) => seqs.len(),
             Seqs::DecodeVec(v) => v.len(),
             #[cfg(feature = "codec-rkyv")]
-            Seqs::ArchivedSeqs(_) | Seqs::ArchivedDecodeSeqs(_) => unreachable!(
-                "Archived seqs must be materialised before sample()"
+            Seqs::ArchivedSeqs(av) => av.len(),
+            #[cfg(feature = "codec-rkyv")]
+            Seqs::ArchivedDecodeSeqs(_) => unreachable!(
+                "ArchivedDecodeSeqs not yet implemented"
             ),
         };
 
