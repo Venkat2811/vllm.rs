@@ -997,6 +997,15 @@ pub struct Args {
     /// `thinking` / `enable_thinking`.
     #[arg(long, default_value_t = false)]
     pub disable_reasoning: bool,
+
+    /// Force the engine to spawn the runner as a separate subprocess
+    /// even on a single GPU. Without this, single-shard runs use
+    /// `RunnerType::Thread` (in-process); multi-shard runs use
+    /// subprocesses regardless. Useful for runtime/process isolation
+    /// experiments and for transports that require an out-of-process
+    /// runner to attach to.
+    #[arg(long, default_value_t = false)]
+    pub force_runner: bool,
 }
 
 /// Result of executing tool calls via MCP

@@ -184,6 +184,7 @@ async fn main() -> Result<()> {
         args.isq.clone(),
         Some(1),
         args.device_ids.clone(),
+        Some(args.force_runner),
         generation_cfg,
         args.seed,
         Some(prefix_cache),
