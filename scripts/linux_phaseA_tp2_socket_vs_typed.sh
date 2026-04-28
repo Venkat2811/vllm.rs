@@ -54,7 +54,7 @@ run_mode() {
         "${extra[@]}" > "$OUT_DIR/${label}_server.log" 2>&1 &
     local SRV_PID=$!
 
-    for i in $(seq 1 240); do
+    for i in $(seq 1 ${BOOT_TIMEOUT_S:-240}); do
         if curl -sf "http://127.0.0.1:$PORT/v1/models" >/dev/null 2>&1; then
             echo "  [$label] up after ${i}s"
             break
@@ -66,7 +66,7 @@ run_mode() {
         sleep 1
     done
     if ! curl -sf "http://127.0.0.1:$PORT/v1/models" >/dev/null 2>&1; then
-        echo "  [$label] ❌ did not come up in 240s"
+        echo "  [$label] ❌ did not come up"
         kill $SRV_PID 2>/dev/null
         return 1
     fi
