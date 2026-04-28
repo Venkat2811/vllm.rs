@@ -54,8 +54,20 @@ use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::task::JoinHandle;
+
+/// Process-wide Tokio runtime used to drive async work from the synchronous
+/// engine/scheduler/transfer paths. Worker threads use a 32 MB stack so the
+/// model-load + PD-init path (which can recurse deep through tensor allocation
+/// and PD handshake setup) does not overflow the default ~2 MB worker stack.
+///
+/// Without this, `--pd-server` / `--pd-client` on macOS aborts with
+/// `thread 'tokio-rt-worker' has overflowed its stack` before the model is
+/// served. The headroom is negligible against the heap budget of inference
+/// workloads (a few worker threads × 32 MB virtual = << GPU/CPU tensor memory),
+/// and is consistent with the pd-comm thread stack chosen in `transfer::mod`.
 pub static GLOBAL_RT: Lazy<Runtime> = Lazy::new(|| {
     tokio::runtime::Builder::new_multi_thread()
+        .thread_stack_size(32 * 1024 * 1024)
         .enable_all()
         .build()
         .expect("Failed to build global Tokio runtime")
