@@ -1,8 +1,14 @@
 //! Bidirectional Myelon-backed transport for PD KV-cache messages.
 //!
 //! Two named SHM rings per (rank, role) pair:
-//!   - `vllm-rs-pd-c2s-rank{N}` : client→server  (server consumes, client produces)
-//!   - `vllm-rs-pd-s2c-rank{N}` : server→client  (server produces, client consumes)
+//!   - `vrsc2s{N}` : client→server  (server consumes, client produces)
+//!   - `vrss2c{N}` : server→client  (server produces, client consumes)
+//!
+//! Names are intentionally short: macOS `PSHMNAMLEN` caps POSIX SHM names at
+//! 31 chars, and `disruptor-mp` appends derived suffixes (`_producer_seq` is
+//! 13 chars, `_cr` is 3) on top of whatever base we hand it. `myelon-playground`
+//! enforces a 14-char base via `validate_segment_name`, so we keep the prefix
+//! tiny (`vrs` = vllm-rs) and tag the role + rank in 7–9 chars total.
 //!
 //! `connect()` returns a `(MyelonReader, MyelonWriter)` pair that the
 //! `Communicator` stores under its existing reader/writer locks. The reader and
@@ -17,7 +23,10 @@
 use crate::transfer::PdRole;
 use anyhow::{Context, Result};
 use myelon_playground::{
-    transport::{FramedTransportConsumer, FramedTransportProducer, MyelonWaitStrategy},
+    transport::{
+        validate_segment_name, FramedTransportConsumer, FramedTransportProducer,
+        MyelonWaitStrategy,
+    },
     AlignedFixedFrame,
 };
 use std::io::{Read, Write};
@@ -47,11 +56,11 @@ const ATTACH_TIMEOUT: Duration = Duration::from_secs(120);
 pub type KvFrame = AlignedFixedFrame<KV_FRAME_DATA_BYTES>;
 
 fn c2s_ring_name(rank: usize) -> String {
-    format!("vllm-rs-pd-c2s-rank{rank}")
+    format!("vrsc2s{rank}")
 }
 
 fn s2c_ring_name(rank: usize) -> String {
-    format!("vllm-rs-pd-s2c-rank{rank}")
+    format!("vrss2c{rank}")
 }
 
 pub struct MyelonReader {
@@ -75,6 +84,14 @@ pub fn connect(role: &PdRole, rank: usize) -> Result<(MyelonReader, MyelonWriter
         PdRole::Server => (s2c_ring_name(rank), c2s_ring_name(rank)),
         PdRole::Client => (c2s_ring_name(rank), s2c_ring_name(rank)),
     };
+
+    // Catch any future regression to long names early — the macOS POSIX SHM
+    // limit otherwise surfaces as a confusing ENAMETOOLONG deep inside
+    // `shared_memory::shm_open`, where it's hard to attribute to PD naming.
+    validate_segment_name(&tx_name)
+        .with_context(|| format!("invalid pd ring name '{tx_name}'"))?;
+    validate_segment_name(&rx_name)
+        .with_context(|| format!("invalid pd ring name '{rx_name}'"))?;
 
     let tx = FramedTransportProducer::<KvFrame>::create(&tx_name, KV_RING_DEPTH)
         .with_context(|| format!("failed to create pd ring '{tx_name}'"))?;

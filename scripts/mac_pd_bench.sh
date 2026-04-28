@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
-# Mac M3 Max PD-mode bench: 20 sequential chat completions
-# socket vs Myelon-typed. KV transfer over TCP loopback (Mac POSIX SHM
-# 31-char name limit blocks myelon:// PD URL on macOS — Linux-only).
+# Mac M3 Max PD-mode bench: sequential chat completions across three transport
+# combinations.
+#
+#   pd_socket           : engine↔runner over UNIX socket  | KV over TCP loopback
+#   pd_myelon_typed     : engine↔runner over Myelon typed | KV over TCP loopback
+#   pd_myelon_typed_kv  : engine↔runner over Myelon typed | KV over Myelon SHM
+#
+# The third cell exercises the full Myelon stack on macOS. It depends on the
+# myelon_chan.rs PD ring naming fix that brings c2s/s2c segment names under the
+# macOS PSHMNAMLEN (31-char) budget — historical names like
+# `vllm-rs-pd-c2s-rank0` blew past that limit and surfaced as ENAMETOOLONG
+# inside `shm_open`.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -29,18 +38,18 @@ echo "Artifacts: $OUT_DIR"
 echo ""
 
 run_pd() {
-    local label="$1"; shift
+    local label="$1" pd_url="$2"; shift 2
     local extra=("$@")
     pkill -f "vllm-rs --pd-" 2>/dev/null || true
     sleep 1
 
     "$BIN" --pd-server --port $HTTP_S --m $MODEL --d 0 \
-        --max-model-len 1024 --pd-url tcp://127.0.0.1:$PD_PORT \
+        --max-model-len 1024 --pd-url "$pd_url" \
         "${extra[@]}" > "$OUT_DIR/${label}_server.log" 2>&1 &
     SERVER_PID=$!
 
     "$BIN" --server --pd-client --port $HTTP_C --m $MODEL --d 0 \
-        --max-model-len 1024 --pd-url tcp://127.0.0.1:$PD_PORT \
+        --max-model-len 1024 --pd-url "$pd_url" \
         "${extra[@]}" > "$OUT_DIR/${label}_client.log" 2>&1 &
     CLIENT_PID=$!
 
@@ -105,33 +114,58 @@ EOF
     sleep 1
 }
 
-# Apples-to-apples: both modes use --force-runner so both spawn
-# subprocess runners. Only the engine↔runner IPC transport differs.
-# Without --force-runner on the socket side, the engine runs in-process
+# Apples-to-apples: all modes use --force-runner so all spawn subprocess
+# runners. Without --force-runner on the socket side the engine runs in-process
 # and we'd be measuring "in-process exec vs subprocess+Myelon" instead.
-echo "── pd_socket ──"
-run_pd "pd_socket" --force-runner
+#
+# Cells differ along two orthogonal axes:
+#   1. engine↔runner IPC: socket / Myelon-typed
+#   2. server↔client KV transfer: tcp loopback / Myelon SHM rings
+echo "── pd_socket (engine↔runner=socket, KV=tcp) ──"
+run_pd "pd_socket" "tcp://127.0.0.1:$PD_PORT" --force-runner
 echo ""
-echo "── pd_myelon_typed ──"
-run_pd "pd_myelon_typed" --force-runner --myelon-ipc --myelon-access-mode typed
+echo "── pd_myelon_typed (engine↔runner=Myelon, KV=tcp) ──"
+run_pd "pd_myelon_typed" "tcp://127.0.0.1:$PD_PORT" \
+    --force-runner --myelon-ipc --myelon-access-mode typed
+echo ""
+echo "── pd_myelon_typed_kv (engine↔runner=Myelon, KV=Myelon SHM) ──"
+run_pd "pd_myelon_typed_kv" "myelon://default" \
+    --force-runner --myelon-ipc --myelon-access-mode typed
 
 echo ""
-echo "── Δ (typed vs socket, end-to-end latency) ──"
+echo "── Δ (vs socket baseline, end-to-end latency) ──"
 python3 - <<EOF
-import re
+import os, re
 
 def parse(path):
+    if not os.path.exists(path):
+        return None
     text = open(path).read()
-    return {
-        "p50": float(re.search(r"p50: ([\d.]+) ms", text).group(1)),
-        "p90": float(re.search(r"p90: ([\d.]+) ms", text).group(1)),
-        "p99": float(re.search(r"p99: ([\d.]+) ms", text).group(1)),
-        "mean": float(re.search(r"mean: ([\d.]+) ms", text).group(1)),
-    }
+    try:
+        return {
+            "p50":  float(re.search(r"p50: ([\d.]+) ms",  text).group(1)),
+            "p90":  float(re.search(r"p90: ([\d.]+) ms",  text).group(1)),
+            "p99":  float(re.search(r"p99: ([\d.]+) ms",  text).group(1)),
+            "mean": float(re.search(r"mean: ([\d.]+) ms", text).group(1)),
+        }
+    except AttributeError:
+        return None
 
+cells = [
+    ("typed",    "$OUT_DIR/pd_myelon_typed_lats.txt"),
+    ("typed_kv", "$OUT_DIR/pd_myelon_typed_kv_lats.txt"),
+]
 s = parse("$OUT_DIR/pd_socket_lats.txt")
-t = parse("$OUT_DIR/pd_myelon_typed_lats.txt")
-for k in ("p50", "p90", "p99", "mean"):
-    d = (t[k] - s[k]) / s[k] * 100
-    print(f"  {k}: socket={s[k]:.1f}ms  typed={t[k]:.1f}ms  Δ={d:+.1f}%")
+if s is None:
+    print("  (socket baseline missing; skipping deltas)")
+else:
+    for label, path in cells:
+        c = parse(path)
+        if c is None:
+            print(f"  {label}: (missing — cell may have failed)")
+            continue
+        for k in ("p50", "p90", "p99", "mean"):
+            d = (c[k] - s[k]) / s[k] * 100
+            print(f"  {label} {k}: socket={s[k]:.1f}ms  {label}={c[k]:.1f}ms  Δ={d:+.1f}%")
+        print()
 EOF
