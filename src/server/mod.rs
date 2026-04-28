@@ -920,8 +920,9 @@ pub struct Args {
     #[arg(long, default_value = "shm", value_parser = ["shm", "mmap"])]
     pub myelon_backend: String,
 
-    /// Myelon receive mode. `typed` switches to the typed transport path.
-    #[arg(long, default_value = "owned", value_parser = ["owned", "borrowed", "typed"])]
+    /// Myelon receive mode. `typed` switches to the typed transport path
+    /// (zero-copy via rkyv); `owned` is the default fallback.
+    #[arg(long, default_value = "owned", value_parser = ["owned", "typed"])]
     pub myelon_access_mode: String,
 
     #[arg(long, default_value_t = false)]
@@ -2034,7 +2035,7 @@ mod tests {
             "--myelon-backend",
             "mmap",
             "--myelon-access-mode",
-            "borrowed",
+            "typed",
         ])
         .expect("topology flags should parse");
 
@@ -2046,7 +2047,7 @@ mod tests {
         assert_eq!(args.myelon_response_depth, Some(32));
         assert!(args.myelon_busy_spin);
         assert_eq!(args.myelon_backend, "mmap");
-        assert_eq!(args.myelon_access_mode, "borrowed");
+        assert_eq!(args.myelon_access_mode, "typed");
     }
 
     #[test]

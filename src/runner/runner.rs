@@ -712,15 +712,6 @@ fn main() -> anyhow::Result<()> {
                         continue;
                     }
                 },
-                MyelonTransportAccessMode::Borrowed => match rpc_consumer
-                    .recv_request_blocking_borrowed()
-                {
-                    Ok(p) => Some(p),
-                    Err(error) => {
-                        response_producer.send_error(error, 0);
-                        continue;
-                    }
-                },
                 MyelonTransportAccessMode::Typed => {
                     #[cfg(feature = "codec-rkyv")]
                     {

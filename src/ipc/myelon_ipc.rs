@@ -93,7 +93,6 @@ fn msg_kind_name(kind: MsgKind) -> &'static str {
 fn access_mode_name(mode: MyelonTransportAccessMode) -> &'static str {
     match mode {
         MyelonTransportAccessMode::Owned => "owned",
-        MyelonTransportAccessMode::Borrowed => "borrowed",
         MyelonTransportAccessMode::Typed => "typed",
     }
 }
@@ -184,7 +183,6 @@ impl MyelonTransportBackend {
 #[serde(rename_all = "snake_case")]
 pub enum MyelonTransportAccessMode {
     Owned,
-    Borrowed,
     Typed,
 }
 
@@ -192,7 +190,6 @@ impl MyelonTransportAccessMode {
     pub fn parse(value: Option<&str>) -> CandleResult<Self> {
         match value.unwrap_or("owned") {
             "owned" => Ok(Self::Owned),
-            "borrowed" => Ok(Self::Borrowed),
             "typed" => Ok(Self::Typed),
             other => candle_core::bail!("unsupported myelon_access_mode '{other}'"),
         }
@@ -673,29 +670,6 @@ impl RpcBroadcastConsumer {
         }
     }
 
-    pub fn recv_request_blocking_borrowed(&mut self) -> CandleResult<(u64, MyelonRequest)> {
-        match self {
-            Self::ShmFramed { inner, reassembly } => {
-                inner.recv_message_blocking_leased(reassembly, |kind, payload| {
-                    let (id, body) = split_request_id(payload)?;
-                    let request = MyelonRequest::decode(kind, body)?;
-                    Ok((id, request))
-                })
-            }
-            Self::MmapFramed { inner, reassembly } => {
-                inner.recv_message_blocking_leased(reassembly, |kind, payload| {
-                    let (id, body) = split_request_id(payload)?;
-                    let request = MyelonRequest::decode(kind, body)?;
-                    Ok((id, request))
-                })
-            }
-            Self::ShmTyped { .. } | Self::MmapTyped { .. } => {
-                candle_core::bail!(
-                    "typed request transport does not support framed borrowed decode"
-                )
-            }
-        }
-    }
 }
 
 pub enum ResponseProducer {
@@ -1048,61 +1022,6 @@ impl ResponseConsumer {
         }
     }
 
-    pub(crate) fn recv_response_blocking_borrowed(
-        &mut self,
-    ) -> CandleResult<(ResponseRecvStats, MyelonResponse)> {
-        match self {
-            Self::ShmFramed { inner, reassembly } => {
-                let t_collect = Instant::now();
-                let (mut stats, response) =
-                    inner.recv_message_blocking_leased(reassembly, |kind, payload| {
-                        let payload_bytes = payload.len();
-                        let t_decode = Instant::now();
-                        let (id, body) = split_request_id(payload)?;
-                        let response = MyelonResponse::decode(kind, body)?;
-                        Ok::<(ResponseRecvStats, MyelonResponse), candle_core::Error>((
-                            ResponseRecvStats {
-                                request_id: id,
-                                payload_bytes,
-                                collect_ns: 0,
-                                decode_ns: t_decode.elapsed().as_nanos(),
-                            },
-                            response,
-                        ))
-                    })?;
-                let total_ns = t_collect.elapsed().as_nanos();
-                stats.collect_ns = total_ns.saturating_sub(stats.decode_ns);
-                Ok((stats, response))
-            }
-            Self::MmapFramed { inner, reassembly } => {
-                let t_collect = Instant::now();
-                let (mut stats, response) =
-                    inner.recv_message_blocking_leased(reassembly, |kind, payload| {
-                        let payload_bytes = payload.len();
-                        let t_decode = Instant::now();
-                        let (id, body) = split_request_id(payload)?;
-                        let response = MyelonResponse::decode(kind, body)?;
-                        Ok::<(ResponseRecvStats, MyelonResponse), candle_core::Error>((
-                            ResponseRecvStats {
-                                request_id: id,
-                                payload_bytes,
-                                collect_ns: 0,
-                                decode_ns: t_decode.elapsed().as_nanos(),
-                            },
-                            response,
-                        ))
-                    })?;
-                let total_ns = t_collect.elapsed().as_nanos();
-                stats.collect_ns = total_ns.saturating_sub(stats.decode_ns);
-                Ok((stats, response))
-            }
-            Self::ShmTyped { .. } | Self::MmapTyped { .. } => {
-                candle_core::bail!(
-                    "typed response transport does not support framed borrowed decode"
-                )
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -1726,7 +1645,6 @@ impl MyelonEngineTransport {
         for (rank, consumer) in self.response_consumers.iter_mut().enumerate() {
             let recv: CandleResult<(ResponseRecvStats, MyelonResponse)> = match self.access_mode {
                 MyelonTransportAccessMode::Owned => consumer.recv_response_blocking_owned(),
-                MyelonTransportAccessMode::Borrowed => consumer.recv_response_blocking_borrowed(),
                 MyelonTransportAccessMode::Typed => consumer.recv_response_blocking_typed(),
             };
             let (recv_stats, response) = match recv {
@@ -1841,7 +1759,6 @@ impl MyelonEngineTransport {
             .ok_or_else(|| candle_core::Error::Msg("missing Myelon runner response".to_string()))?;
         let (recv_stats, response) = match self.access_mode {
             MyelonTransportAccessMode::Owned => consumer.recv_response_blocking_owned()?,
-            MyelonTransportAccessMode::Borrowed => consumer.recv_response_blocking_borrowed()?,
             MyelonTransportAccessMode::Typed => consumer.recv_response_blocking_typed()?,
         };
         let response_id = recv_stats.request_id;
