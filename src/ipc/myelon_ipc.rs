@@ -1308,7 +1308,7 @@ pub enum MyelonResponse {
     ReceivePrefillResponse((bool, Option<Sequence>)),
     CheckPrefillStatusResponse(bool),
     KvCacheSendResponse(bool),
-    KvCacheReceiveResponse((bool, u32, usize)),
+    KvCacheReceiveResponse((bool, u32, usize, usize)),
     KvCacheReleaseResponse(bool),
     CheckKvCacheReleaseResponse(bool),
     KvCacheSwapResponse(bool),
@@ -1624,7 +1624,10 @@ impl MyelonEngineTransport {
         )
     }
 
-    pub fn receive_kvcache(&mut self, sequence: &Sequence) -> CandleResult<(bool, u32, usize)> {
+    pub fn receive_kvcache(
+        &mut self,
+        sequence: &Sequence,
+    ) -> CandleResult<(bool, u32, usize, usize)> {
         self.publish_and_collect_value(
             &MyelonRequest::KvCacheReceive {
                 sequence: sequence.clone(),

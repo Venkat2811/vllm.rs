@@ -190,7 +190,7 @@ pub fn decode_response(kind: u8, payload: &[u8]) -> CandleResult<MyelonResponse>
             decode_owned!(bool, payload),
         )),
         MsgKind::KvCacheReceiveResponse => Ok(MyelonResponse::KvCacheReceiveResponse(
-            decode_owned!((bool, u32, usize), payload),
+            decode_owned!((bool, u32, usize, usize), payload),
         )),
         MsgKind::KvCacheReleaseResponse => Ok(MyelonResponse::KvCacheReleaseResponse(
             decode_owned!(bool, payload),
