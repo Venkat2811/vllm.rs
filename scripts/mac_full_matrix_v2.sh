@@ -223,16 +223,29 @@ echo "server port: $HTTP_PORT"
 echo ""
 
 # Pull a bunch of prompts for the concurrency sweep (open-loop client
-# rotates through them).
+# rotates through them). PHASE2_CTX selects the bucket: 1k / 2k for the
+# H200-shipped buckets, or 4096 / 8192 / 16384 for our local long-ctx
+# buckets. Default 1k preserves prior brink-v3 behavior.
+PHASE2_CTX=${PHASE2_CTX:-1k}
+case "$PHASE2_CTX" in
+    1k|1024)  PHASE2_BUCKET="$DATASET_DIR/sharegpt_1k.jsonl"; PHASE2_MIN=900;  PHASE2_MAX=1100 ;;
+    2k|2048)  PHASE2_BUCKET="$DATASET_DIR/sharegpt_2k.jsonl"; PHASE2_MIN=1900; PHASE2_MAX=2700 ;;
+    4096)     PHASE2_BUCKET="$ROOT/scripts/long_ctx_buckets/sharegpt_4096.jsonl"; PHASE2_MIN=3500; PHASE2_MAX=5500 ;;
+    8192)     PHASE2_BUCKET="$ROOT/scripts/long_ctx_buckets/sharegpt_8192.jsonl"; PHASE2_MIN=7000; PHASE2_MAX=10000 ;;
+    16384)    PHASE2_BUCKET="$ROOT/scripts/long_ctx_buckets/sharegpt_16384.jsonl"; PHASE2_MIN=14000; PHASE2_MAX=18000 ;;
+    *) echo "ERROR: unknown PHASE2_CTX=$PHASE2_CTX (expected 1k|2k|4096|8192|16384)" >&2; exit 1 ;;
+esac
+echo "  phase2 ctx bucket: $PHASE2_BUCKET (range $PHASE2_MIN..$PHASE2_MAX)"
+
 python3 - <<EOF > "$OUT_DIR/phase2_server/prompts.json"
 import json, random
 random.seed(42)
 prompts = []
-with open("$DATASET_DIR/sharegpt_1k.jsonl") as f:
+with open("$PHASE2_BUCKET") as f:
     for line in f:
         if not line.strip(): continue
         d = json.loads(line)
-        if 900 <= d.get("input_tokens", 0) <= 1100:
+        if $PHASE2_MIN <= d.get("input_tokens", 0) <= $PHASE2_MAX:
             prompts.append(d["prompt"])
         if len(prompts) >= 100: break
 random.shuffle(prompts)

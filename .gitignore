@@ -13,3 +13,12 @@ CLAUDE.md
 test_model.py
 __pycache__/
 *.py[cod]
+
+# Bench result directories (timestamped runtime outputs)
+scripts/mac_*_20*/
+scripts/mac_p2_*_20*/
+scripts/mac_mmap_probe_*/
+scripts/mac_multiturn_*/
+
+# Long-context bench buckets (large; regenerated via build_long_context_buckets.py)
+scripts/long_ctx_buckets/
