@@ -11,46 +11,67 @@
 //!   [`KvbmHandle::restore_from_s3`] to rehydrate foyer from MinIO/S3.
 //! - PD producer: [`stash_finished_prefill`] is called from
 //!   `transfer/mod.rs` right after `FinishedPrefillData` is constructed.
-//!   The handle bincode-serializes the payload and best-effort PUTs it
-//!   through foyer + S3.
-//! - PD consumer: [`load_finished_prefill`] is intended for the decode
-//!   side to short-circuit a network transfer when the same KV is already
-//!   resident locally (e.g. after a restart). Wiring is deferred.
+//!   The handle frames the layer_data with `tp_node::kv_frame::encode`
+//!   (replaces the previous bincode path) and best-effort PUTs through
+//!   foyer + S3, keyed by both `seq-{seq_id}` AND a stable
+//!   `prefix-{blake3}` content hash so restart-from-S3 can dedupe.
+//! - PD consumer: [`load_finished_prefill`] / [`load_by_prefix_hash`]
+//!   are intended for the decode side to short-circuit a network transfer
+//!   when the same KV is already resident locally. Wiring of the actual
+//!   GPU-side replay path is deferred — the keys are present and the
+//!   data round-trips with byte fidelity.
 //!
 //! # Failure mode
 //!
 //! All public entry points are best-effort: any failure to reach the cache
 //! is logged with `tracing::warn` and the engine proceeds as if the
-//! tensorpuffer backend were absent. There is **no** code path where the
-//! engine returns an error to the caller because tensorpuffer is unhappy.
+//! tensorpuffer backend were absent.
 
 use std::sync::Arc;
 
-use bincode;
 use bytes::Bytes;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
-use serde::{Deserialize, Serialize};
 
 use tp_node::embed::{EmbedConfig, GetOutcome, HitTier, TensorpufferKvStore};
+use tp_node::embed_metrics::metrics;
 use tp_node::foyer_cache::FoyerCacheConfig;
+use tp_node::kv_frame;
 use tp_store::wal_store::{S3ObjectStore, S3ObjectStoreConfig};
 
-/// Reuse the same disk root as tp-foyer-kv for symmetry with tensorpuffer
-/// tooling.
 const DEFAULT_FOYER_DIR: &str = "/tmp/tpuf-foyer";
 const DEFAULT_S3_PREFIX: &str = "kv/vllm-rs";
 
-/// Simplified mirror of `crate::transfer::FinishedPrefillData` used for
-/// bincode round-trips. Only the bytes-only `RemoteTcp` variant is
-/// supported — `LocalIpc` cannot be persisted across processes anyway.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Decoded prefill payload. Mirrors the data carried by
+/// `crate::transfer::FinishedPrefillData::RemoteTcp` so the decode side
+/// can synthesize an equivalent message after a restart.
+#[derive(Debug, Clone)]
 pub struct StashedPrefill {
-    pub seq_id: usize,
+    pub seq_id: u64,
     pub first_token: u32,
     pub layer_data: Vec<(Vec<u8>, Vec<u8>)>,
-    pub num_blocks: usize,
-    pub num_cached_tokens: usize,
+    pub num_blocks: u32,
+    pub num_cached_tokens: u32,
+}
+
+/// Compute the stable content hash of a prefill prefix. Two requests with
+/// the same `(model_id, token_ids)` produce the same hash regardless of
+/// when they ran.
+#[must_use]
+pub fn content_hash_for_prefix(model_id: &str, token_ids: &[u32]) -> String {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(b"tpuf-kvbm-v1\0");
+    hasher.update(model_id.as_bytes());
+    hasher.update(b"\0");
+    let n = u32::try_from(token_ids.len()).unwrap_or(u32::MAX);
+    hasher.update(&n.to_le_bytes());
+    // Tokens are u32; copy into a tightly-packed byte buffer.
+    let mut buf = Vec::with_capacity(token_ids.len() * 4);
+    for tok in token_ids {
+        buf.extend_from_slice(&tok.to_le_bytes());
+    }
+    hasher.update(&buf);
+    hasher.finalize().to_hex().to_string()
 }
 
 /// Shared handle to the tensorpuffer KV store. Created once at engine
@@ -63,27 +84,17 @@ pub struct KvbmHandle {
 
 static GLOBAL: OnceCell<Option<KvbmHandle>> = OnceCell::new();
 
-/// Look up the global handle. Returns `None` if `init_from_env` was not
-/// called or returned `None`.
 pub fn handle() -> Option<KvbmHandle> {
     GLOBAL.get().and_then(|opt| opt.clone())
 }
 
-/// Initialize the global handle from environment variables. Must be
-/// called once at engine startup. Subsequent calls are no-ops and return
-/// the previously-installed value.
+/// Initialize the global handle from environment variables.
 ///
-/// Required environment:
-///   TPUF_S3_ENDPOINT, TPUF_BUCKET, TPUF_S3_ACCESS_KEY, TPUF_S3_SECRET_KEY
+/// Required: TPUF_S3_ENDPOINT, TPUF_BUCKET, TPUF_S3_ACCESS_KEY,
+/// TPUF_S3_SECRET_KEY.
 ///
-/// Optional environment:
-///   TPUF_KVBM_ENABLE                (default false; "1" / "true" to enable)
-///   TPUF_KVBM_NAMESPACE             (default "default")
-///   TPUF_FOYER_RAM_BYTES            (default 1 GiB)
-///   TPUF_FOYER_SSD_DIR              (default /tmp/tpuf-foyer)
-///   TPUF_FOYER_SSD_BYTES            (default 8 GiB)
-///   TPUF_FOYER_BLOCK_SIZE_BYTES     (default 64 MiB)
-///   TPUF_KVBM_RESTORE_ON_START      (default "1"; "0" to skip)
+/// Optional: TPUF_KVBM_ENABLE, TPUF_KVBM_NAMESPACE, TPUF_FOYER_*,
+/// TPUF_KVBM_RESTORE_ON_START, TPUF_KVBM_S3_PREFIX.
 pub fn init_from_env() -> Option<KvbmHandle> {
     if let Some(installed) = GLOBAL.get() {
         return installed.clone();
@@ -98,12 +109,10 @@ pub fn init_from_env() -> Option<KvbmHandle> {
         return None;
     }
 
-    // foyer + rust-s3 both spin up their own tokio runtimes and call
-    // `block_on` internally. If we initialize them from inside the engine's
-    // `#[tokio::main]` runtime we get
-    //   "Cannot start a runtime from within a runtime."
-    // Run the entire init on a dedicated OS thread so foyer's runtime is
-    // not nested inside the engine's runtime.
+    // foyer + rust-s3 each spin up tokio runtimes and call block_on
+    // internally; if we initialize them from inside the engine's
+    // #[tokio::main] runtime we panic with "Cannot start a runtime from
+    // within a runtime." Run the entire init off-runtime.
     let outcome = std::thread::Builder::new()
         .name("tpuf-kvbm-init".to_string())
         .spawn(try_init)
@@ -210,14 +219,14 @@ fn env_flag(name: &str, default_on: bool) -> bool {
     }
 }
 
-fn cache_key(seq_id: usize) -> String {
+fn seq_key(seq_id: u64) -> String {
     format!("seq-{seq_id:016x}")
 }
 
-/// Run a closure on a dedicated OS thread so foyer / rust-s3's internal
-/// `block_on` calls don't nest inside the engine's `#[tokio::main]`
-/// runtime. Returns the closure's return value or `None` if the thread
-/// panicked.
+fn prefix_key(content_hash_hex: &str) -> String {
+    format!("prefix-{content_hash_hex}")
+}
+
 fn run_off_runtime<R, F>(f: F) -> Option<R>
 where
     R: Send + 'static,
@@ -231,28 +240,27 @@ where
 }
 
 impl KvbmHandle {
-    /// Stash a finished prefill payload through both tiers. Returns false
-    /// if the put failed; the caller should treat this as a hint, not an
-    /// error. Runs on a dedicated OS thread to avoid nesting foyer's
-    /// internal runtime inside a tokio worker.
-    pub fn stash(&self, payload: &StashedPrefill) -> bool {
-        let bytes = match bincode::serialize(payload) {
-            Ok(value) => Bytes::from(value),
-            Err(err) => {
-                tracing::warn!(
-                    target: "tensorpuffer",
-                    "stash bincode failed for seq {}: {err}", payload.seq_id
-                );
-                return false;
-            }
-        };
-        let key = cache_key(payload.seq_id);
+    /// Stash a finished prefill payload through both tiers under both a
+    /// per-seq key and a stable content-hash key.
+    pub fn stash(&self, payload: &StashedPrefill, content_hash_hex: Option<&str>) -> bool {
+        // Encode once with kv_frame (replaces bincode).
+        let encoded = kv_frame::encode(
+            payload.seq_id,
+            payload.first_token,
+            payload.num_blocks,
+            payload.num_cached_tokens,
+            &payload.layer_data,
+        );
+        let bytes = Bytes::from(encoded);
         let inner = self.inner.clone();
         let namespace = self.namespace.clone();
         let seq_id = payload.seq_id;
+        let seq_k = seq_key(seq_id);
+        let prefix_k = content_hash_hex.map(prefix_key);
+
         run_off_runtime(move || {
             let store = inner.read();
-            match store.put_kv(&namespace, &key, bytes) {
+            let mut ok = match store.put_kv(&namespace, &seq_k, bytes.clone()) {
                 Ok(()) => true,
                 Err(err) => {
                     tracing::warn!(
@@ -261,14 +269,32 @@ impl KvbmHandle {
                     );
                     false
                 }
+            };
+            if let Some(prefix_k) = prefix_k {
+                if let Err(err) = store.put_kv(&namespace, &prefix_k, bytes.clone()) {
+                    tracing::warn!(
+                        target: "tensorpuffer",
+                        "stash put_kv (prefix) failed for seq {seq_id}: {err}"
+                    );
+                    ok = false;
+                }
             }
+            ok
         })
         .unwrap_or(false)
     }
 
-    /// Best-effort load of a previously-stashed prefill payload by seq_id.
-    pub fn load(&self, seq_id: usize) -> Option<StashedPrefill> {
-        let key = cache_key(seq_id);
+    /// Best-effort load by seq_id (engine-internal identifier).
+    pub fn load_by_seq_id(&self, seq_id: u64) -> Option<StashedPrefill> {
+        self.load_by_key(seq_key(seq_id))
+    }
+
+    /// Best-effort load by content hash (stable across runs).
+    pub fn load_by_prefix_hash(&self, content_hash_hex: &str) -> Option<StashedPrefill> {
+        self.load_by_key(prefix_key(content_hash_hex))
+    }
+
+    fn load_by_key(&self, key: String) -> Option<StashedPrefill> {
         let inner = self.inner.clone();
         let namespace = self.namespace.clone();
         let bytes = run_off_runtime(move || {
@@ -281,7 +307,7 @@ impl KvbmHandle {
                     };
                     tracing::debug!(
                         target: "tensorpuffer",
-                        "load hit for seq {seq_id} from {tier_label} ({} bytes)",
+                        "load hit for {key} from {tier_label} ({} bytes)",
                         payload.len()
                     );
                     Some(payload)
@@ -290,7 +316,7 @@ impl KvbmHandle {
                 Err(err) => {
                     tracing::warn!(
                         target: "tensorpuffer",
-                        "load get_kv failed for seq {seq_id}: {err}"
+                        "load get_kv failed for {key}: {err}"
                     );
                     None
                 }
@@ -298,21 +324,26 @@ impl KvbmHandle {
         })
         .flatten()?;
 
-        match bincode::deserialize::<StashedPrefill>(&bytes) {
-            Ok(value) => Some(value),
+        let view = match kv_frame::decode_owned(&bytes) {
+            Ok(v) => v,
             Err(err) => {
                 tracing::warn!(
                     target: "tensorpuffer",
-                    "load bincode failed for seq {seq_id}: {err}"
+                    "load kv_frame::decode_owned failed: {err}"
                 );
-                None
+                return None;
             }
-        }
+        };
+        let (seq_id, _num_layers, num_blocks, first_token, num_cached_tokens, layer_data) = view;
+        Some(StashedPrefill {
+            seq_id,
+            first_token,
+            layer_data,
+            num_blocks,
+            num_cached_tokens,
+        })
     }
 
-    /// Restore foyer state from S3 for the configured namespace. Called
-    /// once at engine startup when `TPUF_KVBM_RESTORE_ON_START` is set.
-    /// Runs on a dedicated OS thread for the same reason as `stash`.
     pub fn restore_from_s3(&self) -> Result<usize, String> {
         let inner = self.inner.clone();
         let namespace = self.namespace.clone();
@@ -326,15 +357,14 @@ impl KvbmHandle {
     }
 }
 
-/// Convenience entry point used by `transfer/mod.rs`. Mirrors the shape of
-/// `FinishedPrefillData` but flattens to `StashedPrefill` to keep the
-/// crate boundary clean.
+/// Convenience entry point used by `transfer/mod.rs`.
 pub fn stash_finished_prefill(
-    seq_id: usize,
+    seq_id: u64,
     first_token: u32,
     layer_data: &[(Vec<u8>, Vec<u8>)],
-    num_blocks: usize,
-    num_cached_tokens: usize,
+    num_blocks: u32,
+    num_cached_tokens: u32,
+    content_hash_hex: Option<&str>,
 ) -> bool {
     let Some(handle) = handle() else {
         return false;
@@ -346,13 +376,49 @@ pub fn stash_finished_prefill(
         num_blocks,
         num_cached_tokens,
     };
-    handle.stash(&payload)
+    handle.stash(&payload, content_hash_hex)
 }
 
-/// Convenience entry point for the consumer side. Returns the previously
-/// stashed payload, or None if no entry exists / the global handle is
-/// uninitialized.
-pub fn load_finished_prefill(seq_id: usize) -> Option<StashedPrefill> {
-    handle()?.load(seq_id)
+pub fn load_finished_prefill(seq_id: u64) -> Option<StashedPrefill> {
+    handle()?.load_by_seq_id(seq_id)
 }
 
+pub fn load_finished_prefill_by_prefix(content_hash_hex: &str) -> Option<StashedPrefill> {
+    handle()?.load_by_prefix_hash(content_hash_hex)
+}
+
+/// Render the process-global metrics as one JSON object per op.
+#[must_use]
+pub fn metrics_report() -> String {
+    metrics().to_json_lines()
+}
+
+/// Spawn a background thread that periodically logs the metrics report
+/// (every `period_ms`). Idempotent — only the first call wins.
+pub fn start_metrics_emitter(period_ms: u64) {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static STARTED: AtomicBool = AtomicBool::new(false);
+    if STARTED.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let period = std::time::Duration::from_millis(period_ms.max(100));
+    std::thread::Builder::new()
+        .name("tpuf-metrics-emitter".to_string())
+        .spawn(move || loop {
+            std::thread::sleep(period);
+            let report = metrics().to_json_lines();
+            if !report.trim().is_empty() {
+                for line in report.lines() {
+                    println!("[MyelonInstr] {line}");
+                }
+            }
+        })
+        .ok();
+}
+
+/// Bytes encoded for a given layer_data, exposed for callers that want
+/// to size buffers without actually allocating.
+#[must_use]
+pub fn encoded_size(layers: &[(Vec<u8>, Vec<u8>)]) -> usize {
+    kv_frame::encoded_size(layers)
+}

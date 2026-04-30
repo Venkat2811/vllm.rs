@@ -79,6 +79,7 @@ flatbuffers = { version = "24.12", optional = true }
 tp-node = { path = "../tensorpuffer/crates/tp-node", optional = true }
 tp-store = { path = "../tensorpuffer/crates/tp-store", optional = true }
 bytes = { version = "1", optional = true }
+blake3 = { version = "1", optional = true }
 
 [lib]
 name = "vllm_rs"
@@ -98,7 +99,7 @@ nvtx = ["dep:nvtx"]
 myelon = ["dep:myelon-playground"]
 codec-rkyv = ["myelon", "myelon-playground/rkyv", "dep:rkyv"]
 codec-flatbuf = ["myelon", "myelon-playground/flatbuffers", "dep:flatbuffers"]
-tensorpuffer = ["dep:tp-node", "dep:tp-store", "dep:bytes"]
+tensorpuffer = ["dep:tp-node", "dep:tp-store", "dep:bytes", "dep:blake3"]
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

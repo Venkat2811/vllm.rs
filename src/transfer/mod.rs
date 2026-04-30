@@ -504,16 +504,27 @@ impl Transfer {
                     // Best-effort: stash a copy through the embeddable
                     // tensorpuffer KV store (foyer + S3) so the same
                     // payload survives a process restart and is reusable
-                    // by other decode pods. No-op when feature is off
-                    // or TPUF_KVBM_ENABLE != 1.
+                    // by other decode pods. Indexed by both `seq-{id}`
+                    // (engine-internal) and `prefix-{blake3}` (stable
+                    // across runs). No-op when feature is off or
+                    // TPUF_KVBM_ENABLE != 1.
                     #[cfg(feature = "tensorpuffer")]
                     {
+                        let prefix_hash = crate::tensorpuffer_kvbm::content_hash_for_prefix(
+                            "vllm-rs",
+                            &seq.token_ids,
+                        );
+                        let layers = layer_data.len();
+                        let blocks = seq.block_table.len();
+                        let bytes_estimate =
+                            crate::tensorpuffer_kvbm::encoded_size(&layer_data);
                         let stashed = crate::tensorpuffer_kvbm::stash_finished_prefill(
-                            seq.id,
+                            seq.id as u64,
                             first_token,
                             &layer_data,
-                            seq.block_table.len(),
-                            seq.num_cached_tokens,
+                            blocks as u32,
+                            seq.num_cached_tokens as u32,
+                            Some(&prefix_hash),
                         );
                         if instrument {
                             println!(
@@ -523,8 +534,10 @@ impl Transfer {
                                     "op": "stash_finished_prefill",
                                     "seq_id": seq.id,
                                     "stashed": stashed,
-                                    "layers": layer_data.len(),
-                                    "blocks": seq.block_table.len(),
+                                    "layers": layers,
+                                    "blocks": blocks,
+                                    "encoded_bytes": bytes_estimate,
+                                    "prefix_hash": prefix_hash,
                                 })
                             );
                         }

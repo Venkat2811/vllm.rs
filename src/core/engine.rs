@@ -131,7 +131,13 @@ impl LLMEngine {
         // TPUF_KVBM_ENABLE != 1.
         #[cfg(feature = "tensorpuffer")]
         {
-            let _ = crate::tensorpuffer_kvbm::init_from_env();
+            if crate::tensorpuffer_kvbm::init_from_env().is_some() {
+                let period_ms = std::env::var("TPUF_KVBM_METRICS_PERIOD_MS")
+                    .ok()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(2000);
+                crate::tensorpuffer_kvbm::start_metrics_emitter(period_ms);
+            }
         }
 
         let (model_pathes, is_gguf, mut config, config_tokenizer, tokenizer, mut generation_cfg) =
