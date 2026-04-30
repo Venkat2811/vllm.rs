@@ -27,15 +27,19 @@ use vllm_rs::utils::heartbeat::heartbeat_worker;
 use vllm_rs::utils::new_device;
 use vllm_rs::utils::progress::{ProgressLike, ProgressReporter, RemoteProgressReporter};
 
-/// Stash a sequence's freshly-computed prefill KV through tensorpuffer.
-/// Mirrors the GPU→CPU copy + bytes serialization that
+/// Stash a sequence's current KV state (prefill or post-decode) through
+/// tensorpuffer. Mirrors the GPU→CPU copy + bytes serialization that
 /// `transfer/mod.rs::transfer_kv_cache` performs for PD, but writes to
 /// the embedded KV store instead of sending over the PD wire. Keyed by
-/// content hash so a restart can serve the same prefix from foyer/S3.
+/// content hash of the CURRENT seq.token_ids — for prefill this is the
+/// prompt; for post-decode it's prompt + emitted tokens — so each
+/// snapshot lives under its own key and a restart can resume from the
+/// deepest matching prefix in foyer/S3.
 #[cfg(feature = "tensorpuffer")]
-fn stash_seq_post_prefill_local(
+fn stash_seq_kv_local(
     runner: &ModelRunner,
     seq: &vllm_rs::core::sequence::Sequence,
+    phase: &'static str,
 ) {
     use candle_core::DType;
     use std::collections::HashMap;
@@ -63,7 +67,7 @@ fn stash_seq_post_prefill_local(
             Ok(t) => t,
             Err(err) => {
                 vllm_rs::log_warn!(
-                    "[non-PD stash] copy_blocks_to_cpu k failed for Seq {}: {err}",
+                    "[kv stash] copy_blocks_to_cpu k failed for Seq {}: {err}",
                     seq.id
                 );
                 return;
@@ -73,7 +77,7 @@ fn stash_seq_post_prefill_local(
             Ok(t) => t,
             Err(err) => {
                 vllm_rs::log_warn!(
-                    "[non-PD stash] copy_blocks_to_cpu v failed for Seq {}: {err}",
+                    "[kv stash] copy_blocks_to_cpu v failed for Seq {}: {err}",
                     seq.id
                 );
                 return;
@@ -112,7 +116,7 @@ fn stash_seq_post_prefill_local(
             ),
             other => {
                 vllm_rs::log_warn!(
-                    "[non-PD stash] unsupported dtype {:?} for Seq {}",
+                    "[kv stash] unsupported dtype {:?} for Seq {}",
                     other,
                     seq.id
                 );
@@ -138,11 +142,163 @@ fn stash_seq_post_prefill_local(
             "[MyelonInstr] {}",
             serde_json::json!({
                 "scope": "tensorpuffer_kvbm",
-                "op": "stash_post_prefill_local",
+                "op": "stash_kv_local",
+                "phase": phase,
                 "seq_id": seq.id,
                 "stashed": stashed,
                 "layers": layer_data.len(),
                 "blocks": seq.block_table.len(),
+                "tokens": seq.token_ids.len(),
+                "prefix_hash": prefix_hash,
+            })
+        );
+    }
+}
+
+/// Returns true if non-PD decode-side stashing is enabled. Off by
+/// default (prefill stash is the common case; decode stashing creates
+/// one S3 PUT per token-step which is a lot for some workloads).
+/// Enable with `TPUF_KVBM_STASH_DECODE=1`.
+#[cfg(feature = "tensorpuffer")]
+fn decode_stash_enabled() -> bool {
+    matches!(
+        std::env::var("TPUF_KVBM_STASH_DECODE").ok().as_deref(),
+        Some("1") | Some("true") | Some("TRUE") | Some("True")
+    )
+}
+
+/// Per-seq token-id cache populated during prefill so the decode-side
+/// stash can compute a content hash. RunDecode messages only carry
+/// `DecodeSequence` (id, last_token, block_tables) — they intentionally
+/// don't ship the full token list to keep the wire small. We rebuild
+/// the running list here by snapshotting `seq.token_ids` on prefill
+/// and appending `last_token` on each subsequent decode.
+#[cfg(feature = "tensorpuffer")]
+static RUNNER_SEQ_TOKENS: std::sync::OnceLock<
+    std::sync::Mutex<std::collections::HashMap<usize, Vec<u32>>>,
+> = std::sync::OnceLock::new();
+
+#[cfg(feature = "tensorpuffer")]
+fn runner_seq_tokens() -> &'static std::sync::Mutex<
+    std::collections::HashMap<usize, Vec<u32>>,
+> {
+    RUNNER_SEQ_TOKENS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+#[cfg(feature = "tensorpuffer")]
+fn record_prefill_tokens(seq: &vllm_rs::core::sequence::Sequence) {
+    if let Ok(mut map) = runner_seq_tokens().lock() {
+        map.insert(seq.id, seq.token_ids.clone());
+    }
+}
+
+#[cfg(feature = "tensorpuffer")]
+fn append_decoded_token(seq_id: usize, tok: u32) -> Option<Vec<u32>> {
+    let mut map = runner_seq_tokens().lock().ok()?;
+    let entry = map.get_mut(&seq_id)?;
+    entry.push(tok);
+    Some(entry.clone())
+}
+
+/// Stash post-decode KV state. Mirrors `stash_seq_kv_local` but takes
+/// a `DecodeSequence` plus the precomputed running token_ids (since
+/// `DecodeSequence` doesn't carry them on the wire — see
+/// `RUNNER_SEQ_TOKENS`).
+#[cfg(feature = "tensorpuffer")]
+fn stash_decode_seq_local(
+    runner: &ModelRunner,
+    dseq: &vllm_rs::core::sequence::DecodeSequence,
+    token_ids: &[u32],
+) {
+    use candle_core::DType;
+    use std::collections::HashMap;
+    use vllm_rs::transfer::{copy_blocks_to_cpu, cpu_tensor_to_bytes};
+
+    if dseq.block_tables.is_empty() {
+        return;
+    }
+    let server_block_ids = &dseq.block_tables;
+    let mapping: HashMap<usize, usize> = server_block_ids
+        .iter()
+        .enumerate()
+        .map(|(i, &server_id)| (server_id as usize, i))
+        .collect();
+
+    let gpu_cache = runner.get_kv_cache();
+    if gpu_cache.is_empty() {
+        return;
+    }
+    let dtype = gpu_cache[0].0.dtype();
+    let mut layer_data: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity(gpu_cache.len());
+    for (k_tensor, v_tensor) in gpu_cache.iter() {
+        let k_cpu = match copy_blocks_to_cpu(k_tensor, &mapping, server_block_ids.len()) {
+            Ok(t) => t,
+            Err(err) => {
+                vllm_rs::log_warn!(
+                    "[kv stash] copy_blocks_to_cpu k failed for Seq {} (decode): {err}",
+                    dseq.id
+                );
+                return;
+            }
+        };
+        let v_cpu = match copy_blocks_to_cpu(v_tensor, &mapping, server_block_ids.len()) {
+            Ok(t) => t,
+            Err(err) => {
+                vllm_rs::log_warn!(
+                    "[kv stash] copy_blocks_to_cpu v failed for Seq {} (decode): {err}",
+                    dseq.id
+                );
+                return;
+            }
+        };
+        let (k_bytes, v_bytes) = match dtype {
+            DType::F16 => (
+                match cpu_tensor_to_bytes::<half::f16>(&k_cpu) { Ok(b) => b, Err(_) => return },
+                match cpu_tensor_to_bytes::<half::f16>(&v_cpu) { Ok(b) => b, Err(_) => return },
+            ),
+            DType::BF16 => (
+                match cpu_tensor_to_bytes::<half::bf16>(&k_cpu) { Ok(b) => b, Err(_) => return },
+                match cpu_tensor_to_bytes::<half::bf16>(&v_cpu) { Ok(b) => b, Err(_) => return },
+            ),
+            DType::U8 => (
+                match cpu_tensor_to_bytes::<u8>(&k_cpu) { Ok(b) => b, Err(_) => return },
+                match cpu_tensor_to_bytes::<u8>(&v_cpu) { Ok(b) => b, Err(_) => return },
+            ),
+            other => {
+                vllm_rs::log_warn!(
+                    "[kv stash] unsupported dtype {:?} for Seq {} (decode)",
+                    other,
+                    dseq.id
+                );
+                return;
+            }
+        };
+        layer_data.push((k_bytes, v_bytes));
+    }
+    drop(gpu_cache);
+
+    let prefix_hash =
+        vllm_rs::tensorpuffer_kvbm::content_hash_for_prefix("vllm-rs", token_ids);
+    let stashed = vllm_rs::tensorpuffer_kvbm::stash_finished_prefill(
+        dseq.id as u64,
+        dseq.last_token,
+        &layer_data,
+        dseq.block_tables.len() as u32,
+        token_ids.len() as u32,
+        Some(&prefix_hash),
+    );
+    if std::env::var("MYELON_INSTRUMENT").map(|v| v == "1").unwrap_or(false) {
+        println!(
+            "[MyelonInstr] {}",
+            serde_json::json!({
+                "scope": "tensorpuffer_kvbm",
+                "op": "stash_kv_local",
+                "phase": "decode",
+                "seq_id": dseq.id,
+                "stashed": stashed,
+                "layers": layer_data.len(),
+                "blocks": dseq.block_tables.len(),
+                "tokens": token_ids.len(),
                 "prefix_hash": prefix_hash,
             })
         );
@@ -494,7 +650,10 @@ fn main() -> anyhow::Result<()> {
                 #[cfg(feature = "tensorpuffer")]
                 if outputs.is_ok() && is_prefill {
                     for seq in &sequences {
-                        stash_seq_post_prefill_local(&runner, seq);
+                        // Snapshot token_ids so the decode-side stash
+                        // can rebuild a content hash later.
+                        record_prefill_tokens(seq);
+                        stash_seq_kv_local(&runner, seq, "prefill");
                     }
                 }
                 send_local(
@@ -507,6 +666,31 @@ fn main() -> anyhow::Result<()> {
                 let outputs = runner.run(Seqs::DecodeVec(&sequences), is_prefill);
                 if outputs.is_err() {
                     vllm_rs::log_error!("Runner decode error: {:?}", outputs);
+                }
+                // Tensorpuffer KVBM: optional decode-side stash. Each
+                // call captures the current KV state under a content
+                // hash that includes the just-emitted token, so the
+                // stashed snapshots form a chain prompt → prompt+1 →
+                // prompt+2 → … and a restart can rejoin at the deepest
+                // matching prefix. Off by default — enable with
+                // `TPUF_KVBM_STASH_DECODE=1`.
+                //
+                // RunDecode messages carry a stripped `DecodeSequence`
+                // (no token_ids on the wire). We rebuild the running
+                // token list from the per-seq cache populated during
+                // RunPrefill. If a seq's prefill happened on a different
+                // runner process (PD-disagg) the cache lookup will miss
+                // and we silently skip — the prefill side already
+                // stashed.
+                #[cfg(feature = "tensorpuffer")]
+                if outputs.is_ok() && decode_stash_enabled() {
+                    for dseq in &sequences {
+                        if let Some(token_ids) =
+                            append_decoded_token(dseq.id, dseq.last_token)
+                        {
+                            stash_decode_seq_local(&runner, dseq, &token_ids);
+                        }
+                    }
                 }
                 send_local(
                     &mut vec![stream.try_clone()?],
