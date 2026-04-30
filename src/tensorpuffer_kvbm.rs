@@ -98,13 +98,29 @@ pub fn init_from_env() -> Option<KvbmHandle> {
         return None;
     }
 
-    match try_init() {
-        Ok(handle) => {
+    // foyer + rust-s3 both spin up their own tokio runtimes and call
+    // `block_on` internally. If we initialize them from inside the engine's
+    // `#[tokio::main]` runtime we get
+    //   "Cannot start a runtime from within a runtime."
+    // Run the entire init on a dedicated OS thread so foyer's runtime is
+    // not nested inside the engine's runtime.
+    let outcome = std::thread::Builder::new()
+        .name("tpuf-kvbm-init".to_string())
+        .spawn(try_init)
+        .and_then(|h| h.join().map_err(|_| std::io::Error::other("kvbm init thread panicked")));
+
+    match outcome {
+        Ok(Ok(handle)) => {
             let _ = GLOBAL.set(Some(handle.clone()));
             Some(handle)
         }
-        Err(err) => {
+        Ok(Err(err)) => {
             tracing::warn!(target: "tensorpuffer", "KVBM init failed; running without tensorpuffer: {err}");
+            let _ = GLOBAL.set(None);
+            None
+        }
+        Err(err) => {
+            tracing::warn!(target: "tensorpuffer", "KVBM init thread spawn failed: {err}");
             let _ = GLOBAL.set(None);
             None
         }
@@ -198,10 +214,27 @@ fn cache_key(seq_id: usize) -> String {
     format!("seq-{seq_id:016x}")
 }
 
+/// Run a closure on a dedicated OS thread so foyer / rust-s3's internal
+/// `block_on` calls don't nest inside the engine's `#[tokio::main]`
+/// runtime. Returns the closure's return value or `None` if the thread
+/// panicked.
+fn run_off_runtime<R, F>(f: F) -> Option<R>
+where
+    R: Send + 'static,
+    F: Send + 'static + FnOnce() -> R,
+{
+    std::thread::Builder::new()
+        .name("tpuf-kvbm-call".to_string())
+        .spawn(f)
+        .ok()
+        .and_then(|h| h.join().ok())
+}
+
 impl KvbmHandle {
     /// Stash a finished prefill payload through both tiers. Returns false
     /// if the put failed; the caller should treat this as a hint, not an
-    /// error.
+    /// error. Runs on a dedicated OS thread to avoid nesting foyer's
+    /// internal runtime inside a tokio worker.
     pub fn stash(&self, payload: &StashedPrefill) -> bool {
         let bytes = match bincode::serialize(payload) {
             Ok(value) => Bytes::from(value),
@@ -214,50 +247,63 @@ impl KvbmHandle {
             }
         };
         let key = cache_key(payload.seq_id);
-        let store = self.inner.read();
-        match store.put_kv(&self.namespace, &key, bytes) {
-            Ok(()) => true,
-            Err(err) => {
-                tracing::warn!(
-                    target: "tensorpuffer",
-                    "stash put_kv failed for seq {}: {err}", payload.seq_id
-                );
-                false
+        let inner = self.inner.clone();
+        let namespace = self.namespace.clone();
+        let seq_id = payload.seq_id;
+        run_off_runtime(move || {
+            let store = inner.read();
+            match store.put_kv(&namespace, &key, bytes) {
+                Ok(()) => true,
+                Err(err) => {
+                    tracing::warn!(
+                        target: "tensorpuffer",
+                        "stash put_kv failed for seq {seq_id}: {err}"
+                    );
+                    false
+                }
             }
-        }
+        })
+        .unwrap_or(false)
     }
 
     /// Best-effort load of a previously-stashed prefill payload by seq_id.
     pub fn load(&self, seq_id: usize) -> Option<StashedPrefill> {
         let key = cache_key(seq_id);
-        let store = self.inner.read();
-        match store.get_kv(&self.namespace, &key) {
-            Ok(GetOutcome::Hit { tier, payload }) => {
-                let tier_label = match tier {
-                    HitTier::Foyer => "foyer",
-                    HitTier::ObjectStore => "s3",
-                };
-                tracing::debug!(
-                    target: "tensorpuffer",
-                    "load hit for seq {seq_id} from {tier_label} ({} bytes)",
-                    payload.len()
-                );
-                match bincode::deserialize::<StashedPrefill>(&payload) {
-                    Ok(value) => Some(value),
-                    Err(err) => {
-                        tracing::warn!(
-                            target: "tensorpuffer",
-                            "load bincode failed for seq {seq_id}: {err}"
-                        );
-                        None
-                    }
+        let inner = self.inner.clone();
+        let namespace = self.namespace.clone();
+        let bytes = run_off_runtime(move || {
+            let store = inner.read();
+            match store.get_kv(&namespace, &key) {
+                Ok(GetOutcome::Hit { tier, payload }) => {
+                    let tier_label = match tier {
+                        HitTier::Foyer => "foyer",
+                        HitTier::ObjectStore => "s3",
+                    };
+                    tracing::debug!(
+                        target: "tensorpuffer",
+                        "load hit for seq {seq_id} from {tier_label} ({} bytes)",
+                        payload.len()
+                    );
+                    Some(payload)
+                }
+                Ok(GetOutcome::Miss) => None,
+                Err(err) => {
+                    tracing::warn!(
+                        target: "tensorpuffer",
+                        "load get_kv failed for seq {seq_id}: {err}"
+                    );
+                    None
                 }
             }
-            Ok(GetOutcome::Miss) => None,
+        })
+        .flatten()?;
+
+        match bincode::deserialize::<StashedPrefill>(&bytes) {
+            Ok(value) => Some(value),
             Err(err) => {
                 tracing::warn!(
                     target: "tensorpuffer",
-                    "load get_kv failed for seq {seq_id}: {err}"
+                    "load bincode failed for seq {seq_id}: {err}"
                 );
                 None
             }
@@ -266,11 +312,17 @@ impl KvbmHandle {
 
     /// Restore foyer state from S3 for the configured namespace. Called
     /// once at engine startup when `TPUF_KVBM_RESTORE_ON_START` is set.
+    /// Runs on a dedicated OS thread for the same reason as `stash`.
     pub fn restore_from_s3(&self) -> Result<usize, String> {
-        let store = self.inner.read();
-        store
-            .restore_from_s3(&self.namespace)
-            .map_err(|err| format!("{err}"))
+        let inner = self.inner.clone();
+        let namespace = self.namespace.clone();
+        run_off_runtime(move || {
+            let store = inner.read();
+            store
+                .restore_from_s3(&namespace)
+                .map_err(|err| format!("{err}"))
+        })
+        .unwrap_or_else(|| Err("kvbm restore thread panicked".to_string()))
     }
 }
 
