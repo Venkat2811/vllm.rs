@@ -245,6 +245,27 @@ impl Scheduler {
                 break;
             }
 
+            // Tensorpuffer KVBM try-load: BEFORE the engine's prefix-cache
+            // hit/miss decision, probe the puffer (foyer + S3). On hit,
+            // seed the prefix_cache table with synthetic entries pointing
+            // at fresh blocks; the next allocate(seq) will then find a
+            // cache hit through the normal path and shorten prefill.
+            // The actual KV bytes are written to GPU by the runner's
+            // try_import_seq_kv_from_puffer hook, which fires after
+            // RunPrefill arrives at the runner.
+            //
+            // Off by default; enable with `TPUF_KVBM_TRY_LOAD=1`. When
+            // off this is a no-op, preserving existing behavior.
+            #[cfg(feature = "tensorpuffer")]
+            if seq.block_table.is_empty()
+                && matches!(
+                    std::env::var("TPUF_KVBM_TRY_LOAD").ok().as_deref(),
+                    Some("1") | Some("true") | Some("TRUE") | Some("True")
+                )
+            {
+                self.block_manager.try_seed_prefix_cache_from_puffer(&seq);
+            }
+
             if scheduled_ids.len() >= std::cmp::max(self.cfg.max_num_seqs, MIN_NUM_SCHEDULED_REQS)
                 || num_tokens + seq.len() >= self.cfg.max_num_batched_tokens - 1
                 || (seq.block_table.is_empty() && !self.block_manager.can_allocate(&seq))

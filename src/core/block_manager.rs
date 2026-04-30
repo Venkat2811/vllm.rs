@@ -410,6 +410,112 @@ impl BlockManager {
         Ok(())
     }
 
+    /// Tensorpuffer-KVBM seed: when an incoming sequence has a stashed
+    /// KV state in the puffer (foyer or S3), allocate fresh blocks and
+    /// seed the in-memory `prefix_cache` table so the subsequent
+    /// `allocate(seq)` finds those blocks as a prefix-cache hit and
+    /// the engine schedules a shorter prefill (only the un-cached
+    /// suffix). The actual KV bytes are still written to the GPU by
+    /// the runner's existing `try_import_seq_kv_from_puffer` hook —
+    /// this engine-side seeder is purely about accounting.
+    ///
+    /// Returns `true` if the prefix_cache was seeded (caller should
+    /// proceed with `allocate` to bind the seq to those blocks via
+    /// the normal hit path). Returns `false` if there's no puffer
+    /// hit, prefix_cache is disabled, or any sanity check fails — in
+    /// which case the seq goes through normal cold-prefill.
+    ///
+    /// Gated by `TPUF_KVBM_TRY_LOAD=1`. Off by default so existing
+    /// benchmarks aren't affected.
+    #[cfg(feature = "tensorpuffer")]
+    pub fn try_seed_prefix_cache_from_puffer(&mut self, seq: &Sequence) -> bool {
+        use crate::tensorpuffer_kvbm::{
+            content_hash_for_prefix, load_finished_prefill_by_prefix,
+        };
+
+        // Need an active prefix_cache for the seeding to mean anything
+        // to the engine's scheduler.
+        let Some(prefix_cache) = self.prefix_cache.as_mut() else {
+            return false;
+        };
+        if !prefix_cache.enabled() {
+            return false;
+        }
+
+        // Sanity gates.
+        if seq.token_ids.is_empty() {
+            return false;
+        }
+        if seq.images.is_some() {
+            // Image seqs hash with a per-image seed — not handled yet.
+            return false;
+        }
+        if !seq.block_table.is_empty() {
+            // Already allocated; don't seed mid-flight.
+            return false;
+        }
+
+        // If prefix_cache already has a hit for this seq, no need to
+        // probe the puffer.
+        let already = prefix_cache.match_prefix_with_seed(&seq.token_ids, None);
+        if already.matched_blocks > 0 {
+            return false;
+        }
+
+        // Probe puffer.
+        let prefix_hash = content_hash_for_prefix("vllm-rs", &seq.token_ids);
+        let stashed = match load_finished_prefill_by_prefix(&prefix_hash) {
+            Some(s) => s,
+            None => return false,
+        };
+
+        // Only FULL blocks can be prefix-cached. The stash may have N
+        // blocks but if the prompt's token count isn't a multiple of
+        // block_size, the last block was partially-filled and isn't
+        // valid as a cache entry. Clamp to full_blocks.
+        let stashed_blocks = stashed.num_blocks as usize;
+        let full_blocks_in_seq = seq.token_ids.len() / self.block_size;
+        let num_blocks = stashed_blocks.min(full_blocks_in_seq);
+        if num_blocks == 0 {
+            return false;
+        }
+        let needed_tokens = num_blocks * self.block_size;
+
+        // Need this many free blocks to seed.
+        if self.free_block_ids.len() < num_blocks {
+            return false;
+        }
+
+        // Allocate the blocks (ref_count starts at 1 from `allocate_block`).
+        let mut block_ids: Vec<usize> = Vec::with_capacity(num_blocks);
+        for _ in 0..num_blocks {
+            let bid = self
+                .free_block_ids
+                .pop_front()
+                .expect("checked free_block_ids len above");
+            self.allocate_block(bid);
+            block_ids.push(bid);
+        }
+
+        // Insert into prefix_cache. The first `needed_tokens` of the
+        // sequence are now considered cached and tied to these block
+        // ids. Subsequent identical requests will find this entry via
+        // match_prefix_with_seed and re-use the same blocks.
+        let token_slice = &seq.token_ids[..needed_tokens];
+        let prefix_cache = self.prefix_cache.as_mut().expect("checked above");
+        let _update = prefix_cache.insert_prefix(token_slice, &block_ids);
+
+        crate::log_info!(
+            "[puffer-seed] seq {}: seeded prefix_cache with {} blocks ({} tokens) from puffer hash {}",
+            seq.id,
+            num_blocks,
+            needed_tokens,
+            &prefix_hash[..12.min(prefix_hash.len())]
+        );
+
+        true
+    }
+
     pub fn capture_mamba_prefix_state(&mut self, seq: &Sequence, processed_tokens: usize) {
         if !self.mamba_prefix_enabled {
             return;
