@@ -467,6 +467,21 @@ impl Communicator {
                         seq.len()
                     );
                 }
+
+                // Tensorpuffer KVBM full short-circuit: if the prefix is
+                // cached, synthesize a TransferKvCache response RIGHT
+                // HERE — never push to pending_prefills, never allocate
+                // GPU blocks, never run model.forward(). Skips the entire
+                // prefill compute on the server side.
+                #[cfg(feature = "tensorpuffer")]
+                {
+                    if try_server_short_circuit_prefill(self, &seq) {
+                        // Cached path fired the response directly; nothing
+                        // more to do for this seq.
+                        return;
+                    }
+                }
+
                 server_tasks.write().push(seq.id); // indicate working in progress
                 pending_prefills.lock().push_back(seq);
             }
@@ -560,4 +575,64 @@ fn receive_message_generic(
             decode_ns,
         },
     ))
+}
+
+#[cfg(feature = "tensorpuffer")]
+fn try_server_short_circuit_prefill(
+    comm: &Communicator,
+    seq: &crate::core::sequence::Sequence,
+) -> bool {
+    use super::KVTransferHandle;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let prefix_hash =
+        crate::tensorpuffer_kvbm::content_hash_for_prefix("vllm-rs", &seq.token_ids);
+    let cached =
+        match crate::tensorpuffer_kvbm::load_finished_prefill_by_prefix(&prefix_hash) {
+            Some(c) => c,
+            None => return false,
+        };
+
+    let sending_time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as usize)
+        .unwrap_or(0);
+
+    let response = TransferMessage::TransferKvCache(FinishedPrefillData {
+        seq_id: seq.id,
+        first_token: cached.first_token,
+        transfer_handle: KVTransferHandle::RemoteTcp {
+            layer_data: cached.layer_data,
+            num_blocks: cached.num_blocks as usize,
+        },
+        sending_time,
+        num_cached_tokens: cached.num_cached_tokens as usize,
+    });
+
+    if *MYELON_INSTRUMENT {
+        println!(
+            "[MyelonInstr] {}",
+            serde_json::json!({
+                "scope": "tensorpuffer_kvbm",
+                "op": "server_short_circuit_prefill",
+                "seq_id": seq.id,
+                "prefix_hash": prefix_hash,
+                "tokens": seq.len(),
+            })
+        );
+    }
+    crate::log_info!(
+        "Tensorpuffer KVBM full short-circuit fired for Seq {} ({} tokens) — skipping GPU prefill compute",
+        seq.id,
+        seq.len()
+    );
+
+    if let Err(err) = comm.send(&response) {
+        crate::log_warn!(
+            "tensorpuffer short-circuit send failed for Seq {}: {err}; falling back to normal prefill",
+            seq.id
+        );
+        return false;
+    }
+    true
 }
