@@ -129,12 +129,21 @@ fn stash_seq_kv_local(
 
     let prefix_hash =
         vllm_rs::tensorpuffer_kvbm::content_hash_for_prefix("vllm-rs", &seq.token_ids);
+    // Record the prefix-cache hit length seen by FUTURE consumers. The
+    // stashed bytes contain KV for the full `seq.token_ids.len()`
+    // tokens; that's the number a future try-load should set
+    // `seq.num_cached_tokens` to so the engine's existing prefix-cache
+    // logic skips the prefill compute.
+    //
+    // (Field is named `num_cached_tokens` for historical PD-disagg
+    // reasons. Semantically here it's "tokens-already-prefilled-in-
+    // these-blocks".)
     let stashed = vllm_rs::tensorpuffer_kvbm::stash_finished_prefill(
         seq.id as u64,
         seq.last_token,
         &layer_data,
         seq.block_table.len() as u32,
-        seq.num_cached_tokens as u32,
+        seq.token_ids.len() as u32,
         Some(&prefix_hash),
     );
     if std::env::var("MYELON_INSTRUMENT").map(|v| v == "1").unwrap_or(false) {
@@ -153,6 +162,147 @@ fn stash_seq_kv_local(
             })
         );
     }
+}
+
+/// Try to import a sequence's KV cache from tensorpuffer BEFORE
+/// running prefill. If a stashed prefix matching `seq.token_ids` is
+/// found, write the bytes into the runner's GPU KV cache for the
+/// seq's already-allocated blocks and bump `seq.num_cached_tokens` so
+/// the engine's existing prefix-cache logic skips the cached prefix.
+///
+/// Returns `true` on import (caller should treat the seq as
+/// pre-prefilled) or `false` on miss / mismatch (caller falls through
+/// to normal prefill).
+///
+/// Gated by `TPUF_KVBM_TRY_LOAD=1` so existing benchmarks aren't
+/// affected. Mirrors the byte-fidelity primitives the PD-disagg
+/// `KVTransferHandle::RemoteTcp` path already uses
+/// (`bytes_to_cpu_tensor` → `swap_blocks`).
+#[cfg(feature = "tensorpuffer")]
+fn try_import_seq_kv_from_puffer(
+    runner: &ModelRunner,
+    seq: &mut vllm_rs::core::sequence::Sequence,
+) -> bool {
+    use std::collections::HashMap;
+    use vllm_rs::transfer::bytes_to_cpu_tensor;
+
+    if seq.token_ids.is_empty() || seq.block_table.is_empty() {
+        return false;
+    }
+
+    // 1. Lookup by content hash.
+    let prefix_hash = vllm_rs::tensorpuffer_kvbm::content_hash_for_prefix(
+        "vllm-rs",
+        &seq.token_ids,
+    );
+    let stashed = match vllm_rs::tensorpuffer_kvbm::load_finished_prefill_by_prefix(
+        &prefix_hash,
+    ) {
+        Some(s) => s,
+        None => return false,
+    };
+
+    // 2. Shape sanity.
+    let gpu_cache = runner.get_kv_cache();
+    if gpu_cache.is_empty() {
+        return false;
+    }
+    if stashed.layer_data.len() != gpu_cache.len() {
+        vllm_rs::log_warn!(
+            "[try-load] layer count mismatch: stashed={} runner={} — falling through",
+            stashed.layer_data.len(),
+            gpu_cache.len()
+        );
+        return false;
+    }
+    let n_blocks = stashed.num_blocks as usize;
+    if n_blocks == 0 || seq.block_table.len() < n_blocks {
+        return false;
+    }
+
+    // 3. Map stashed[i] → seq's i-th allocated block.
+    let mapping: HashMap<usize, usize> = (0..n_blocks)
+        .map(|i| (i, seq.block_table[i] as usize))
+        .collect();
+
+    // 4. Import each layer.
+    for (i, (k_bytes, v_bytes)) in stashed.layer_data.iter().enumerate() {
+        let (local_k_cache, local_v_cache) = &gpu_cache[i];
+        let remote_k = match bytes_to_cpu_tensor(k_bytes, n_blocks, local_k_cache) {
+            Ok(t) => t,
+            Err(err) => {
+                vllm_rs::log_warn!(
+                    "[try-load] bytes_to_cpu_tensor (k) failed for seq {}: {err}",
+                    seq.id
+                );
+                return false;
+            }
+        };
+        let remote_v = match bytes_to_cpu_tensor(v_bytes, n_blocks, local_v_cache) {
+            Ok(t) => t,
+            Err(err) => {
+                vllm_rs::log_warn!(
+                    "[try-load] bytes_to_cpu_tensor (v) failed for seq {}: {err}",
+                    seq.id
+                );
+                return false;
+            }
+        };
+        if let Err(err) = attention_rs::cache::swap_blocks(&remote_k, local_k_cache, &mapping) {
+            vllm_rs::log_warn!("[try-load] swap_blocks (k) failed for seq {}: {err}", seq.id);
+            return false;
+        }
+        if let Err(err) = attention_rs::cache::swap_blocks(&remote_v, local_v_cache, &mapping) {
+            vllm_rs::log_warn!("[try-load] swap_blocks (v) failed for seq {}: {err}", seq.id);
+            return false;
+        }
+    }
+    drop(gpu_cache);
+
+    // 5. Mark seq as pre-prefilled. The engine's existing prefix-cache
+    //    logic respects this and only computes the un-cached suffix.
+    //    Cap at `token_ids.len() - 1` so there's always at least one
+    //    token left for the engine to prefill — this is what produces
+    //    the logits the sampler needs to start decoding. Setting cached
+    //    == total causes a "0 tokens to prefill" panic in the runner's
+    //    input validator.
+    let recorded = stashed.num_cached_tokens as usize;
+    let max_cacheable = seq.token_ids.len().saturating_sub(1);
+    let cached_tokens = recorded.min(max_cacheable);
+    seq.num_cached_tokens = cached_tokens;
+
+    if std::env::var("MYELON_INSTRUMENT").map(|v| v == "1").unwrap_or(false) {
+        println!(
+            "[MyelonInstr] {}",
+            serde_json::json!({
+                "scope": "tensorpuffer_kvbm",
+                "op": "try_import_kv_local",
+                "seq_id": seq.id,
+                "imported_blocks": n_blocks,
+                "cached_tokens": cached_tokens,
+                "tokens": seq.token_ids.len(),
+                "prefix_hash": prefix_hash,
+            })
+        );
+    }
+    vllm_rs::log_info!(
+        "[try-load] seq {} imported {} blocks ({} cached tokens) from puffer",
+        seq.id,
+        n_blocks,
+        cached_tokens
+    );
+
+    true
+}
+
+/// Returns true if non-PD pre-prefill try-load is enabled. Off by
+/// default. Enable with `TPUF_KVBM_TRY_LOAD=1`.
+#[cfg(feature = "tensorpuffer")]
+fn try_load_enabled() -> bool {
+    matches!(
+        std::env::var("TPUF_KVBM_TRY_LOAD").ok().as_deref(),
+        Some("1") | Some("true") | Some("TRUE") | Some("True")
+    )
 }
 
 /// Returns true if non-PD decode-side stashing is enabled. Off by
@@ -636,6 +786,23 @@ fn main() -> anyhow::Result<()> {
                 break;
             }
             Ok(MessageType::RunPrefill((sequences, is_prefill))) => {
+                // Tensorpuffer KVBM try-load: BEFORE prefill, look up
+                // each seq's content hash in the puffer. On hit, write
+                // the bytes directly into this runner's KV cache and
+                // bump seq.num_cached_tokens so the engine's existing
+                // prefix-cache logic skips the cached prefix on the
+                // upcoming prefill compute. Off by default; enable
+                // with TPUF_KVBM_TRY_LOAD=1.
+                let mut sequences = sequences;
+                #[cfg(feature = "tensorpuffer")]
+                let try_load_on = try_load_enabled();
+                #[cfg(feature = "tensorpuffer")]
+                if try_load_on && is_prefill {
+                    for seq in sequences.iter_mut() {
+                        let _ = try_import_seq_kv_from_puffer(&runner, seq);
+                    }
+                }
+
                 let outputs = runner.run(
                     Seqs::SeqRefs(&sequences.iter().collect::<Vec<_>>()),
                     is_prefill,
