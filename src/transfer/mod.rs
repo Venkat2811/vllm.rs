@@ -497,10 +497,39 @@ impl Transfer {
                             })
                         );
                     }
-                    KVTransferHandle::RemoteTcp {
-                        layer_data,
+                    let handle_for_send = KVTransferHandle::RemoteTcp {
+                        layer_data: layer_data.clone(),
                         num_blocks: seq.block_table.len(),
+                    };
+                    // Best-effort: stash a copy through the embeddable
+                    // tensorpuffer KV store (foyer + S3) so the same
+                    // payload survives a process restart and is reusable
+                    // by other decode pods. No-op when feature is off
+                    // or TPUF_KVBM_ENABLE != 1.
+                    #[cfg(feature = "tensorpuffer")]
+                    {
+                        let stashed = crate::tensorpuffer_kvbm::stash_finished_prefill(
+                            seq.id,
+                            first_token,
+                            &layer_data,
+                            seq.block_table.len(),
+                            seq.num_cached_tokens,
+                        );
+                        if instrument {
+                            println!(
+                                "[MyelonInstr] {}",
+                                serde_json::json!({
+                                    "scope": "tensorpuffer_kvbm",
+                                    "op": "stash_finished_prefill",
+                                    "seq_id": seq.id,
+                                    "stashed": stashed,
+                                    "layers": layer_data.len(),
+                                    "blocks": seq.block_table.len(),
+                                })
+                            );
+                        }
                     }
+                    handle_for_send
                 }
             };
 

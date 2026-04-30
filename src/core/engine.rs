@@ -125,6 +125,15 @@ pub struct LLMEngine {
 impl LLMEngine {
     #[allow(unused_mut)]
     pub fn new(econfig: &EngineConfig, dtype: DType) -> Result<Arc<RwLock<Self>>> {
+        // Tensorpuffer KVBM init runs before anything else so a successful
+        // restore_from_s3 can warm the cache before the runner starts
+        // accepting prefills. No-op when the feature is off or
+        // TPUF_KVBM_ENABLE != 1.
+        #[cfg(feature = "tensorpuffer")]
+        {
+            let _ = crate::tensorpuffer_kvbm::init_from_env();
+        }
+
         let (model_pathes, is_gguf, mut config, config_tokenizer, tokenizer, mut generation_cfg) =
             init_config_tokenizer(econfig)?;
         let llg_factory = match build_llg_factory(tokenizer.clone(), config.vocab_size) {

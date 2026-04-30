@@ -74,6 +74,11 @@ nvtx = { version = "1.3", optional = true }
 myelon-playground = { path = "../myelon-playground/crates/myelon-playground", package = "myelon-playground", optional = true }
 rkyv = { version = "0.8", features = ["bytecheck"], optional = true }
 flatbuffers = { version = "24.12", optional = true }
+# Tensorpuffer KV cache backend (foyer hot tier + S3 cold tier with restart-from-S3).
+# See ../tensorpuffer/crates/tp-node:feature/foyer-hybrid-cache.
+tp-node = { path = "../tensorpuffer/crates/tp-node", optional = true }
+tp-store = { path = "../tensorpuffer/crates/tp-store", optional = true }
+bytes = { version = "1", optional = true }
 
 [lib]
 name = "vllm_rs"
@@ -93,6 +98,7 @@ nvtx = ["dep:nvtx"]
 myelon = ["dep:myelon-playground"]
 codec-rkyv = ["myelon", "myelon-playground/rkyv", "dep:rkyv"]
 codec-flatbuf = ["myelon", "myelon-playground/flatbuffers", "dep:flatbuffers"]
+tensorpuffer = ["dep:tp-node", "dep:tp-store", "dep:bytes"]
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

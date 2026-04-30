@@ -11,6 +11,8 @@ pub mod models;
 pub mod py;
 pub mod runner;
 pub mod server;
+#[cfg(feature = "tensorpuffer")]
+pub mod tensorpuffer_kvbm;
 pub mod tools;
 pub mod transfer;
 pub mod utils;
