@@ -27,12 +27,143 @@ use vllm_rs::utils::heartbeat::heartbeat_worker;
 use vllm_rs::utils::new_device;
 use vllm_rs::utils::progress::{ProgressLike, ProgressReporter, RemoteProgressReporter};
 
+/// Stash a sequence's freshly-computed prefill KV through tensorpuffer.
+/// Mirrors the GPU→CPU copy + bytes serialization that
+/// `transfer/mod.rs::transfer_kv_cache` performs for PD, but writes to
+/// the embedded KV store instead of sending over the PD wire. Keyed by
+/// content hash so a restart can serve the same prefix from foyer/S3.
+#[cfg(feature = "tensorpuffer")]
+fn stash_seq_post_prefill_local(
+    runner: &ModelRunner,
+    seq: &vllm_rs::core::sequence::Sequence,
+) {
+    use candle_core::DType;
+    use std::collections::HashMap;
+    use vllm_rs::transfer::{copy_blocks_to_cpu, cpu_tensor_to_bytes};
+
+    if seq.block_table.is_empty() {
+        return;
+    }
+
+    let server_block_ids = &seq.block_table;
+    let mapping: HashMap<usize, usize> = server_block_ids
+        .iter()
+        .enumerate()
+        .map(|(i, &server_id)| (server_id as usize, i))
+        .collect();
+
+    let gpu_cache = runner.get_kv_cache();
+    if gpu_cache.is_empty() {
+        return;
+    }
+    let dtype = gpu_cache[0].0.dtype();
+    let mut layer_data: Vec<(Vec<u8>, Vec<u8>)> = Vec::with_capacity(gpu_cache.len());
+    for (k_tensor, v_tensor) in gpu_cache.iter() {
+        let k_cpu = match copy_blocks_to_cpu(k_tensor, &mapping, server_block_ids.len()) {
+            Ok(t) => t,
+            Err(err) => {
+                vllm_rs::log_warn!(
+                    "[non-PD stash] copy_blocks_to_cpu k failed for Seq {}: {err}",
+                    seq.id
+                );
+                return;
+            }
+        };
+        let v_cpu = match copy_blocks_to_cpu(v_tensor, &mapping, server_block_ids.len()) {
+            Ok(t) => t,
+            Err(err) => {
+                vllm_rs::log_warn!(
+                    "[non-PD stash] copy_blocks_to_cpu v failed for Seq {}: {err}",
+                    seq.id
+                );
+                return;
+            }
+        };
+        let (k_bytes, v_bytes) = match dtype {
+            DType::F16 => (
+                match cpu_tensor_to_bytes::<half::f16>(&k_cpu) {
+                    Ok(b) => b,
+                    Err(_) => return,
+                },
+                match cpu_tensor_to_bytes::<half::f16>(&v_cpu) {
+                    Ok(b) => b,
+                    Err(_) => return,
+                },
+            ),
+            DType::BF16 => (
+                match cpu_tensor_to_bytes::<half::bf16>(&k_cpu) {
+                    Ok(b) => b,
+                    Err(_) => return,
+                },
+                match cpu_tensor_to_bytes::<half::bf16>(&v_cpu) {
+                    Ok(b) => b,
+                    Err(_) => return,
+                },
+            ),
+            DType::U8 => (
+                match cpu_tensor_to_bytes::<u8>(&k_cpu) {
+                    Ok(b) => b,
+                    Err(_) => return,
+                },
+                match cpu_tensor_to_bytes::<u8>(&v_cpu) {
+                    Ok(b) => b,
+                    Err(_) => return,
+                },
+            ),
+            other => {
+                vllm_rs::log_warn!(
+                    "[non-PD stash] unsupported dtype {:?} for Seq {}",
+                    other,
+                    seq.id
+                );
+                return;
+            }
+        };
+        layer_data.push((k_bytes, v_bytes));
+    }
+    drop(gpu_cache);
+
+    let prefix_hash =
+        vllm_rs::tensorpuffer_kvbm::content_hash_for_prefix("vllm-rs", &seq.token_ids);
+    let stashed = vllm_rs::tensorpuffer_kvbm::stash_finished_prefill(
+        seq.id as u64,
+        seq.last_token,
+        &layer_data,
+        seq.block_table.len() as u32,
+        seq.num_cached_tokens as u32,
+        Some(&prefix_hash),
+    );
+    if std::env::var("MYELON_INSTRUMENT").map(|v| v == "1").unwrap_or(false) {
+        println!(
+            "[MyelonInstr] {}",
+            serde_json::json!({
+                "scope": "tensorpuffer_kvbm",
+                "op": "stash_post_prefill_local",
+                "seq_id": seq.id,
+                "stashed": stashed,
+                "layers": layer_data.len(),
+                "blocks": seq.block_table.len(),
+                "prefix_hash": prefix_hash,
+            })
+        );
+    }
+}
+
 fn main() -> anyhow::Result<()> {
     vllm_rs::log_info!("runner started");
 
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
         .init();
+
+    // Tensorpuffer KVBM init for the runner subprocess. Mirrors the
+    // engine-side init in core/engine.rs so the runner has its own
+    // global handle and can stash post-prefill KV without going through
+    // PD. No-op when feature is off or TPUF_KVBM_ENABLE != 1.
+    #[cfg(feature = "tensorpuffer")]
+    {
+        let _ = vllm_rs::tensorpuffer_kvbm::init_from_env();
+    }
     let args: Vec<String> = std::env::args().collect();
     let sock = args
         .iter()
@@ -355,6 +486,16 @@ fn main() -> anyhow::Result<()> {
                 );
                 if outputs.is_err() {
                     vllm_rs::log_error!("Runner prefill error: {:?}", outputs);
+                }
+                // Tensorpuffer KVBM: durably stash every successfully
+                // prefilled seq under content-addressed key. Best-effort,
+                // gated by TPUF_KVBM_ENABLE so non-PD single-engine
+                // workloads can survive a restart.
+                #[cfg(feature = "tensorpuffer")]
+                if outputs.is_ok() && is_prefill {
+                    for seq in &sequences {
+                        stash_seq_post_prefill_local(&runner, seq);
+                    }
                 }
                 send_local(
                     &mut vec![stream.try_clone()?],
