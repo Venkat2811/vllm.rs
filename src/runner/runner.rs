@@ -170,9 +170,16 @@ fn stash_seq_kv_local(
 /// seq's already-allocated blocks and bump `seq.num_cached_tokens` so
 /// the engine's existing prefix-cache logic skips the cached prefix.
 ///
-/// Returns `true` on import (caller should treat the seq as
-/// pre-prefilled) or `false` on miss / mismatch (caller falls through
-/// to normal prefill).
+/// Returns `Some(first_token)` from the stash on import, or `None`
+/// on miss / mismatch (caller falls through to normal prefill).
+///
+/// `full_skip = true` sets `num_cached_tokens = seq.len()` (no `-1`
+/// cap) so the runner's input validator wouldn't accept this seq for
+/// prefill — only safe when the caller plans to skip `runner.run()`
+/// entirely and synthesize the prefill response from the stashed
+/// `first_token`. `full_skip = false` preserves the existing partial
+/// behavior: caps at `seq.len() - 1` to leave one token for the
+/// prefill kernel to compute logits for.
 ///
 /// Gated by `TPUF_KVBM_TRY_LOAD=1` so existing benchmarks aren't
 /// affected. Mirrors the byte-fidelity primitives the PD-disagg
@@ -182,12 +189,13 @@ fn stash_seq_kv_local(
 fn try_import_seq_kv_from_puffer(
     runner: &ModelRunner,
     seq: &mut vllm_rs::core::sequence::Sequence,
-) -> bool {
+    full_skip: bool,
+) -> Option<u32> {
     use std::collections::HashMap;
     use vllm_rs::transfer::bytes_to_cpu_tensor;
 
     if seq.token_ids.is_empty() || seq.block_table.is_empty() {
-        return false;
+        return None;
     }
 
     // 1. Lookup by content hash.
@@ -199,13 +207,13 @@ fn try_import_seq_kv_from_puffer(
         &prefix_hash,
     ) {
         Some(s) => s,
-        None => return false,
+        None => return None,
     };
 
     // 2. Shape sanity.
     let gpu_cache = runner.get_kv_cache();
     if gpu_cache.is_empty() {
-        return false;
+        return None;
     }
     if stashed.layer_data.len() != gpu_cache.len() {
         vllm_rs::log_warn!(
@@ -213,11 +221,11 @@ fn try_import_seq_kv_from_puffer(
             stashed.layer_data.len(),
             gpu_cache.len()
         );
-        return false;
+        return None;
     }
     let n_blocks = stashed.num_blocks as usize;
     if n_blocks == 0 || seq.block_table.len() < n_blocks {
-        return false;
+        return None;
     }
 
     // 3. Map stashed[i] → seq's i-th allocated block.
@@ -235,7 +243,7 @@ fn try_import_seq_kv_from_puffer(
                     "[try-load] bytes_to_cpu_tensor (k) failed for seq {}: {err}",
                     seq.id
                 );
-                return false;
+                return None;
             }
         };
         let remote_v = match bytes_to_cpu_tensor(v_bytes, n_blocks, local_v_cache) {
@@ -245,30 +253,36 @@ fn try_import_seq_kv_from_puffer(
                     "[try-load] bytes_to_cpu_tensor (v) failed for seq {}: {err}",
                     seq.id
                 );
-                return false;
+                return None;
             }
         };
         if let Err(err) = attention_rs::cache::swap_blocks(&remote_k, local_k_cache, &mapping) {
             vllm_rs::log_warn!("[try-load] swap_blocks (k) failed for seq {}: {err}", seq.id);
-            return false;
+            return None;
         }
         if let Err(err) = attention_rs::cache::swap_blocks(&remote_v, local_v_cache, &mapping) {
             vllm_rs::log_warn!("[try-load] swap_blocks (v) failed for seq {}: {err}", seq.id);
-            return false;
+            return None;
         }
     }
     drop(gpu_cache);
 
-    // 5. Mark seq as pre-prefilled. The engine's existing prefix-cache
-    //    logic respects this and only computes the un-cached suffix.
-    //    Cap at `token_ids.len() - 1` so there's always at least one
-    //    token left for the engine to prefill — this is what produces
-    //    the logits the sampler needs to start decoding. Setting cached
-    //    == total causes a "0 tokens to prefill" panic in the runner's
-    //    input validator.
+    // 5. Mark seq as pre-prefilled. Two modes:
+    //    - `full_skip = false` (partial): cap at `token_ids.len() - 1` so
+    //      the engine still prefills 1 token to produce logits for the
+    //      sampler. Setting cached == total causes a "0 tokens to prefill"
+    //      panic in the runner's input validator.
+    //    - `full_skip = true`: set cached == total. Caller MUST skip
+    //      `runner.run()` for this seq and synthesize the prefill
+    //      response from the stashed `first_token` (mirroring the PD
+    //      `try_server_short_circuit_prefill` pattern).
     let recorded = stashed.num_cached_tokens as usize;
-    let max_cacheable = seq.token_ids.len().saturating_sub(1);
-    let cached_tokens = recorded.min(max_cacheable);
+    let cached_tokens = if full_skip {
+        recorded.min(seq.token_ids.len())
+    } else {
+        let max_cacheable = seq.token_ids.len().saturating_sub(1);
+        recorded.min(max_cacheable)
+    };
     seq.num_cached_tokens = cached_tokens;
 
     if std::env::var("MYELON_INSTRUMENT").map(|v| v == "1").unwrap_or(false) {
@@ -276,23 +290,26 @@ fn try_import_seq_kv_from_puffer(
             "[MyelonInstr] {}",
             serde_json::json!({
                 "scope": "tensorpuffer_kvbm",
-                "op": "try_import_kv_local",
+                "op": if full_skip { "try_full_skip_prefill" } else { "try_import_kv_local" },
                 "seq_id": seq.id,
                 "imported_blocks": n_blocks,
                 "cached_tokens": cached_tokens,
                 "tokens": seq.token_ids.len(),
+                "first_token": stashed.first_token,
                 "prefix_hash": prefix_hash,
             })
         );
     }
     vllm_rs::log_info!(
-        "[try-load] seq {} imported {} blocks ({} cached tokens) from puffer",
+        "[try-load{}] seq {} imported {} blocks ({} cached tokens, first_token={}) from puffer",
+        if full_skip { "/full-skip" } else { "" },
         seq.id,
         n_blocks,
-        cached_tokens
+        cached_tokens,
+        stashed.first_token,
     );
 
-    true
+    Some(stashed.first_token)
 }
 
 /// Returns true if non-PD pre-prefill try-load is enabled. Off by
@@ -301,6 +318,21 @@ fn try_import_seq_kv_from_puffer(
 fn try_load_enabled() -> bool {
     matches!(
         std::env::var("TPUF_KVBM_TRY_LOAD").ok().as_deref(),
+        Some("1") | Some("true") | Some("TRUE") | Some("True")
+    )
+}
+
+/// Returns true if non-PD FULL prefill short-circuit is enabled. When
+/// on, every request whose prefix is in the puffer skips
+/// `runner.run()` entirely on the prefill step; the runner synthesizes
+/// the response from the stashed `first_token` (the same pattern as
+/// `try_server_short_circuit_prefill` in `transfer/comm.rs`). Requires
+/// `TPUF_KVBM_TRY_LOAD=1` for the import work to actually run. Off by
+/// default. Enable with `TPUF_KVBM_FULL_SKIP=1`.
+#[cfg(feature = "tensorpuffer")]
+fn full_skip_enabled() -> bool {
+    matches!(
+        std::env::var("TPUF_KVBM_FULL_SKIP").ok().as_deref(),
         Some("1") | Some("true") | Some("TRUE") | Some("True")
     )
 }
@@ -793,16 +825,68 @@ fn main() -> anyhow::Result<()> {
                 // prefix-cache logic skips the cached prefix on the
                 // upcoming prefill compute. Off by default; enable
                 // with TPUF_KVBM_TRY_LOAD=1.
+                //
+                // TPUF_KVBM_FULL_SKIP=1 additionally skips runner.run()
+                // entirely for batches where every seq hit the puffer —
+                // synthesizing the prefill response from the stashed
+                // `first_token`. This is the non-PD analogue of
+                // `try_server_short_circuit_prefill` and is what
+                // delivers the order-of-magnitude warm-vs-cold win
+                // (matches the PD-side 11.7x in commit 5db1d85).
                 let mut sequences = sequences;
                 #[cfg(feature = "tensorpuffer")]
                 let try_load_on = try_load_enabled();
                 #[cfg(feature = "tensorpuffer")]
-                if try_load_on && is_prefill {
+                let full_skip_on = full_skip_enabled();
+                #[cfg(feature = "tensorpuffer")]
+                let mut short_circuit_outputs: Option<Vec<u32>> = None;
+                #[cfg(feature = "tensorpuffer")]
+                if try_load_on && is_prefill && !sequences.is_empty() {
+                    let mut tokens: Vec<u32> = Vec::with_capacity(sequences.len());
+                    let mut all_hit = true;
                     for seq in sequences.iter_mut() {
-                        let _ = try_import_seq_kv_from_puffer(&runner, seq);
+                        match try_import_seq_kv_from_puffer(&runner, seq, full_skip_on) {
+                            Some(t) => tokens.push(t),
+                            None => {
+                                all_hit = false;
+                                if !full_skip_on {
+                                    // partial-skip mode: misses are
+                                    // fine, the rest of the batch will
+                                    // prefill normally.
+                                    continue;
+                                } else {
+                                    // full-skip mode: any miss aborts
+                                    // the synthesized-response path; we
+                                    // fall through to runner.run() for
+                                    // the whole batch. Already-imported
+                                    // seqs keep their KV (still correct
+                                    // — partial behavior).
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if full_skip_on && all_hit {
+                        short_circuit_outputs = Some(tokens);
+                        vllm_rs::log_info!(
+                            "[full-skip] short-circuited prefill for {} seq(s) — skipping runner.run()",
+                            sequences.len()
+                        );
                     }
                 }
 
+                #[cfg(feature = "tensorpuffer")]
+                let was_short_circuit = short_circuit_outputs.is_some();
+                #[cfg(feature = "tensorpuffer")]
+                let outputs = if let Some(synthesized) = short_circuit_outputs {
+                    Ok(synthesized)
+                } else {
+                    runner.run(
+                        Seqs::SeqRefs(&sequences.iter().collect::<Vec<_>>()),
+                        is_prefill,
+                    )
+                };
+                #[cfg(not(feature = "tensorpuffer"))]
                 let outputs = runner.run(
                     Seqs::SeqRefs(&sequences.iter().collect::<Vec<_>>()),
                     is_prefill,
@@ -814,13 +898,19 @@ fn main() -> anyhow::Result<()> {
                 // prefilled seq under content-addressed key. Best-effort,
                 // gated by TPUF_KVBM_ENABLE so non-PD single-engine
                 // workloads can survive a restart.
+                //
+                // Skip the stash when this batch was just short-circuited
+                // — the bytes we'd PUT are byte-identical to the ones we
+                // just LOADED, so re-stashing is pure I/O cost on the
+                // warm path. We still record the token snapshot so the
+                // decode-side stash hook can rebuild a content hash.
                 #[cfg(feature = "tensorpuffer")]
                 if outputs.is_ok() && is_prefill {
                     for seq in &sequences {
-                        // Snapshot token_ids so the decode-side stash
-                        // can rebuild a content hash later.
                         record_prefill_tokens(seq);
-                        stash_seq_kv_local(&runner, seq, "prefill");
+                        if !was_short_circuit {
+                            stash_seq_kv_local(&runner, seq, "prefill");
+                        }
                     }
                 }
                 send_local(
@@ -1273,9 +1363,68 @@ fn main() -> anyhow::Result<()> {
             }
             match request {
                 MyelonRequest::RunPrefill { sequences } => {
-                    let refs = sequences.iter().collect::<Vec<_>>();
-                    match runner.run(Seqs::SeqRefs(&refs), true) {
+                    // Mirrors the pipe-path RunPrefill handler: try-load
+                    // hits set num_cached_tokens; full-skip additionally
+                    // synthesizes the prefill response from the stashed
+                    // first_token so we can avoid runner.run() entirely.
+                    let mut sequences = sequences;
+                    #[cfg(feature = "tensorpuffer")]
+                    let try_load_on = try_load_enabled();
+                    #[cfg(feature = "tensorpuffer")]
+                    let full_skip_on = full_skip_enabled();
+                    #[cfg(feature = "tensorpuffer")]
+                    let mut short_circuit_outputs: Option<Vec<u32>> = None;
+                    #[cfg(feature = "tensorpuffer")]
+                    if try_load_on && !sequences.is_empty() {
+                        let mut tokens: Vec<u32> = Vec::with_capacity(sequences.len());
+                        let mut all_hit = true;
+                        for seq in sequences.iter_mut() {
+                            match try_import_seq_kv_from_puffer(&runner, seq, full_skip_on) {
+                                Some(t) => tokens.push(t),
+                                None => {
+                                    all_hit = false;
+                                    if full_skip_on { break; }
+                                }
+                            }
+                        }
+                        if full_skip_on && all_hit {
+                            short_circuit_outputs = Some(tokens);
+                            vllm_rs::log_info!(
+                                "[full-skip] short-circuited Myelon prefill for {} seq(s) request_id={}",
+                                sequences.len(),
+                                request_id,
+                            );
+                        }
+                    }
+                    #[cfg(feature = "tensorpuffer")]
+                    let was_short_circuit = short_circuit_outputs.is_some();
+                    let run_outputs = {
+                        #[cfg(feature = "tensorpuffer")]
+                        {
+                            if let Some(synthesized) = short_circuit_outputs {
+                                Ok(synthesized)
+                            } else {
+                                let refs = sequences.iter().collect::<Vec<_>>();
+                                runner.run(Seqs::SeqRefs(&refs), true)
+                            }
+                        }
+                        #[cfg(not(feature = "tensorpuffer"))]
+                        {
+                            let refs = sequences.iter().collect::<Vec<_>>();
+                            runner.run(Seqs::SeqRefs(&refs), true)
+                        }
+                    };
+                    match run_outputs {
                         Ok(outputs) => {
+                            #[cfg(feature = "tensorpuffer")]
+                            {
+                                for seq in &sequences {
+                                    record_prefill_tokens(seq);
+                                    if !was_short_circuit {
+                                        stash_seq_kv_local(&runner, seq, "prefill");
+                                    }
+                                }
+                            }
                             if runner_rank == 0 {
                                 let response = MyelonResponse::RunResponse(outputs);
                                 if !logged_first_response {
