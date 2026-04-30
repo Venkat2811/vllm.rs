@@ -119,6 +119,13 @@ fn m1_kvbm_stash_then_load_round_trips() {
         panic!("init_from_env returned None — daemon connect failed?");
     };
 
+    // Verify backend health probes work.
+    assert_eq!(handle.backend_kind(), "remote");
+    assert!(handle.is_alive(), "remote backend should be alive after connect");
+    let (kind, alive) = tensorpuffer_kvbm::backend_health();
+    assert_eq!(kind, Some("remote"));
+    assert!(alive);
+
     // Build a minimally valid StashedPrefill payload. The kv_frame
     // codec doesn't care about token semantics; it just needs the layer
     // bytes to round-trip.

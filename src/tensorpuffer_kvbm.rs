@@ -64,6 +64,36 @@ enum BackendGetOutcome {
 }
 
 impl Backend {
+    /// Static label for metrics / logs. Stable across the handle's
+    /// lifetime; "embedded" or "remote".
+    fn kind(&self) -> &'static str {
+        match self {
+            Backend::Embedded(_) => "embedded",
+            #[cfg(feature = "tensorpuffer-remote")]
+            Backend::Remote(_) => "remote",
+        }
+    }
+
+    /// True when the backend is in a usable state.
+    ///
+    /// `Embedded` is always alive for the life of this process — the
+    /// foyer + S3 plumbing doesn't cross any process boundary, so the
+    /// only way to lose it is to drop the handle entirely.
+    ///
+    /// `Remote` returns `false` once the client has timed out and
+    /// transitioned to dead state. The engine should drop this handle
+    /// and rebuild a fresh one (`tensorpuffer_kvbm::init_from_env` after
+    /// `reset_for_test()`-style teardown, OR by treating the handle as
+    /// disposable per session) when this returns `false`. Today there
+    /// is no transparent reconnect; that's M1.2.
+    fn is_alive(&self) -> bool {
+        match self {
+            Backend::Embedded(_) => true,
+            #[cfg(feature = "tensorpuffer-remote")]
+            Backend::Remote(client) => !client.is_dead(),
+        }
+    }
+
     fn put_kv(&self, namespace: &str, key: &str, payload: Bytes) -> Result<(), String> {
         match self {
             Backend::Embedded(store) => {
@@ -453,6 +483,43 @@ impl KvbmHandle {
         run_off_runtime(move || backend.restore_from_s3(&namespace))
             .unwrap_or_else(|| Err("kvbm restore thread panicked".to_string()))
     }
+
+    /// Static label for the active backend: `"embedded"` (M0) or
+    /// `"remote"` (M1). Useful for metrics labels and log context.
+    #[must_use]
+    pub fn backend_kind(&self) -> &'static str {
+        self.inner.kind()
+    }
+
+    /// True when the backend is currently usable.
+    ///
+    /// For `Embedded` this is always `true` — losing it means the whole
+    /// process is gone.
+    ///
+    /// For `Remote` this returns `false` once the client has observed a
+    /// per-call timeout and transitioned to dead state. From that point
+    /// every call returns `BackendUnavailable` immediately. There is no
+    /// transparent reconnect today; the engine should treat the handle
+    /// as terminal and degrade to running without puffer (or drop and
+    /// rebuild on next request boundary).
+    ///
+    /// # Recovery pattern
+    ///
+    /// ```ignore
+    /// if let Some(h) = tensorpuffer_kvbm::handle() {
+    ///     if !h.is_alive() {
+    ///         tracing::warn!("puffer backend dead — rebuilding");
+    ///         // Drop the global handle and rebuild from env.
+    ///         // (Currently requires test-only reset; production code
+    ///         // typically just degrades to no-puffer for the rest of
+    ///         // this engine session.)
+    ///     }
+    /// }
+    /// ```
+    #[must_use]
+    pub fn is_alive(&self) -> bool {
+        self.inner.is_alive()
+    }
 }
 
 /// Convenience entry point used by `transfer/mod.rs`.
@@ -483,6 +550,16 @@ pub fn load_finished_prefill(seq_id: u64) -> Option<StashedPrefill> {
 
 pub fn load_finished_prefill_by_prefix(content_hash_hex: &str) -> Option<StashedPrefill> {
     handle()?.load_by_prefix_hash(content_hash_hex)
+}
+
+/// `(backend_kind, is_alive)` for the active global handle, or
+/// `(None, _)` if puffer is disabled. Cheap — no IPC.
+#[must_use]
+pub fn backend_health() -> (Option<&'static str>, bool) {
+    match handle() {
+        Some(h) => (Some(h.backend_kind()), h.is_alive()),
+        None => (None, false),
+    }
 }
 
 /// Render the process-global metrics as one JSON object per op.
