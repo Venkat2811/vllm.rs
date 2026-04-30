@@ -39,8 +39,92 @@ use tp_node::foyer_cache::FoyerCacheConfig;
 use tp_node::kv_frame;
 use tp_store::wal_store::{S3ObjectStore, S3ObjectStoreConfig};
 
+#[cfg(feature = "tensorpuffer-remote")]
+use tp_puffer_shm::{RemoteGetOutcome, RemoteHitTier, RemoteKvStoreClient};
+
 const DEFAULT_FOYER_DIR: &str = "/tmp/tpuf-foyer";
 const DEFAULT_S3_PREFIX: &str = "kv/vllm-rs";
+
+/// Internal dispatch over the active KV backend.
+///
+/// `Embedded` is the M0 default — `TensorpufferKvStore` lives in this
+/// process. `Remote` is M1 — calls hop through a `tp-puffer-shm-daemon`
+/// over the SHM ring. The rest of `KvbmHandle` is identical for both.
+enum Backend {
+    Embedded(Arc<RwLock<TensorpufferKvStore<S3ObjectStore>>>),
+    #[cfg(feature = "tensorpuffer-remote")]
+    Remote(Arc<RemoteKvStoreClient>),
+}
+
+/// Backend-agnostic GET result. Mirrors `tp_node::embed::GetOutcome` but
+/// owned by the local crate so both backends can produce it.
+enum BackendGetOutcome {
+    Hit { tier: HitTier, payload: Bytes },
+    Miss,
+}
+
+impl Backend {
+    fn put_kv(&self, namespace: &str, key: &str, payload: Bytes) -> Result<(), String> {
+        match self {
+            Backend::Embedded(store) => {
+                let store = store.read();
+                store
+                    .put_kv(namespace, key, payload)
+                    .map_err(|err| format!("{err}"))
+            }
+            #[cfg(feature = "tensorpuffer-remote")]
+            Backend::Remote(client) => {
+                client
+                    .put_kv(namespace, key, payload)
+                    .map_err(|err| format!("{err}"))
+            }
+        }
+    }
+
+    fn get_kv(&self, namespace: &str, key: &str) -> Result<BackendGetOutcome, String> {
+        match self {
+            Backend::Embedded(store) => {
+                let store = store.read();
+                match store.get_kv(namespace, key) {
+                    Ok(GetOutcome::Hit { tier, payload }) => {
+                        Ok(BackendGetOutcome::Hit { tier, payload })
+                    }
+                    Ok(GetOutcome::Miss) => Ok(BackendGetOutcome::Miss),
+                    Err(err) => Err(format!("{err}")),
+                }
+            }
+            #[cfg(feature = "tensorpuffer-remote")]
+            Backend::Remote(client) => match client.get_kv(namespace, key) {
+                Ok(RemoteGetOutcome::Hit { tier, payload }) => {
+                    let tier = match tier {
+                        RemoteHitTier::Foyer => HitTier::Foyer,
+                        RemoteHitTier::ObjectStore => HitTier::ObjectStore,
+                    };
+                    Ok(BackendGetOutcome::Hit { tier, payload })
+                }
+                Ok(RemoteGetOutcome::Miss) => Ok(BackendGetOutcome::Miss),
+                Err(err) => Err(format!("{err}")),
+            },
+        }
+    }
+
+    fn restore_from_s3(&self, namespace: &str) -> Result<usize, String> {
+        match self {
+            Backend::Embedded(store) => {
+                let store = store.read();
+                store
+                    .restore_from_s3(namespace)
+                    .map_err(|err| format!("{err}"))
+            }
+            #[cfg(feature = "tensorpuffer-remote")]
+            Backend::Remote(client) => {
+                client
+                    .restore_from_s3(namespace)
+                    .map_err(|err| format!("{err}"))
+            }
+        }
+    }
+}
 
 /// Decoded prefill payload. Mirrors the data carried by
 /// `crate::transfer::FinishedPrefillData::RemoteTcp` so the decode side
@@ -75,10 +159,10 @@ pub fn content_hash_for_prefix(model_id: &str, token_ids: &[u32]) -> String {
 }
 
 /// Shared handle to the tensorpuffer KV store. Created once at engine
-/// startup; cheap to clone (Arc + RwLock).
+/// startup; cheap to clone (Arc).
 #[derive(Clone)]
 pub struct KvbmHandle {
-    inner: Arc<RwLock<TensorpufferKvStore<S3ObjectStore>>>,
+    inner: Arc<Backend>,
     namespace: String,
 }
 
@@ -137,31 +221,12 @@ pub fn init_from_env() -> Option<KvbmHandle> {
 }
 
 fn try_init() -> Result<KvbmHandle, String> {
-    let s3_cfg = S3ObjectStoreConfig::from_env()
-        .map_err(|err| format!("S3 config from env: {err:?}"))?;
-    let s3_store = S3ObjectStore::new(s3_cfg)
-        .map_err(|err| format!("S3ObjectStore::new: {err:?}"))?;
-    s3_store
-        .ensure_bucket()
-        .map_err(|err| format!("ensure_bucket: {err:?}"))?;
-
-    let foyer = foyer_config_from_env();
-    let s3_prefix = std::env::var("TPUF_KVBM_S3_PREFIX")
-        .unwrap_or_else(|_| DEFAULT_S3_PREFIX.to_string());
     let namespace = std::env::var("TPUF_KVBM_NAMESPACE")
         .unwrap_or_else(|_| "default".to_string());
 
-    let cfg = EmbedConfig {
-        s3_prefix,
-        foyer,
-        write_through_s3: true,
-    };
-
-    let store = TensorpufferKvStore::new(cfg, s3_store)
-        .map_err(|err| format!("TensorpufferKvStore::new: {err}"))?;
-
+    let backend = build_backend()?;
     let handle = KvbmHandle {
-        inner: Arc::new(RwLock::new(store)),
+        inner: Arc::new(backend),
         namespace,
     };
 
@@ -183,6 +248,48 @@ fn try_init() -> Result<KvbmHandle, String> {
     }
 
     Ok(handle)
+}
+
+fn build_backend() -> Result<Backend, String> {
+    // Remote backend (M1): TPUF_KVBM_REMOTE_PREFIX selects a co-located
+    // tp-puffer-shm-daemon. Only enabled when the engine was built with
+    // `--features tensorpuffer-remote`.
+    #[cfg(feature = "tensorpuffer-remote")]
+    if let Ok(prefix) = std::env::var("TPUF_KVBM_REMOTE_PREFIX") {
+        if !prefix.is_empty() {
+            tracing::info!(
+                target: "tensorpuffer",
+                "KVBM using remote daemon (prefix={prefix})"
+            );
+            let client = RemoteKvStoreClient::connect(&prefix)
+                .map_err(|err| format!("RemoteKvStoreClient::connect({prefix}): {err}"))?;
+            return Ok(Backend::Remote(Arc::new(client)));
+        }
+    }
+
+    // Embedded backend (M0): TensorpufferKvStore lives in this process.
+    let s3_cfg = S3ObjectStoreConfig::from_env()
+        .map_err(|err| format!("S3 config from env: {err:?}"))?;
+    let s3_store = S3ObjectStore::new(s3_cfg)
+        .map_err(|err| format!("S3ObjectStore::new: {err:?}"))?;
+    s3_store
+        .ensure_bucket()
+        .map_err(|err| format!("ensure_bucket: {err:?}"))?;
+
+    let foyer = foyer_config_from_env();
+    let s3_prefix = std::env::var("TPUF_KVBM_S3_PREFIX")
+        .unwrap_or_else(|_| DEFAULT_S3_PREFIX.to_string());
+
+    let cfg = EmbedConfig {
+        s3_prefix,
+        foyer,
+        write_through_s3: true,
+    };
+
+    let store = TensorpufferKvStore::new(cfg, s3_store)
+        .map_err(|err| format!("TensorpufferKvStore::new: {err}"))?;
+    tracing::info!(target: "tensorpuffer", "KVBM using embedded backend");
+    Ok(Backend::Embedded(Arc::new(RwLock::new(store))))
 }
 
 fn foyer_config_from_env() -> FoyerCacheConfig {
@@ -252,15 +359,14 @@ impl KvbmHandle {
             &payload.layer_data,
         );
         let bytes = Bytes::from(encoded);
-        let inner = self.inner.clone();
+        let backend = self.inner.clone();
         let namespace = self.namespace.clone();
         let seq_id = payload.seq_id;
         let seq_k = seq_key(seq_id);
         let prefix_k = content_hash_hex.map(prefix_key);
 
         run_off_runtime(move || {
-            let store = inner.read();
-            let mut ok = match store.put_kv(&namespace, &seq_k, bytes.clone()) {
+            let mut ok = match backend.put_kv(&namespace, &seq_k, bytes.clone()) {
                 Ok(()) => true,
                 Err(err) => {
                     tracing::warn!(
@@ -271,7 +377,7 @@ impl KvbmHandle {
                 }
             };
             if let Some(prefix_k) = prefix_k {
-                if let Err(err) = store.put_kv(&namespace, &prefix_k, bytes.clone()) {
+                if let Err(err) = backend.put_kv(&namespace, &prefix_k, bytes.clone()) {
                     tracing::warn!(
                         target: "tensorpuffer",
                         "stash put_kv (prefix) failed for seq {seq_id}: {err}"
@@ -295,31 +401,28 @@ impl KvbmHandle {
     }
 
     fn load_by_key(&self, key: String) -> Option<StashedPrefill> {
-        let inner = self.inner.clone();
+        let backend = self.inner.clone();
         let namespace = self.namespace.clone();
-        let bytes = run_off_runtime(move || {
-            let store = inner.read();
-            match store.get_kv(&namespace, &key) {
-                Ok(GetOutcome::Hit { tier, payload }) => {
-                    let tier_label = match tier {
-                        HitTier::Foyer => "foyer",
-                        HitTier::ObjectStore => "s3",
-                    };
-                    tracing::debug!(
-                        target: "tensorpuffer",
-                        "load hit for {key} from {tier_label} ({} bytes)",
-                        payload.len()
-                    );
-                    Some(payload)
-                }
-                Ok(GetOutcome::Miss) => None,
-                Err(err) => {
-                    tracing::warn!(
-                        target: "tensorpuffer",
-                        "load get_kv failed for {key}: {err}"
-                    );
-                    None
-                }
+        let bytes = run_off_runtime(move || match backend.get_kv(&namespace, &key) {
+            Ok(BackendGetOutcome::Hit { tier, payload }) => {
+                let tier_label = match tier {
+                    HitTier::Foyer => "foyer",
+                    HitTier::ObjectStore => "s3",
+                };
+                tracing::debug!(
+                    target: "tensorpuffer",
+                    "load hit for {key} from {tier_label} ({} bytes)",
+                    payload.len()
+                );
+                Some(payload)
+            }
+            Ok(BackendGetOutcome::Miss) => None,
+            Err(err) => {
+                tracing::warn!(
+                    target: "tensorpuffer",
+                    "load get_kv failed for {key}: {err}"
+                );
+                None
             }
         })
         .flatten()?;
@@ -345,15 +448,10 @@ impl KvbmHandle {
     }
 
     pub fn restore_from_s3(&self) -> Result<usize, String> {
-        let inner = self.inner.clone();
+        let backend = self.inner.clone();
         let namespace = self.namespace.clone();
-        run_off_runtime(move || {
-            let store = inner.read();
-            store
-                .restore_from_s3(&namespace)
-                .map_err(|err| format!("{err}"))
-        })
-        .unwrap_or_else(|| Err("kvbm restore thread panicked".to_string()))
+        run_off_runtime(move || backend.restore_from_s3(&namespace))
+            .unwrap_or_else(|| Err("kvbm restore thread panicked".to_string()))
     }
 }
 
