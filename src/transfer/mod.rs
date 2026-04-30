@@ -236,6 +236,33 @@ impl Transfer {
         Ok(self.finished_data.write().contains_key(&seq_id))
     }
 
+    /// (Client) Install a synthetic FinishedPrefillData built from a local
+    /// cache hit (e.g. tensorpuffer KVBM). The receive_kv_cache() path
+    /// then applies the layer_data to the seq's local GPU blocks via the
+    /// existing RemoteTcp branch — no network I/O happens.
+    pub fn install_local_kvcache(
+        &self,
+        seq_id: usize,
+        first_token: u32,
+        layer_data: Vec<(Vec<u8>, Vec<u8>)>,
+        num_blocks: usize,
+        num_cached_tokens: usize,
+    ) -> Result<()> {
+        let sending_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_millis() as usize;
+        let data = FinishedPrefillData {
+            seq_id,
+            first_token,
+            transfer_handle: KVTransferHandle::RemoteTcp { layer_data, num_blocks },
+            sending_time,
+            num_cached_tokens,
+        };
+        self.finished_data.write().insert(seq_id, data);
+        Ok(())
+    }
+
     /// (Client) Receives the KV cache data and copies it into local GPU blocks.
     /// Returns (success, first_token, sending_time, num_cached_tokens).
     #[allow(unused)]
@@ -453,6 +480,37 @@ impl Transfer {
                 // RemoteTcp and LocalMyelon both send raw KV bytes through the
                 // chosen transport — only the underlying socket/SHM differs.
                 PdMethod::RemoteTcp | PdMethod::LocalMyelon => {
+                    // Tensorpuffer KVBM short-circuit: if this seq's prefix
+                    // hash is already cached (from a prior run that survived
+                    // restart), skip the GPU→CPU copy and reuse the cached
+                    // layer_data. Prefill compute still happened, but we
+                    // avoid the per-layer copy + bytes serialization.
+                    #[cfg(feature = "tensorpuffer")]
+                    let cached_short_circuit = {
+                        let prefix_hash =
+                            crate::tensorpuffer_kvbm::content_hash_for_prefix(
+                                "vllm-rs",
+                                &seq.token_ids,
+                            );
+                        let hit = crate::tensorpuffer_kvbm::load_finished_prefill_by_prefix(
+                            &prefix_hash,
+                        );
+                        if hit.is_some() && instrument {
+                            println!(
+                                "[MyelonInstr] {}",
+                                serde_json::json!({
+                                    "scope": "tensorpuffer_kvbm",
+                                    "op": "load_short_circuit",
+                                    "seq_id": seq.id,
+                                    "prefix_hash": prefix_hash,
+                                })
+                            );
+                        }
+                        hit
+                    };
+                    #[cfg(not(feature = "tensorpuffer"))]
+                    let cached_short_circuit: Option<()> = None;
+
                     let mut layer_data = Vec::new();
                     let server_block_ids = &seq.block_table;
 
@@ -465,24 +523,47 @@ impl Transfer {
                         .collect();
 
                     let t_gpu_to_cpu = Instant::now();
-                    for (k_tensor, v_tensor) in server_gpu_cache.iter() {
-                        // Copy blocks from GPU to a new contiguous CPU tensor
-                        let k_cpu_tensor = super::transfer::copy_blocks_to_cpu(
-                            k_tensor,
-                            &mapping,
-                            server_block_ids.len(),
-                        )?;
-                        let v_cpu_tensor = super::transfer::copy_blocks_to_cpu(
-                            v_tensor,
-                            &mapping,
-                            server_block_ids.len(),
-                        )?;
-
-                        // Get raw bytes from the CPU tensors
-                        layer_data.push((
-                            super::transfer::cpu_tensor_to_bytes::<T>(&k_cpu_tensor)?,
-                            super::transfer::cpu_tensor_to_bytes::<T>(&v_cpu_tensor)?,
-                        ));
+                    #[cfg(feature = "tensorpuffer")]
+                    if let Some(hit) = cached_short_circuit {
+                        // Use the cached layer_data instead of the GPU copy
+                        layer_data = hit.layer_data;
+                    } else {
+                        for (k_tensor, v_tensor) in server_gpu_cache.iter() {
+                            let k_cpu_tensor = super::transfer::copy_blocks_to_cpu(
+                                k_tensor,
+                                &mapping,
+                                server_block_ids.len(),
+                            )?;
+                            let v_cpu_tensor = super::transfer::copy_blocks_to_cpu(
+                                v_tensor,
+                                &mapping,
+                                server_block_ids.len(),
+                            )?;
+                            layer_data.push((
+                                super::transfer::cpu_tensor_to_bytes::<T>(&k_cpu_tensor)?,
+                                super::transfer::cpu_tensor_to_bytes::<T>(&v_cpu_tensor)?,
+                            ));
+                        }
+                    }
+                    #[cfg(not(feature = "tensorpuffer"))]
+                    {
+                        let _ = cached_short_circuit;
+                        for (k_tensor, v_tensor) in server_gpu_cache.iter() {
+                            let k_cpu_tensor = super::transfer::copy_blocks_to_cpu(
+                                k_tensor,
+                                &mapping,
+                                server_block_ids.len(),
+                            )?;
+                            let v_cpu_tensor = super::transfer::copy_blocks_to_cpu(
+                                v_tensor,
+                                &mapping,
+                                server_block_ids.len(),
+                            )?;
+                            layer_data.push((
+                                super::transfer::cpu_tensor_to_bytes::<T>(&k_cpu_tensor)?,
+                                super::transfer::cpu_tensor_to_bytes::<T>(&v_cpu_tensor)?,
+                            ));
+                        }
                     }
                     if instrument {
                         println!(
