@@ -112,18 +112,20 @@ for i in range(n):
     (out / f"p{i + 1}.txt").write_text(prompt, encoding="utf-8")
 PY
 
-start_m1_daemon() {
-  local remote_prefix="$1"
-  local phase="$2"
-  local i="$3"
-  local daemon_log="${OUT_DIR}/daemon-${phase}-${i}.log"
+start_m1_pair_daemon() {
+  local i="$1"
+  local cold_prefix="${TPUF_REMOTE_BASE}-cold-${i}"
+  local warm_prefix="${TPUF_REMOTE_BASE}-warm-${i}"
+  local daemon_log="${OUT_DIR}/daemon-pair-${i}.log"
 
-  echo "[m1] starting daemon for ${remote_prefix}-{engine,runner}" >&2
+  echo "[m1] starting pair daemon for p${i}: ${cold_prefix}/{engine,runner} + ${warm_prefix}/{engine,runner}" >&2
   env \
-    TPUF_FOYER_SSD_DIR="${OUT_DIR}/daemon-foyer-${phase}-${i}" \
+    TPUF_FOYER_SSD_DIR="${OUT_DIR}/daemon-foyer-pair-${i}" \
     "${TPUF_DAEMON_BIN}" \
-      --prefix "${remote_prefix}-engine" \
-      --prefix "${remote_prefix}-runner" \
+      --prefix "${cold_prefix}-engine" \
+      --prefix "${cold_prefix}-runner" \
+      --prefix "${warm_prefix}-engine" \
+      --prefix "${warm_prefix}-runner" \
       >"${daemon_log}" 2>&1 &
   DAEMON_PID="$!"
   sleep 0.5
@@ -151,7 +153,6 @@ run_one() {
   )
   if [[ "${TPUF_MODE}" == "M1" ]]; then
     local remote_prefix="${TPUF_REMOTE_BASE}-${phase}-${i}"
-    start_m1_daemon "${remote_prefix}" "${phase}" "${i}"
     run_env+=(TPUF_KVBM_REMOTE_PREFIX="${remote_prefix}")
   fi
   local rc=0
@@ -168,19 +169,27 @@ run_one() {
       --prefix-cache \
       --prefix-cache-max-tokens "${PREFIX_CACHE_MAX_TOKENS}" \
       >"${log_file}" 2>&1 || rc=$?
-  if [[ "${TPUF_MODE}" == "M1" ]]; then
-    cleanup
-  fi
   return "${rc}"
 }
 
-for i in $(seq 1 "${N}"); do
-  run_one cold "${i}" 0 0 0
-done
+if [[ "${TPUF_MODE}" == "M1" ]]; then
+  for i in $(seq 1 "${N}"); do
+    start_m1_pair_daemon "${i}"
+    run_one cold "${i}" 0 0 0
+    # Pair mode keeps the remote store alive across cold -> warm, so a warm
+    # restore would measure S3 hydration instead of remote sidecar reuse.
+    run_one warm "${i}" 0 1 1
+    cleanup
+  done
+else
+  for i in $(seq 1 "${N}"); do
+    run_one cold "${i}" 0 0 0
+  done
 
-for i in $(seq 1 "${N}"); do
-  run_one warm "${i}" 1 1 1
-done
+  for i in $(seq 1 "${N}"); do
+    run_one warm "${i}" 1 1 1
+  done
+fi
 
 python3 - "${OUT_DIR}" "${N}" "${TPUF_MODE}" <<'PY'
 import json
