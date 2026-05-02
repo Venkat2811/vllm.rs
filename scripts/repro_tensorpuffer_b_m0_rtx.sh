@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reproduce the TensorPuffer Direction-B / M0 FULL_SKIP toy row on an RTX host.
+# Reproduce the TensorPuffer Direction-B / M0 or M1 FULL_SKIP toy row on an RTX host.
 #
 # This is intentionally a forced-runner RTX reproduction, not CPU-only:
 # the current CLI parses --cpu, but that flag is not wired into device
@@ -8,7 +8,13 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-RUN_ID="${RUN_ID:-rtx-vllmrs-b-m0-$(date -u +%Y%m%dT%H%M%SZ)}"
+TPUF_MODE="${TPUF_MODE:-M0}"
+TPUF_MODE="${TPUF_MODE^^}"
+if [[ "${TPUF_MODE}" != "M0" && "${TPUF_MODE}" != "M1" ]]; then
+  echo "error: TPUF_MODE must be M0 or M1, got ${TPUF_MODE}" >&2
+  exit 1
+fi
+RUN_ID="${RUN_ID:-rtx-vllmrs-b-${TPUF_MODE,,}-$(date -u +%Y%m%dT%H%M%SZ)}"
 OUT_DIR="${OUT_DIR:-/tmp/${RUN_ID}}"
 N="${N:-8}"
 SEED="${SEED:-123}"
@@ -18,6 +24,8 @@ PREFIX_CACHE_MAX_TOKENS="${PREFIX_CACHE_MAX_TOKENS:-4096}"
 
 VLLM_BIN="${VLLM_BIN:-${ROOT}/target/release/vllm-rs}"
 MODEL="${MODEL:-${HOME}/.cache/huggingface/hub/models--bartowski--Llama-3.2-3B-Instruct-GGUF/snapshots/5ab33fa94d1d04e903623ae72c95d1696f09f9e8/Llama-3.2-3B-Instruct-Q4_K_M.gguf}"
+TENSORPUFFER_ROOT="${TENSORPUFFER_ROOT:-${ROOT}/../../../../tensorpuffer}"
+TPUF_DAEMON_BIN="${TPUF_DAEMON_BIN:-${TENSORPUFFER_ROOT}/target/release/tp-puffer-shm-daemon}"
 
 export TPUF_S3_ENDPOINT="${TPUF_S3_ENDPOINT:-http://127.0.0.1:9100}"
 export TPUF_BUCKET="${TPUF_BUCKET:-tensorpuffer}"
@@ -34,6 +42,15 @@ export TPUF_FOYER_BLOCK_SIZE_BYTES="${TPUF_FOYER_BLOCK_SIZE_BYTES:-1048576}"
 export TPUF_COMPRESS="${TPUF_COMPRESS:-zstd}"
 export MYELON_INSTRUMENT="${MYELON_INSTRUMENT:-1}"
 export RUST_BACKTRACE="${RUST_BACKTRACE:-1}"
+
+DAEMON_PID=""
+cleanup() {
+  if [[ -n "${DAEMON_PID}" ]]; then
+    kill "${DAEMON_PID}" >/dev/null 2>&1 || true
+    wait "${DAEMON_PID}" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT
 
 if [[ ! -x "${VLLM_BIN}" ]]; then
   echo "error: vllm-rs binary not found or not executable: ${VLLM_BIN}" >&2
@@ -53,6 +70,39 @@ if command -v curl >/dev/null 2>&1; then
 fi
 
 mkdir -p "${OUT_DIR}/prompts" "${OUT_DIR}/cold" "${OUT_DIR}/warm"
+
+if [[ "${TPUF_MODE}" == "M1" ]]; then
+  if [[ ! -x "${TPUF_DAEMON_BIN}" ]]; then
+    echo "error: tp-puffer-shm-daemon not found or not executable: ${TPUF_DAEMON_BIN}" >&2
+    echo "build with: cargo build -p tp-puffer-shm --release --bin tp-puffer-shm-daemon" >&2
+    exit 1
+  fi
+  TPUF_REMOTE_BASE="${TPUF_KVBM_REMOTE_PREFIX:-${RUN_ID}}"
+  unset TPUF_KVBM_REMOTE_PREFIX_EXACT
+  daemon_args=()
+  for phase in cold warm; do
+    for i in $(seq 1 "${N}"); do
+      daemon_args+=(--prefix "${TPUF_REMOTE_BASE}-${phase}-${i}-engine")
+      daemon_args+=(--prefix "${TPUF_REMOTE_BASE}-${phase}-${i}-runner")
+    done
+  done
+  echo "[m1] starting daemon for ${#daemon_args[@]} prefix args under base ${TPUF_REMOTE_BASE}" >&2
+  env \
+    TPUF_FOYER_SSD_DIR="${OUT_DIR}/daemon-foyer" \
+    "${TPUF_DAEMON_BIN}" \
+      "${daemon_args[@]}" \
+      >"${OUT_DIR}/daemon.log" 2>&1 &
+  DAEMON_PID="$!"
+  sleep 1
+  if ! kill -0 "${DAEMON_PID}" >/dev/null 2>&1; then
+    echo "error: tp-puffer-shm-daemon exited early; see ${OUT_DIR}/daemon.log" >&2
+    exit 1
+  fi
+else
+  unset TPUF_KVBM_REMOTE_PREFIX
+  unset TPUF_KVBM_REMOTE_PREFIX_EXACT
+  unset TPUF_KVBM_REMOTE_ROLE
+fi
 
 python3 - "${OUT_DIR}/prompts" "${N}" <<'PY'
 import pathlib
@@ -90,11 +140,17 @@ run_one() {
   local log_file="${OUT_DIR}/${phase}/p${i}.log"
 
   echo "[${phase}] p${i} -> ${log_file}" >&2
+  local run_env=(
+    TPUF_FOYER_SSD_DIR="${OUT_DIR}/foyer-${phase}-${i}"
+    TPUF_KVBM_RESTORE_ON_START="${restore}"
+    TPUF_KVBM_TRY_LOAD="${try_load}"
+    TPUF_KVBM_FULL_SKIP="${full_skip}"
+  )
+  if [[ "${TPUF_MODE}" == "M1" ]]; then
+    run_env+=(TPUF_KVBM_REMOTE_PREFIX="${TPUF_REMOTE_BASE}-${phase}-${i}")
+  fi
   env \
-    TPUF_FOYER_SSD_DIR="${OUT_DIR}/foyer-${phase}-${i}" \
-    TPUF_KVBM_RESTORE_ON_START="${restore}" \
-    TPUF_KVBM_TRY_LOAD="${try_load}" \
-    TPUF_KVBM_FULL_SKIP="${full_skip}" \
+    "${run_env[@]}" \
     "${VLLM_BIN}" \
       --f "${MODEL}" \
       --max-model-len "${MAX_MODEL_LEN}" \
@@ -116,7 +172,7 @@ for i in $(seq 1 "${N}"); do
   run_one warm "${i}" 1 1 1
 done
 
-python3 - "${OUT_DIR}" "${N}" <<'PY'
+python3 - "${OUT_DIR}" "${N}" "${TPUF_MODE}" <<'PY'
 import json
 import math
 import pathlib
@@ -125,6 +181,7 @@ import sys
 
 out = pathlib.Path(sys.argv[1])
 n = int(sys.argv[2])
+mode = sys.argv[3]
 
 first_token_re = re.compile(
     r"FirstTokenPath:.*?prefill_roundtrip_ms=(\d+).*?ingress_to_emit_ms=(\d+)"
@@ -149,8 +206,9 @@ def parse_log(path):
         "ingress_ms": int(ft.group(2)) if ft else None,
         "full_skip": "[full-skip]" in text,
         "try_load": "[try-load/full-skip]" in text or '"op":"try_full_skip_prefill"' in text,
-        "stash": '"op":"stash_kv_local"' in text,
+        "stash": '"op":"stash_kv_local"' in text and '"stashed":true' in text,
         "kvbm_failed": "KVBM init failed" in text,
+        "remote": "KVBM using remote daemon" in text,
     }
 
 rows = []
@@ -168,6 +226,7 @@ for i in range(1, n + 1):
         "try_load": warm["try_load"],
         "stash": cold["stash"],
         "kvbm_failed": cold["kvbm_failed"] or warm["kvbm_failed"],
+        "remote": cold["remote"] or warm["remote"],
     }
     if row["cold_ingress_ms"] and row["warm_ingress_ms"]:
         row["x_ingress"] = row["cold_ingress_ms"] / row["warm_ingress_ms"]
@@ -190,7 +249,7 @@ summary = {
     "run_dir": str(out),
     "engine": "vllm.rs",
     "direction": "B",
-    "mode": "M0 RTX forced-runner FULL_SKIP",
+    "mode": f"{mode} RTX forced-runner FULL_SKIP",
     "n": n,
     "tokens_min": min(tokens) if tokens else None,
     "tokens_p50": nearest_rank(tokens, 50),
@@ -215,6 +274,7 @@ summary = {
     "all_try_load": all(r["try_load"] for r in rows),
     "all_stash": all(r["stash"] for r in rows),
     "any_kvbm_failed": any(r["kvbm_failed"] for r in rows),
+    "any_remote": any(r["remote"] for r in rows),
     "rows": rows,
 }
 

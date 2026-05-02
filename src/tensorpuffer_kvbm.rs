@@ -103,11 +103,9 @@ impl Backend {
                     .map_err(|err| format!("{err}"))
             }
             #[cfg(feature = "tensorpuffer-remote")]
-            Backend::Remote(client) => {
-                client
-                    .put_kv(namespace, key, payload)
-                    .map_err(|err| format!("{err}"))
-            }
+            Backend::Remote(client) => client
+                .put_kv(namespace, key, payload)
+                .map_err(|err| format!("{err}")),
         }
     }
 
@@ -147,11 +145,9 @@ impl Backend {
                     .map_err(|err| format!("{err}"))
             }
             #[cfg(feature = "tensorpuffer-remote")]
-            Backend::Remote(client) => {
-                client
-                    .restore_from_s3(namespace)
-                    .map_err(|err| format!("{err}"))
-            }
+            Backend::Remote(client) => client
+                .restore_from_s3(namespace)
+                .map_err(|err| format!("{err}")),
         }
     }
 }
@@ -230,7 +226,10 @@ pub fn init_from_env() -> Option<KvbmHandle> {
     let outcome = std::thread::Builder::new()
         .name("tpuf-kvbm-init".to_string())
         .spawn(try_init)
-        .and_then(|h| h.join().map_err(|_| std::io::Error::other("kvbm init thread panicked")));
+        .and_then(|h| {
+            h.join()
+                .map_err(|_| std::io::Error::other("kvbm init thread panicked"))
+        });
 
     match outcome {
         Ok(Ok(handle)) => {
@@ -251,8 +250,7 @@ pub fn init_from_env() -> Option<KvbmHandle> {
 }
 
 fn try_init() -> Result<KvbmHandle, String> {
-    let namespace = std::env::var("TPUF_KVBM_NAMESPACE")
-        .unwrap_or_else(|_| "default".to_string());
+    let namespace = std::env::var("TPUF_KVBM_NAMESPACE").unwrap_or_else(|_| "default".to_string());
 
     let backend = build_backend()?;
     let handle = KvbmHandle {
@@ -287,28 +285,30 @@ fn build_backend() -> Result<Backend, String> {
     #[cfg(feature = "tensorpuffer-remote")]
     if let Ok(prefix) = std::env::var("TPUF_KVBM_REMOTE_PREFIX") {
         if !prefix.is_empty() {
+            let effective_prefix = effective_remote_prefix(&prefix);
             tracing::info!(
                 target: "tensorpuffer",
-                "KVBM using remote daemon (prefix={prefix})"
+                "KVBM using remote daemon (prefix={effective_prefix}, base_prefix={prefix})"
             );
-            let client = RemoteKvStoreClient::connect(&prefix)
-                .map_err(|err| format!("RemoteKvStoreClient::connect({prefix}): {err}"))?;
+            let client = RemoteKvStoreClient::connect(&effective_prefix).map_err(|err| {
+                format!("RemoteKvStoreClient::connect({effective_prefix}): {err}")
+            })?;
             return Ok(Backend::Remote(Arc::new(client)));
         }
     }
 
     // Embedded backend (M0): TensorpufferKvStore lives in this process.
-    let s3_cfg = S3ObjectStoreConfig::from_env()
-        .map_err(|err| format!("S3 config from env: {err:?}"))?;
-    let s3_store = S3ObjectStore::new(s3_cfg)
-        .map_err(|err| format!("S3ObjectStore::new: {err:?}"))?;
+    let s3_cfg =
+        S3ObjectStoreConfig::from_env().map_err(|err| format!("S3 config from env: {err:?}"))?;
+    let s3_store =
+        S3ObjectStore::new(s3_cfg).map_err(|err| format!("S3ObjectStore::new: {err:?}"))?;
     s3_store
         .ensure_bucket()
         .map_err(|err| format!("ensure_bucket: {err:?}"))?;
 
     let foyer = foyer_config_from_env();
-    let s3_prefix = std::env::var("TPUF_KVBM_S3_PREFIX")
-        .unwrap_or_else(|_| DEFAULT_S3_PREFIX.to_string());
+    let s3_prefix =
+        std::env::var("TPUF_KVBM_S3_PREFIX").unwrap_or_else(|_| DEFAULT_S3_PREFIX.to_string());
 
     let cfg = EmbedConfig {
         s3_prefix,
@@ -320,6 +320,43 @@ fn build_backend() -> Result<Backend, String> {
         .map_err(|err| format!("TensorpufferKvStore::new: {err}"))?;
     tracing::info!(target: "tensorpuffer", "KVBM using embedded backend");
     Ok(Backend::Embedded(Arc::new(RwLock::new(store))))
+}
+
+#[cfg(feature = "tensorpuffer-remote")]
+fn effective_remote_prefix(base_prefix: &str) -> String {
+    if env_flag("TPUF_KVBM_REMOTE_PREFIX_EXACT", false) {
+        return base_prefix.to_string();
+    }
+
+    if let Ok(role) = std::env::var("TPUF_KVBM_REMOTE_ROLE") {
+        let role = sanitize_remote_role(&role);
+        if !role.is_empty() {
+            return format!("{base_prefix}-{role}");
+        }
+    }
+
+    let exe = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().to_string()))
+        .unwrap_or_default();
+    if exe.contains("runner") {
+        format!("{base_prefix}-runner")
+    } else {
+        format!("{base_prefix}-engine")
+    }
+}
+
+#[cfg(feature = "tensorpuffer-remote")]
+fn sanitize_remote_role(role: &str) -> String {
+    role.chars()
+        .filter_map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                Some(ch)
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 fn foyer_config_from_env() -> FoyerCacheConfig {
