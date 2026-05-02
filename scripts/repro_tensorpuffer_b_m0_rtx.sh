@@ -130,10 +130,13 @@ start_m1_pair_daemon() {
   local cold_prefix="${TPUF_REMOTE_BASE}-cold-${i}"
   local warm_prefix="${TPUF_REMOTE_BASE}-warm-${i}"
   local daemon_log="${OUT_DIR}/daemon-pair-${i}.log"
+  local arena_path="${OUT_DIR}/arena-pair-${i}.bin"
 
   echo "[m1] starting pair daemon for p${i}: ${cold_prefix}/{engine,runner} + ${warm_prefix}/{engine,runner}" >&2
   env \
     TPUF_FOYER_SSD_DIR="${OUT_DIR}/daemon-foyer-pair-${i}" \
+    TPUF_PUFFER_SHM_ARENA_PATH="${arena_path}" \
+    TPUF_PUFFER_SHM_ARENA_BYTES="${TPUF_PUFFER_SHM_ARENA_BYTES:-2147483648}" \
     "${TPUF_DAEMON_BIN}" \
       --prefix "${cold_prefix}-engine" \
       --prefix "${cold_prefix}-runner" \
@@ -169,6 +172,7 @@ run_one() {
   if [[ "${TPUF_MODE}" == "M1" ]]; then
     local remote_prefix="${TPUF_REMOTE_BASE}-${phase}-${i}"
     run_env+=(TPUF_KVBM_REMOTE_PREFIX="${remote_prefix}")
+    run_env+=(TPUF_PUFFER_SHM_ARENA_PATH="${OUT_DIR}/arena-pair-${i}.bin")
   fi
   local runner_args=()
   if [[ "${TPUF_FORCE_RUNNER}" == "1" ]]; then
