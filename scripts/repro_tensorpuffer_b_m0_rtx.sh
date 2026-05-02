@@ -48,6 +48,7 @@ cleanup() {
   if [[ -n "${DAEMON_PID}" ]]; then
     kill "${DAEMON_PID}" >/dev/null 2>&1 || true
     wait "${DAEMON_PID}" >/dev/null 2>&1 || true
+    DAEMON_PID=""
   fi
 }
 trap cleanup EXIT
@@ -79,25 +80,6 @@ if [[ "${TPUF_MODE}" == "M1" ]]; then
   fi
   TPUF_REMOTE_BASE="${TPUF_KVBM_REMOTE_PREFIX:-${RUN_ID}}"
   unset TPUF_KVBM_REMOTE_PREFIX_EXACT
-  daemon_args=()
-  for phase in cold warm; do
-    for i in $(seq 1 "${N}"); do
-      daemon_args+=(--prefix "${TPUF_REMOTE_BASE}-${phase}-${i}-engine")
-      daemon_args+=(--prefix "${TPUF_REMOTE_BASE}-${phase}-${i}-runner")
-    done
-  done
-  echo "[m1] starting daemon for ${#daemon_args[@]} prefix args under base ${TPUF_REMOTE_BASE}" >&2
-  env \
-    TPUF_FOYER_SSD_DIR="${OUT_DIR}/daemon-foyer" \
-    "${TPUF_DAEMON_BIN}" \
-      "${daemon_args[@]}" \
-      >"${OUT_DIR}/daemon.log" 2>&1 &
-  DAEMON_PID="$!"
-  sleep 1
-  if ! kill -0 "${DAEMON_PID}" >/dev/null 2>&1; then
-    echo "error: tp-puffer-shm-daemon exited early; see ${OUT_DIR}/daemon.log" >&2
-    exit 1
-  fi
 else
   unset TPUF_KVBM_REMOTE_PREFIX
   unset TPUF_KVBM_REMOTE_PREFIX_EXACT
@@ -130,6 +112,27 @@ for i in range(n):
     (out / f"p{i + 1}.txt").write_text(prompt, encoding="utf-8")
 PY
 
+start_m1_daemon() {
+  local remote_prefix="$1"
+  local phase="$2"
+  local i="$3"
+  local daemon_log="${OUT_DIR}/daemon-${phase}-${i}.log"
+
+  echo "[m1] starting daemon for ${remote_prefix}-{engine,runner}" >&2
+  env \
+    TPUF_FOYER_SSD_DIR="${OUT_DIR}/daemon-foyer-${phase}-${i}" \
+    "${TPUF_DAEMON_BIN}" \
+      --prefix "${remote_prefix}-engine" \
+      --prefix "${remote_prefix}-runner" \
+      >"${daemon_log}" 2>&1 &
+  DAEMON_PID="$!"
+  sleep 0.5
+  if ! kill -0 "${DAEMON_PID}" >/dev/null 2>&1; then
+    echo "error: tp-puffer-shm-daemon exited early; see ${daemon_log}" >&2
+    return 1
+  fi
+}
+
 run_one() {
   local phase="$1"
   local i="$2"
@@ -147,8 +150,11 @@ run_one() {
     TPUF_KVBM_FULL_SKIP="${full_skip}"
   )
   if [[ "${TPUF_MODE}" == "M1" ]]; then
-    run_env+=(TPUF_KVBM_REMOTE_PREFIX="${TPUF_REMOTE_BASE}-${phase}-${i}")
+    local remote_prefix="${TPUF_REMOTE_BASE}-${phase}-${i}"
+    start_m1_daemon "${remote_prefix}" "${phase}" "${i}"
+    run_env+=(TPUF_KVBM_REMOTE_PREFIX="${remote_prefix}")
   fi
+  local rc=0
   env \
     "${run_env[@]}" \
     "${VLLM_BIN}" \
@@ -161,7 +167,11 @@ run_one() {
       --force-runner \
       --prefix-cache \
       --prefix-cache-max-tokens "${PREFIX_CACHE_MAX_TOKENS}" \
-      >"${log_file}" 2>&1
+      >"${log_file}" 2>&1 || rc=$?
+  if [[ "${TPUF_MODE}" == "M1" ]]; then
+    cleanup
+  fi
+  return "${rc}"
 }
 
 for i in $(seq 1 "${N}"); do
