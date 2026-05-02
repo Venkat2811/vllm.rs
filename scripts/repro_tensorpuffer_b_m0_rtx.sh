@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reproduce the TensorPuffer Direction-B / M0 or M1 FULL_SKIP toy row on an RTX host.
+# Reproduce TensorPuffer Direction-B / M0 or M1 toy rows on an RTX host.
 #
 # This is intentionally a forced-runner RTX reproduction, not CPU-only:
 # the current CLI parses --cpu, but that flag is not wired into device
@@ -21,6 +21,8 @@ SEED="${SEED:-123}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-2304}"
 MAX_TOKENS="${MAX_TOKENS:-16}"
 PREFIX_CACHE_MAX_TOKENS="${PREFIX_CACHE_MAX_TOKENS:-4096}"
+TPUF_SCENARIO_LABEL="${TPUF_SCENARIO_LABEL:-FULL_SKIP}"
+TPUF_FORCE_RUNNER="${TPUF_FORCE_RUNNER:-1}"
 
 VLLM_BIN="${VLLM_BIN:-${ROOT}/target/release/vllm-rs}"
 MODEL="${MODEL:-${HOME}/.cache/huggingface/hub/models--bartowski--Llama-3.2-3B-Instruct-GGUF/snapshots/5ab33fa94d1d04e903623ae72c95d1696f09f9e8/Llama-3.2-3B-Instruct-Q4_K_M.gguf}"
@@ -42,6 +44,15 @@ export TPUF_FOYER_BLOCK_SIZE_BYTES="${TPUF_FOYER_BLOCK_SIZE_BYTES:-1048576}"
 export TPUF_COMPRESS="${TPUF_COMPRESS:-zstd}"
 export MYELON_INSTRUMENT="${MYELON_INSTRUMENT:-1}"
 export RUST_BACKTRACE="${RUST_BACKTRACE:-1}"
+
+TPUF_COLD_RESTORE="${TPUF_COLD_RESTORE:-0}"
+TPUF_COLD_TRY_LOAD="${TPUF_COLD_TRY_LOAD:-0}"
+TPUF_COLD_FULL_SKIP="${TPUF_COLD_FULL_SKIP:-0}"
+TPUF_COLD_STASH_DECODE="${TPUF_COLD_STASH_DECODE:-0}"
+TPUF_WARM_RESTORE="${TPUF_WARM_RESTORE:-}"
+TPUF_WARM_TRY_LOAD="${TPUF_WARM_TRY_LOAD:-1}"
+TPUF_WARM_FULL_SKIP="${TPUF_WARM_FULL_SKIP:-1}"
+TPUF_WARM_STASH_DECODE="${TPUF_WARM_STASH_DECODE:-0}"
 
 DAEMON_PID=""
 cleanup() {
@@ -80,10 +91,12 @@ if [[ "${TPUF_MODE}" == "M1" ]]; then
   fi
   TPUF_REMOTE_BASE="${TPUF_KVBM_REMOTE_PREFIX:-${RUN_ID}}"
   unset TPUF_KVBM_REMOTE_PREFIX_EXACT
+  TPUF_WARM_RESTORE="${TPUF_WARM_RESTORE:-0}"
 else
   unset TPUF_KVBM_REMOTE_PREFIX
   unset TPUF_KVBM_REMOTE_PREFIX_EXACT
   unset TPUF_KVBM_REMOTE_ROLE
+  TPUF_WARM_RESTORE="${TPUF_WARM_RESTORE:-1}"
 fi
 
 python3 - "${OUT_DIR}/prompts" "${N}" <<'PY'
@@ -141,6 +154,7 @@ run_one() {
   local restore="$3"
   local try_load="$4"
   local full_skip="$5"
+  local stash_decode="$6"
   local prompt_file="${OUT_DIR}/prompts/p${i}.txt"
   local log_file="${OUT_DIR}/${phase}/p${i}.log"
 
@@ -150,10 +164,15 @@ run_one() {
     TPUF_KVBM_RESTORE_ON_START="${restore}"
     TPUF_KVBM_TRY_LOAD="${try_load}"
     TPUF_KVBM_FULL_SKIP="${full_skip}"
+    TPUF_KVBM_STASH_DECODE="${stash_decode}"
   )
   if [[ "${TPUF_MODE}" == "M1" ]]; then
     local remote_prefix="${TPUF_REMOTE_BASE}-${phase}-${i}"
     run_env+=(TPUF_KVBM_REMOTE_PREFIX="${remote_prefix}")
+  fi
+  local runner_args=()
+  if [[ "${TPUF_FORCE_RUNNER}" == "1" ]]; then
+    runner_args+=(--force-runner)
   fi
   local rc=0
   env \
@@ -165,7 +184,7 @@ run_one() {
       --max-tokens "${MAX_TOKENS}" \
       --prompts "$(cat "${prompt_file}")" \
       --seed "${SEED}" \
-      --force-runner \
+      "${runner_args[@]}" \
       --prefix-cache \
       --prefix-cache-max-tokens "${PREFIX_CACHE_MAX_TOKENS}" \
       >"${log_file}" 2>&1 || rc=$?
@@ -175,23 +194,25 @@ run_one() {
 if [[ "${TPUF_MODE}" == "M1" ]]; then
   for i in $(seq 1 "${N}"); do
     start_m1_pair_daemon "${i}"
-    run_one cold "${i}" 0 0 0
+    run_one cold "${i}" "${TPUF_COLD_RESTORE}" "${TPUF_COLD_TRY_LOAD}" "${TPUF_COLD_FULL_SKIP}" "${TPUF_COLD_STASH_DECODE}"
     # Pair mode keeps the remote store alive across cold -> warm, so a warm
     # restore would measure S3 hydration instead of remote sidecar reuse.
-    run_one warm "${i}" 0 1 1
+    run_one warm "${i}" "${TPUF_WARM_RESTORE}" "${TPUF_WARM_TRY_LOAD}" "${TPUF_WARM_FULL_SKIP}" "${TPUF_WARM_STASH_DECODE}"
     cleanup
   done
 else
   for i in $(seq 1 "${N}"); do
-    run_one cold "${i}" 0 0 0
+    run_one cold "${i}" "${TPUF_COLD_RESTORE}" "${TPUF_COLD_TRY_LOAD}" "${TPUF_COLD_FULL_SKIP}" "${TPUF_COLD_STASH_DECODE}"
   done
 
   for i in $(seq 1 "${N}"); do
-    run_one warm "${i}" 1 1 1
+    run_one warm "${i}" "${TPUF_WARM_RESTORE}" "${TPUF_WARM_TRY_LOAD}" "${TPUF_WARM_FULL_SKIP}" "${TPUF_WARM_STASH_DECODE}"
   done
 fi
 
-python3 - "${OUT_DIR}" "${N}" "${TPUF_MODE}" <<'PY'
+python3 - "${OUT_DIR}" "${N}" "${TPUF_MODE}" "${TPUF_SCENARIO_LABEL}" "${TPUF_FORCE_RUNNER}" \
+  "${TPUF_COLD_RESTORE}" "${TPUF_COLD_TRY_LOAD}" "${TPUF_COLD_FULL_SKIP}" "${TPUF_COLD_STASH_DECODE}" \
+  "${TPUF_WARM_RESTORE}" "${TPUF_WARM_TRY_LOAD}" "${TPUF_WARM_FULL_SKIP}" "${TPUF_WARM_STASH_DECODE}" <<'PY'
 import json
 import math
 import pathlib
@@ -201,11 +222,26 @@ import sys
 out = pathlib.Path(sys.argv[1])
 n = int(sys.argv[2])
 mode = sys.argv[3]
+scenario = sys.argv[4]
+force_runner = sys.argv[5]
+cold_cfg = {
+    "restore": sys.argv[6],
+    "try_load": sys.argv[7],
+    "full_skip": sys.argv[8],
+    "stash_decode": sys.argv[9],
+}
+warm_cfg = {
+    "restore": sys.argv[10],
+    "try_load": sys.argv[11],
+    "full_skip": sys.argv[12],
+    "stash_decode": sys.argv[13],
+}
 
 first_token_re = re.compile(
     r"FirstTokenPath:.*?prefill_roundtrip_ms=(\d+).*?ingress_to_emit_ms=(\d+)"
 )
 prompt_tokens_re = re.compile(r"Prompt tokens:\s+(\d+)")
+json_instr_re = re.compile(r"\[MyelonInstr\]\s+({.*})")
 
 def nearest_rank(values, pct):
     values = sorted(values)
@@ -218,14 +254,42 @@ def parse_log(path):
     text = path.read_text(errors="replace")
     ft = first_token_re.search(text)
     toks = prompt_tokens_re.search(text)
+    instr = []
+    for match in json_instr_re.finditer(text):
+        try:
+            instr.append(json.loads(match.group(1)))
+        except json.JSONDecodeError:
+            pass
+    full_skip = "[full-skip]" in text or any(
+        row.get("op") == "try_full_skip_prefill" for row in instr
+    )
+    partial_try_load = any(row.get("op") == "try_import_kv_local" for row in instr)
+    try_load = full_skip or partial_try_load or "[try-load]" in text or "[try-load/full-skip]" in text
+    prefill_stash_count = sum(
+        1
+        for row in instr
+        if row.get("op") == "stash_kv_local"
+        and row.get("stashed") is True
+        and row.get("phase") == "prefill"
+    )
+    decode_stash_count = sum(
+        1
+        for row in instr
+        if row.get("op") == "stash_kv_local"
+        and row.get("stashed") is True
+        and row.get("phase") == "decode"
+    )
     return {
         "path": str(path),
         "tokens": int(toks.group(1)) if toks else None,
         "prefill_rt_ms": int(ft.group(1)) if ft else None,
         "ingress_ms": int(ft.group(2)) if ft else None,
-        "full_skip": "[full-skip]" in text,
-        "try_load": "[try-load/full-skip]" in text or '"op":"try_full_skip_prefill"' in text,
-        "stash": '"op":"stash_kv_local"' in text and '"stashed":true' in text,
+        "full_skip": full_skip,
+        "partial_try_load": partial_try_load,
+        "try_load": try_load,
+        "prefill_stash_count": prefill_stash_count,
+        "decode_stash_count": decode_stash_count,
+        "stash": prefill_stash_count > 0 or decode_stash_count > 0,
         "kvbm_failed": "KVBM init failed" in text,
         "remote": "KVBM using remote daemon" in text,
     }
@@ -242,8 +306,13 @@ for i in range(1, n + 1):
         "cold_prefill_rt_ms": cold["prefill_rt_ms"],
         "warm_prefill_rt_ms": warm["prefill_rt_ms"],
         "full_skip": warm["full_skip"],
+        "partial_try_load": warm["partial_try_load"],
         "try_load": warm["try_load"],
         "stash": cold["stash"],
+        "cold_prefill_stash_count": cold["prefill_stash_count"],
+        "cold_decode_stash_count": cold["decode_stash_count"],
+        "warm_prefill_stash_count": warm["prefill_stash_count"],
+        "warm_decode_stash_count": warm["decode_stash_count"],
         "kvbm_failed": cold["kvbm_failed"] or warm["kvbm_failed"],
         "remote": cold["remote"] or warm["remote"],
     }
@@ -268,7 +337,11 @@ summary = {
     "run_dir": str(out),
     "engine": "vllm.rs",
     "direction": "B",
-    "mode": f"{mode} RTX forced-runner FULL_SKIP",
+    "mode": f"{mode} RTX {'forced-runner' if force_runner == '1' else 'in-process'} {scenario}",
+    "scenario": scenario,
+    "force_runner": force_runner == "1",
+    "cold_cfg": cold_cfg,
+    "warm_cfg": warm_cfg,
     "n": n,
     "tokens_min": min(tokens) if tokens else None,
     "tokens_p50": nearest_rank(tokens, 50),
@@ -290,8 +363,13 @@ summary = {
         else None
     ),
     "all_full_skip": all(r["full_skip"] for r in rows),
+    "all_partial_try_load": all(r["partial_try_load"] for r in rows),
     "all_try_load": all(r["try_load"] for r in rows),
     "all_stash": all(r["stash"] for r in rows),
+    "cold_prefill_stash_count_total": sum(r["cold_prefill_stash_count"] for r in rows),
+    "cold_decode_stash_count_total": sum(r["cold_decode_stash_count"] for r in rows),
+    "warm_prefill_stash_count_total": sum(r["warm_prefill_stash_count"] for r in rows),
+    "warm_decode_stash_count_total": sum(r["warm_decode_stash_count"] for r in rows),
     "any_kvbm_failed": any(r["kvbm_failed"] for r in rows),
     "any_remote": any(r["remote"] for r in rows),
     "rows": rows,
