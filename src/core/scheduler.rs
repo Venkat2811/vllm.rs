@@ -23,7 +23,7 @@ pub struct Scheduler {
     next_seq_id: usize,
     /// Per-seq cached-token count retained briefly after `clear_finished()`
     /// so response finalization can still read it. Bounded by
-    /// `FINISHED_CACHED_TOKENS_MAX`; cleared en masse on overflow.
+    /// `FINISHED_CACHED_TOKENS_MAX`.
     finished_cached_tokens: HashMap<usize, usize>,
     eos_token_id: Vec<u32>,
     /// Token IDs that represent the end of a tool call (e.g., </tool_call> tokens)
@@ -585,23 +585,22 @@ impl Scheduler {
 
     pub fn clear_finished(&mut self) {
         let is_pd_server = self.is_pd_server();
+        let mut finished_counts = Vec::new();
         for seq in &self.running {
             if seq.status == SequenceStatus::Finished {
                 if is_pd_server {
                     self.print_free_blocks();
                 }
-                self.finished_cached_tokens
-                    .insert(seq.id, seq.num_cached_tokens);
+                finished_counts.push((seq.id, seq.num_cached_tokens));
             }
         }
         for seq in &self.waiting {
             if seq.status == SequenceStatus::Finished {
-                self.finished_cached_tokens
-                    .insert(seq.id, seq.num_cached_tokens);
+                finished_counts.push((seq.id, seq.num_cached_tokens));
             }
         }
-        if self.finished_cached_tokens.len() > FINISHED_CACHED_TOKENS_MAX {
-            self.finished_cached_tokens.clear();
+        for (seq_id, num_cached_tokens) in finished_counts {
+            self.remember_finished_cached_tokens(seq_id, num_cached_tokens);
         }
         self.running
             .retain(|seq| seq.status != SequenceStatus::Finished);
@@ -1066,10 +1065,22 @@ impl Scheduler {
         self.running
             .iter()
             .chain(self.waiting.iter())
+            .chain(self.cached.iter())
             .chain(self.transferred.iter())
             .find(|s| s.id == seq_id)
             .map(|s| s.num_cached_tokens)
             .or_else(|| self.finished_cached_tokens.get(&seq_id).copied())
+    }
+
+    fn remember_finished_cached_tokens(&mut self, seq_id: usize, num_cached_tokens: usize) {
+        self.finished_cached_tokens
+            .insert(seq_id, num_cached_tokens);
+        while self.finished_cached_tokens.len() > FINISHED_CACHED_TOKENS_MAX {
+            let Some(oldest_seq_id) = self.finished_cached_tokens.keys().min().copied() else {
+                break;
+            };
+            self.finished_cached_tokens.remove(&oldest_seq_id);
+        }
     }
 
     pub fn evict_prefix_cache_until_free(&mut self, min_free_blocks: usize) -> usize {
