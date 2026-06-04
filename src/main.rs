@@ -3,7 +3,6 @@ use clap::Parser;
 use colored::Colorize;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 use serde_json;
-use std::sync::Arc;
 use tool_parser::ParserFactory;
 use xinfer::core::engine::StreamItem;
 use xinfer::core::engine::GLOBAL_RT;
@@ -438,14 +437,16 @@ async fn main() -> Result<()> {
             } else {
                 xinfer::log_warn!("Starting the inference...");
 
-                let (receivers, tokenizer) = {
+                let (receivers, tokenizer_service) = {
                     let mut e = engine.write();
                     (
                         e.generate_sync(&params, &message_list, None, &Vec::new(), &None)?,
-                        Arc::new(e.tokenizer.clone()),
+                        e.tokenizer_service.clone(),
                     )
                 };
-                let results = LLMEngine::collect_sync_results(receivers, tokenizer, None).await?;
+                let results =
+                    LLMEngine::collect_sync_results(receivers, tokenizer_service, None)
+                        .await?;
                 // GenerationOutput is returned directly
                 results
             }

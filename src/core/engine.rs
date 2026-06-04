@@ -101,6 +101,15 @@ pub struct LLMEngine {
     pub tool_config: ToolConfig,
     pub img_cfg: Option<ImageProcessConfig>,
     pub guidance_tokens: GuidanceTokens,
+    /// Dispatch for the engine's hot-path tokenize/detokenize calls.
+    /// `TokenizerService::Inline` is the default in-process tokenizer.
+    /// `TokenizerService::Worker` is the opt-in out-of-process worker
+    /// activated by `XINFER_TOK_DETOK_WORKER=1`. The enum shape mirrors
+    /// `RunnerType::{Thread, Process}` so future variants (inference
+    /// firewall, grammar-aware, remote multi-model) plug in by adding a
+    /// variant rather than threading another `Option<...>` through the
+    /// engine call sites.
+    pub tokenizer_service: crate::runner::tokenizer_service::TokenizerService,
 }
 
 impl LLMEngine {
@@ -474,6 +483,63 @@ impl LLMEngine {
 
         log_warn!("Model loaded.\n");
 
+        // Optional out-of-process tokenization + detokenization.
+        // Spawns a `tok_detok_worker` subprocess; the engine binds two
+        // `interprocess::local_socket` listeners (one for tokenize, one for
+        // detokenize) so the two directions don't head-of-line each other.
+        let tok_detok_ipc = if std::env::var("XINFER_TOK_DETOK_WORKER")
+            .ok()
+            .map(|s| matches!(s.to_ascii_lowercase().as_str(), "1" | "true" | "yes"))
+            .unwrap_or(false)
+        {
+            use crate::runner::tok_detok_msgs::{MsgKind, TokDetokInit};
+            use crate::runner::tok_detok_socket::{TokDetokIpcPair, TokDetokSocketServer};
+            use crate::utils::get_tok_detok_worker_path;
+            let pid = std::process::id() % 100000;
+            let tok_sock = format!("xinfer-tokdetok-{}-tok", pid);
+            let det_sock = format!("xinfer-tokdetok-{}-det", pid);
+            let worker_path = get_tok_detok_worker_path().expect("tok_detok_worker path");
+            // Child lives for the engine lifetime; same `.map(|_| ())` pattern as
+            // `spawn_runner` in `src/utils/mod.rs` to silence `clippy::zombie_processes`.
+            std::process::Command::new(&worker_path)
+                .env("XINFER_TOK_DETOK_SOCKET_TOK", &tok_sock)
+                .env("XINFER_TOK_DETOK_SOCKET_DET", &det_sock)
+                .spawn()
+                .map(|_child| ())
+                .expect("spawn tok_detok_worker");
+            log_info!(
+                "[tok_detok_worker] spawned, awaiting connects on tok={} det={}",
+                tok_sock,
+                det_sock
+            );
+            // Worker connects to tok first, then det (same order as
+            // tok_detok_worker.rs main()).
+            let tok = TokDetokSocketServer::bind_and_accept(&tok_sock)
+                .expect("tok_detok tok socket bind");
+            let det = TokDetokSocketServer::bind_and_accept(&det_sock)
+                .expect("tok_detok det socket bind");
+            // Init is delivered on the tok socket; the worker shares the
+            // tokenizer between its two service threads.
+            let init = TokDetokInit {
+                model_paths: model_pathes.clone(),
+                is_gguf,
+            };
+            let bytes = bincode::serialize(&init).unwrap();
+            tok.send(&bytes, MsgKind::TokDetokInit);
+            log_info!("[tok_detok_worker] TokDetokInit sent on tok socket");
+            Some(TokDetokIpcPair { tok, det })
+        } else {
+            None
+        };
+        let tokenizer_arc = Arc::new(tokenizer.clone());
+        let tokenizer_service = match tok_detok_ipc {
+            Some(ipc) => crate::runner::tokenizer_service::TokenizerService::Worker {
+                ipc,
+                tokenizer: tokenizer_arc,
+            },
+            None => crate::runner::tokenizer_service::TokenizerService::Inline(tokenizer_arc),
+        };
+
         let engine = Arc::new(RwLock::new(Self {
             runners,
             scheduler,
@@ -499,6 +565,7 @@ impl LLMEngine {
             img_cfg,
             model_name,
             guidance_tokens,
+            tokenizer_service,
         }));
 
         Self::start_engine(engine.clone());
@@ -513,12 +580,11 @@ impl LLMEngine {
         images: &Option<ImageData>,
         image_idx: i32,
     ) -> Result<(usize, usize)> {
-        let tokens = self
-            .tokenizer
-            .encode_fast(prompt, true)
-            .expect("encode failed!");
-        let token_ids: Vec<u32> = tokens.get_ids().iter().map(|&x| x).collect();
-        let length = token_ids.len();
+        // Hot path: dispatch via TokenizerService — Inline (default) or Worker.
+        let (token_ids, length): (Vec<u32>, usize) = self
+            .tokenizer_service
+            .encode(prompt)
+            .map_err(|e| candle_core::Error::wrap(e))?;
         let raw_replay_token_ids = self.match_prompt_replay_candidate(&token_ids);
         if let Some(max_model_len) = self.econfig.max_model_len {
             if length > max_model_len - 1 {
@@ -1320,11 +1386,14 @@ impl LLMEngine {
 
     pub async fn collect_sync_results(
         receivers: Vec<(usize, usize, mpsc::Receiver<StreamItem>)>,
-        tokenizer: Arc<Tokenizer>,
+        tokenizer_service: crate::runner::tokenizer_service::TokenizerService,
         logger: Option<Arc<ChatCompletionLogger>>,
     ) -> Result<Vec<GenerationOutput>> {
         let decoded_tokens = Arc::new(AtomicUsize::new(0));
         let decode_start_time = Arc::new(AtomicUsize::new(0));
+        // Raw tokenizer for the in-process stream decoder (logger path);
+        // streaming decode is stateful and stays in-process by design.
+        let tokenizer: Arc<Tokenizer> = tokenizer_service.tokenizer().clone();
 
         // Create futures for each receiver (do NOT spawn detached tasks)
         let tasks = receivers
@@ -1334,6 +1403,7 @@ impl LLMEngine {
                 let decode_start_time_clone = decode_start_time.clone();
                 let tokenizer = Arc::clone(&tokenizer);
                 let logger = logger.clone();
+                let tokenizer_service = tokenizer_service.clone();
                 async move {
                     let mut output: Option<GenerationOutput> = None;
                     let mut collected_token_ids: Vec<u32> = Vec::new();
@@ -1362,7 +1432,7 @@ impl LLMEngine {
                                 stop_sequence,
                             )) => {
                                 let decoded_len = decoded_ids.len();
-                                let decode_output = tokenizer
+                                let decode_output = tokenizer_service
                                     .decode(&decoded_ids, true)
                                     .expect("unable to decode!");
 

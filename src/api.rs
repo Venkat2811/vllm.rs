@@ -217,16 +217,16 @@ impl Engine {
         images: Option<crate::utils::image::ImageData>,
         tools: Vec<Tool>,
     ) -> Result<GenerationOutput> {
-        let (receivers, tokenizer) = {
+        let (receivers, tokenizer_service) = {
             let mut engine = self.engine.write();
             (
                 engine.generate_sync(&vec![params], &vec![messages], images, &tools, &None)?,
-                Arc::new(engine.tokenizer.clone()),
+                engine.tokenizer_service.clone(),
             )
         };
 
         let results = GLOBAL_RT.block_on(async {
-            LLMEngine::collect_sync_results(receivers, tokenizer, None).await
+            LLMEngine::collect_sync_results(receivers, tokenizer_service, None).await
         })?;
 
         // Extract GenerationOutput
